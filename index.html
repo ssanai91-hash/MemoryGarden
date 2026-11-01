@@ -55,7 +55,17 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid
 .practice-title{display:flex;justify-content:space-between;align-items:center;gap:8px}.practice-title strong{font-family:var(--display);font-size:18px}.practice-title span{font-size:11px;color:var(--soft)}
 .count-line{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:12px}.count-line span{margin-right:auto}.count-line b{font-size:22px;font-weight:400}.count-line button{font-size:11px;padding:5px 8px}
 progress{width:100%;height:4px;accent-color:#9c7d43;display:block;margin-top:9px}.practice-note{font-size:10px;color:#78796e;margin-top:7px}
-button:disabled{opacity:.5;cursor:default}.hint{bottom:220px}.poses{bottom:26px}
+button:disabled{opacity:.5;cursor:default}
+.now{font-size:12px;color:var(--accent);margin-top:7px}
+.mhead{font-size:11.5px;color:var(--soft)}
+.tracks{display:grid;gap:5px}
+.tracks button{text-align:left;border-radius:10px;display:grid;gap:2px;padding:7px 10px}
+.tracks button small{color:var(--soft);font-size:11px}
+.tracks button[aria-pressed="true"] small{color:#e8e2d8}
+.vol{font-size:11.5px;color:var(--soft);display:grid;gap:4px}
+.vol input{width:100%;accent-color:var(--accent)}
+.sound{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 4px 14px rgba(40,30,20,.18);z-index:4}
+.sound.on{background:var(--paper);color:var(--ink);border-color:var(--line)}.hint{bottom:220px}.poses{bottom:26px}
 @media(max-width:650px){.plaque{top:12px;left:12px;padding:10px 12px;max-width:215px}.plaque h1{font-size:20px}.plaque .row button{font-size:11px;padding:5px 8px}.plaque .sub,.mine{display:none}.practice{bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:10px 12px;width:calc(100vw - 48px);max-width:370px}.practice-title strong{font-size:16px}.poses{bottom:225px;right:12px;gap:5px}.poses button{font-size:11px;min-width:70px;padding:6px 9px}#joy{width:92px;height:92px;left:15px;bottom:215px}#knob{width:36px;height:36px;margin:-18px 0 0 -18px}.hint{bottom:330px;font-size:11px}.toast{top:210px}.environment{font-size:10px}.eyebrow{font-size:9px}}
 </style>
 
@@ -67,9 +77,16 @@ button:disabled{opacity:.5;cursor:default}.hint{bottom:220px}.poses{bottom:26px}
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText">혼자 산책 중</span></div>
   <div class="environment"><span id="seoulClock">한국 시각</span><span id="skyLabel"></span></div>
   <label class="weather-label">날씨 <select id="weatherSelect" aria-label="정원 날씨"><option value="auto">자동 순환</option><option value="clear">맑음</option><option value="rain">비</option><option value="snow">눈</option></select></label>
-  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
+  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
+  <div class="now" id="nowPlaying" hidden></div>
   <div class="mine" id="mine"></div>
+  <div class="panel" id="musicPanel" hidden>
+    <div class="mhead" id="musicNote">고른 곡은 지금 정원에 있는 모두에게 같은 박자로 들려요</div>
+    <div class="tracks" id="tracks"></div>
+    <label class="vol" for="vol">내 볼륨<input id="vol" type="range" min="0" max="100" value="70"></label>
+  </div>
 </header>
+<button class="sound" id="soundBtn" type="button" hidden>소리 켜기</button>
 <section class="practice" aria-label="기도와 108배">
   <div class="eyebrow">마음을 모으는 시간</div>
   <div class="practice-title"><strong>부처님 앞에서</strong><span id="practiceStatus" role="status">편안히 머물러 보세요</span></div>
@@ -78,7 +95,7 @@ button:disabled{opacity:.5;cursor:default}.hint{bottom:220px}.poses{bottom:26px}
   <progress id="bowProgress" max="108" value="0" aria-label="108배 진행"></progress>
   <div class="practice-note">화면 속 인물이 절합니다 · 이동하면 멈춥니다</div>
 </section>
-<div class="poses"><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button></div>
+<div class="poses"><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="hint" id="hint">조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기</div>
 <div class="toast" id="toast"></div>
@@ -262,9 +279,11 @@ function makePerson(L){
   box(.5,.7,.26,L.shirt,0,.35,0,torso);box(.51,.06,.27,L.pants,0,.73,0,rig);
   const head=new THREE.Mesh(BOX,headMats(L));head.scale.setScalar(.5);head.position.y=.95;head.castShadow=true;torso.add(head);
   if(L.hat){box(.54,.14,.54,L.shirt,0,1.23,0,torso);box(.54,.05,.22,L.shirt,0,1.18,.35,torso)}
+  const cup=new THREE.Group();box(.13,.15,.13,0xf2efe8,0,0,0,cup);box(.11,.01,.11,0x4a2c1a,0,.076,0,cup);box(.04,.08,.03,0xf2efe8,.085,0,0,cup);
+  cup.position.set(0,-.7,.06);arms[1].add(cup);cup.visible=false;
   const tag=makeTag('');tag.position.y=2.25;g.add(tag);
   scene.add(g);
-  return{g,rig,torso,legs,arms,head,tag,walkT:0,speed:0};
+  return{g,rig,torso,legs,arms,head,cup,tag,walkT:0,speed:0};
 }
 function posePerson(P,pose,dt,t){
   const w=Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
@@ -281,6 +300,8 @@ function posePerson(P,pose,dt,t){
     torsoLean=q.lean;ry=q.drop;rz=0;leg=[q.knee,q.knee];arm=[-1.45,-1.45];armZ=[.56,-.56];tagY=1.6;
   }
   else if(pose==='wave'&&still){arm=[0,0];armZ=[-.06,2.6+Math.sin(t*8)*.3]}
+  else if(pose==='coffee'&&still){const c=Math.max(0,Math.sin(t*.7));arm=[0,-.9-c*1.3];armZ=[-.06,-.25-c*.15]}
+  P.cup.visible=pose==='coffee'&&still;
   P.torso.rotation.x=L(P.torso.rotation.x,torsoLean);
   P.rig.rotation.x=L(P.rig.rotation.x,rx);P.rig.position.y=L(P.rig.position.y,ry);P.rig.position.z=L(P.rig.position.z,rz);
   for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
@@ -328,7 +349,7 @@ function collide(x,z,r){
   return[x,z];
 }
 function updateDog(D,ox,oz,oh,ownerPose,ownerMoving,dt,t){
-  const resting=(['sit','lie','pray','bow'].includes(ownerPose))&&!ownerMoving;
+  const resting=(['sit','lie','pray','bow','coffee'].includes(ownerPose))&&!ownerMoving;
   const back=resting?-.2:.3;
   const tx=ox-Math.cos(oh)*1.0-Math.sin(oh)*back,tz=oz+Math.sin(oh)*1.0-Math.cos(oh)*back;
   const dx=tx-D.g.position.x,dz=tz-D.g.position.z,dd=Math.hypot(dx,dz);
@@ -359,9 +380,9 @@ function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${BREEDS[d.b].k})`}
 function refreshMine(){setTag(me.tag,`${myName} · ${dogLabel(myDog)}`);$('mine').textContent=`함께 걷는 강아지: ${dogLabel(myDog)}`}
 refreshMine();
 let pose='stand',sendDirty=true;
-function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
+function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',coffee:'pCoffee'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
 function setPose(p){const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;syncPoseButtons();sendDirty=true}
-$('pWave').onclick=()=>setPose('wave');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');
+$('pWave').onclick=()=>setPose('wave');$('pCoffee').onclick=()=>setPose('coffee');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');
 
 /* ---------- input ---------- */
 const cam={yaw:0,pitch:.25,dist:11.5};
@@ -431,7 +452,7 @@ function onPeerList(change){
       peers.set(pr.peer,e);pendingHello.push(pr.peer);
     }
     e.x=Math.max(-60,Math.min(60,s.x));e.z=Math.max(-60,Math.min(60,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
-    e.pose=['stand','sit','lie','wave','pray','bow'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
+    e.pose=['stand','sit','lie','wave','pray','bow','coffee'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
   }
   for(const k of[...peers.keys()])if(!seen.has(k))removePeer(k);
   if(!userMoved&&!autoJoined&&peers.size){autoJoined=true;goToFriend(true)}
@@ -475,8 +496,13 @@ function applyMyLook(look,dog,save){
   room=r;userNS=u;db=d;assets=a;
   if(userNS){
     const m=await userNS.me();myId=m.id;if(m.name)myName=m.name;refreshMine();
+    if(db){canPickMusic=!!(await userNS.canEdit());renderMusicUI()}
   }
   if(db){
+    db.doc('memorial/music').onSnapshot(s=>{
+      const v=s.exists?(s.data()||{}):{};const ok=TRACKS.some(x=>x.id===v.track);
+      applyMusic({track:ok?v.track:null,startedAt:Number.isFinite(v.startedAt)?v.startedAt:0});
+    },()=>{});
     db.collection('flowers').orderBy('at').limit(300).onSnapshot(s=>{
       sharedFlowers=s.docs.map(x=>{const c=(x.data()||{}).c;return Number.isInteger(c)?c:0});renderFlowers(sharedFlowers);
     },()=>{});
@@ -495,6 +521,113 @@ function applyMyLook(look,dog,save){
   }
   updateWho();
 })();
+
+/* ---------- temple ambience: synthesised live, same beat for everyone ---------- */
+const TRACKS=[
+  {id:'dawn',name:'새벽 예불',desc:'목탁과 범종, 낮은 울림'},
+  {id:'wind',name:'산사의 바람',desc:'처마 끝 풍경과 바람 소리'},
+  {id:'bowl',name:'싱잉볼 명상',desc:'길게 퍼지는 그릇 소리'},
+  {id:'melody',name:'고요한 선율',desc:'느린 오음계 피리 가락'}];
+let AC=null,master=null,bus=null,noiseBuf=null,bed=[],audioOn=false,vol=.7;
+let music={track:null,startedAt:0};
+const sched=new Map();
+function h3(){let h=2166136261;for(const x of arguments){h^=x|0;h=Math.imul(h,16777619);h^=h>>>13}return(h>>>0)/4294967296}
+function initAudio(){
+  if(AC)return true;
+  const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
+  AC=new Ctx();master=AC.createGain();master.gain.value=0;
+  const comp=AC.createDynamicsCompressor();master.connect(comp);comp.connect(AC.destination);
+  const len=Math.floor(AC.sampleRate*4),ir=AC.createBuffer(2,len,AC.sampleRate);
+  for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}
+  const verb=AC.createConvolver();verb.buffer=ir;const wet=AC.createGain();wet.gain.value=.4;verb.connect(wet);wet.connect(master);
+  bus=AC.createGain();bus.connect(master);bus.connect(verb);
+  noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  return true;
+}
+function env(g,t,a,peak,decay){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+decay)}
+function partials(t,f,ratios,amps,decay,peak){ratios.forEach((r,i)=>{const o=AC.createOscillator();o.frequency.value=f*r;const g=AC.createGain();
+  env(g,t,.006,peak*amps[i],decay*Math.max(.3,1-i*.1));o.connect(g);g.connect(bus);o.start(t);o.stop(t+decay+.3)})}
+const bell=(t,f)=>partials(t,f,[.5,1,1.19,1.56,2,2.74,3.76],[.6,1,.45,.35,.3,.2,.12],14,.15);
+const bowl=(t,f)=>partials(t,f,[1,1.004,2.76,5.4],[1,.7,.3,.1],9,.11);
+const chime=(t,f)=>partials(t,f,[1,2.4,4.1],[1,.3,.12],2.8,.045);
+function moktak(t,f){
+  const o=AC.createOscillator();o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.72,t+.09);
+  const g=AC.createGain();env(g,t,.002,.32,.13);o.connect(g);g.connect(bus);o.start(t);o.stop(t+.3);
+  const n=AC.createBufferSource();n.buffer=noiseBuf;const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=f*2.3;bp.Q.value=5;
+  const g2=AC.createGain();env(g2,t,.001,.22,.04);n.connect(bp);bp.connect(g2);g2.connect(bus);n.start(t);n.stop(t+.1);
+}
+function flute(t,f,dur){
+  const o=AC.createOscillator();o.type='triangle';o.frequency.setValueAtTime(f*.985,t);o.frequency.exponentialRampToValueAtTime(f,t+.25);
+  const lfo=AC.createOscillator();lfo.frequency.value=4.6;const lg=AC.createGain();lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(f*.008,t+dur*.5);
+  lfo.connect(lg);lg.connect(o.frequency);
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=f*2.6;
+  const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.085,t+.45);g.gain.setValueAtTime(.085,t+dur*.65);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(lp);lp.connect(g);g.connect(bus);o.start(t);lfo.start(t);o.stop(t+dur+.1);lfo.stop(t+dur+.1);
+}
+const PENTA_HI=[1318.5,1480,1661.2,1975.5,2217.5],BOWLS=[174.6,196,220,261.6,293.7],FLUTE=[293.7,329.6,392,440,523.3,587.3];
+const VOICES={
+  dawn:[{p:1.5,prob:1,on:k=>k%20<14,fn:(t,k)=>moktak(t,k%20===13?520:640)},{p:30,prob:1,fn:t=>bell(t,98)},{p:11,prob:.5,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)]*.5)}],
+  wind:[{p:.9,prob:.33,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)])},{p:21,prob:.6,fn:t=>bowl(t,196)}],
+  bowl:[{p:7,prob:.9,fn:(t,k,r)=>bowl(t,BOWLS[Math.floor(r*5)])},{p:5,prob:.2,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)])}],
+  melody:[{p:3.4,prob:.78,fn:(t,k,r)=>{const i=Math.floor((Math.sin(k*.61)*.5+.5)*5.99);flute(t,FLUTE[(i+(r<.25?1:0))%6],2.6+r*1.4)}},{p:17,prob:1,fn:t=>bowl(t,146.8)}]};
+const BEDS={dawn:{drone:.05,wind:0},wind:{drone:.02,wind:.05},bowl:{drone:.035,wind:0},melody:{drone:.025,wind:.015}};
+function stopBed(){const t=AC.currentTime;bed.forEach(n=>{try{if(n.gain){n.gain.cancelScheduledValues(t);n.gain.setValueAtTime(n.gain.value,t);n.gain.linearRampToValueAtTime(0,t+1.2)}else n.stop(t+1.3)}catch(e){}});bed=[]}
+function startBed(id){
+  const B=BEDS[id];if(!B)return;const t=AC.currentTime;
+  if(B.drone){const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(B.drone,t+3);g.connect(bus);bed.push(g);
+    [55,82.4,110.2].forEach((f,i)=>{const o=AC.createOscillator();o.frequency.value=f;const og=AC.createGain();og.gain.value=i===2?.4:1;
+      const l=AC.createOscillator();l.frequency.value=.05+i*.03;const lg=AC.createGain();lg.gain.value=.35;l.connect(lg);lg.connect(og.gain);
+      o.connect(og);og.connect(g);o.start(t);l.start(t);bed.push(o,l)})}
+  if(B.wind){const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(B.wind,t+3);
+    const n=AC.createBufferSource();n.buffer=noiseBuf;n.loop=true;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=500;lp.Q.value=.7;
+    const l=AC.createOscillator();l.frequency.value=.08;const lg=AC.createGain();lg.gain.value=300;l.connect(lg);lg.connect(lp.frequency);
+    n.connect(lp);lp.connect(g);g.connect(master);n.start(t);l.start(t);bed.push(g,n,l)}
+}
+function schedule(){
+  if(!AC||!audioOn||!music.track||!VOICES[music.track])return;
+  const ti=TRACKS.findIndex(x=>x.id===music.track),pos=(Date.now()-music.startedAt)/1000,ahead=1.2;
+  VOICES[music.track].forEach((v,vi)=>{
+    for(let k=Math.max(0,Math.floor(pos/v.p));k<=Math.floor((pos+ahead)/v.p);k++){
+      const evT=k*v.p,key=vi+':'+k;if(evT<pos||sched.has(key))continue;sched.set(key,evT);
+      if(v.on&&!v.on(k))continue;if(h3(ti,vi,k)>=v.prob)continue;
+      try{v.fn(AC.currentTime+(evT-pos)+.05,k,h3(ti,vi,k,1))}catch(e){}
+    }});
+  for(const [kk,tt] of sched)if(tt<pos-10)sched.delete(kk);
+}
+setInterval(schedule,250);
+function setAudioOn(on){
+  if(on&&!initAudio()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
+  audioOn=on;if(AC){if(on)AC.resume();master.gain.setTargetAtTime(on?vol:0,AC.currentTime,.3);
+    stopBed();sched.clear();if(on&&music.track)startBed(music.track)}
+  renderMusicUI();
+}
+function applyMusic(m){
+  const changed=m.track!==music.track||m.startedAt!==music.startedAt;music=m;
+  if(changed&&AC&&audioOn){stopBed();sched.clear();if(music.track)startBed(music.track)}
+  renderMusicUI();
+}
+let canPickMusic=true;
+function renderMusicUI(){
+  const tr=TRACKS.find(x=>x.id===music.track);
+  $('nowPlaying').hidden=!tr;$('nowPlaying').textContent=tr?`♪ 함께 듣는 중 · ${tr.name}`:'';
+  $('soundBtn').hidden=!tr;$('soundBtn').textContent=audioOn?'소리 끄기':'소리 켜기';$('soundBtn').classList.toggle('on',audioOn);
+  $('musicNote').textContent=canPickMusic?'고른 곡은 지금 정원에 있는 모두에게 같은 박자로 들려요':'음악은 정원 주인이 골라요 · 볼륨은 내 마음대로';
+  const box=$('tracks');box.textContent='';
+  [...TRACKS,{id:null,name:'음악 끄기',desc:'모두에게 조용한 정원'}].forEach(x=>{
+    const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed',String(music.track===x.id));b.disabled=!canPickMusic;
+    const n=document.createElement('span');n.textContent=x.name;const d=document.createElement('small');d.textContent=x.desc;b.append(n,d);
+    b.onclick=()=>pickTrack(x.id);box.appendChild(b)});
+}
+async function pickTrack(id){
+  const m={track:id,startedAt:Date.now()};
+  if(id&&!audioOn)setAudioOn(true);
+  if(db&&canPickMusic){try{await db.doc('memorial/music').set(m)}catch(e){toast('음악을 바꾸지 못했어요. 잠시 뒤 다시 눌러 주세요');return}}
+  applyMusic(m);if(id)toast(`${TRACKS.find(x=>x.id===id).name}을 모두에게 틀었어요`);
+}
+$('soundBtn').onclick=()=>setAudioOn(!audioOn);
+$('musicBtn').onclick=()=>{const p=$('musicPanel');p.hidden=!p.hidden;$('musicBtn').setAttribute('aria-expanded',String(!p.hidden))};
+$('vol').oninput=e=>{vol=e.target.value/100;if(AC&&audioOn)master.gain.setTargetAtTime(vol,AC.currentTime,.1)};
+renderMusicUI();
 
 $('goBtn').onclick=()=>goToFriend(false);
 $('rerollBtn').onclick=()=>{let d=randDog();while(d.b===myDog.b)d=randDog();applyMyLook(randLook(),d,true);toast(`${dogLabel(myDog)}와 함께 걸어요`)};
@@ -531,7 +664,10 @@ function startPractice(mode){
 }
 $('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
 $('pauseBtn').onclick=()=>{practice.paused=!practice.paused;practiceUI()};$('finishBtn').onclick=()=>endPractice();
-$('resetBtn').onclick=()=>{if(!confirm('이 기기의 108배 횟수를 0으로 초기화할까요?'))return;endPractice(false);practice.count=0;store.set('garden.bows','0');practiceUI()};
+let resetArmed=0;
+$('resetBtn').onclick=()=>{
+  if(Date.now()-resetArmed>3000){resetArmed=Date.now();$('resetBtn').textContent='한 번 더 누르면 초기화';setTimeout(()=>{if(Date.now()-resetArmed>=3000)$('resetBtn').textContent='횟수 초기화'},3100);return}
+  resetArmed=0;$('resetBtn').textContent='횟수 초기화';endPractice(false);practice.count=0;store.set('garden.bows','0');practiceUI();toast('횟수를 0으로 되돌렸어요')};
 function updatePractice(dt){
   if(!['auto','single'].includes(practice.mode)||practice.paused)return;
   practice.elapsed+=dt;
