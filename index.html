@@ -195,7 +195,7 @@ for(let i=0;i<5;i++)oval(gold,.19+i*.17,2.67+i*.012,1.34,.085-i*.005,.1,.15-i*.0
 turned([[0,2.42],[1.15,2.42],[1.28,2.8],[1.27,3.35],[1.35,3.9],[1.55,4.48],[1.5,4.83],[1.18,5.12],[.69,5.35],[.4,5.42],[0,5.42]],robe,1,.67);
 oval(gold,0,5.49,.02,.43,.53,.4);
 // Robe neckline: overlapping collars, with chest and diagonal shoulder folds.
-oval(gold,0,4.96,.87,.64,.5,.22);
+// The robe stays continuous across the upper chest.
 sculptLine([[-1.21,5.02,.67],[-.87,4.68,.98],[-.46,4.2,1.04],[.12,3.86,1.02],[.86,3.62,.78]],.065,raisedGold);
 sculptLine([[1.21,5.02,.67],[.95,4.62,.98],[.56,4.1,1.04],[.05,3.8,1.04]],.055,raisedGold);
 sculptLine([[-.94,4.82,.93],[-.47,4.6,1.04],[0,4.54,1.09],[.53,4.7,1.01]],.026,robe);
@@ -203,7 +203,7 @@ for(let i=0;i<5;i++){
   const y=3.05+i*.2;
   sculptLine([[-1.15,y+.48,.5],[-.63,y+.1,.81],[0,y,.88],[.69,y+.22,.75],[1.13,y+.55,.47]],.024,raisedGold);
 }
-for(const side of [-1,1])oval(robe,side*1.26,4.78,.07,.4,.39,.37);
+for(const side of [-1,1])oval(robe,side*1.22,4.78,.02,.31,.32,.3);
 // Arms curve continuously from the shoulders through the elbows to the wrists.
 sculptLine([[-1.28,4.83,.04],[-1.58,4.34,.12],[-1.72,3.72,.33],[-1.79,3.26,.63]],.34,robe);
 sculptLine([[1.28,4.83,.04],[1.6,4.24,.12],[1.7,3.6,.44],[1.14,3.05,.92],[.48,2.99,1.08]],.32,robe);
