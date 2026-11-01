@@ -28,9 +28,6 @@ button,.filebtn{font-family:var(--body);font-size:13px;border:1px solid var(--li
 button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
 button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.panel{margin-top:10px;display:grid;gap:8px}
-.panel label{font-size:12px;color:var(--soft);display:grid;gap:4px}
-.panel input[type=text]{font-family:var(--body);font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-width:0}
 .filebtn input{display:none}
 .mine{font-size:12px;color:var(--soft);margin-top:8px}
 .poses{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:flex-end}
@@ -91,28 +88,12 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid
 .count-line{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:12px}.count-line span{margin-right:auto}.count-line b{font-size:22px;font-weight:400}.count-line button{font-size:11px;padding:5px 8px}
 progress{width:100%;height:4px;accent-color:#9c7d43;display:block;margin-top:9px}.practice-note{font-size:10px;color:#78796e;margin-top:7px}
 button:disabled{opacity:.5;cursor:default}
-.now{font-size:12px;color:var(--accent);margin-top:7px}
-.mhead{font-size:11.5px;color:var(--soft)}
-.tracks{display:grid;gap:5px}
-.tracks button{text-align:left;border-radius:10px;display:grid;gap:2px;padding:7px 10px}
-.tracks button small{color:var(--soft);font-size:11px}
-.tracks button[aria-pressed="true"] small{color:#e8e2d8}
-.vol{font-size:11.5px;color:var(--soft);display:grid;gap:4px}
-.vol input{width:100%;accent-color:var(--accent)}
-.music-sound{background:var(--accent);color:#fff;border-color:var(--accent)}
-.music-sound.on{background:var(--paper);color:var(--ink);border-color:var(--line)}
 .visitors{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:4;box-sizing:border-box;width:116px;max-width:30vw;padding:8px 9px;background:#faf6ee;border:1px solid var(--line);border-radius:12px;backdrop-filter:none}
 .visitors-title{font-size:12px;color:var(--ink);margin-bottom:5px}
 .visitor-names{display:grid;gap:3px;max-height:120px;overflow-y:auto;font-size:11px;line-height:1.35;color:var(--soft);overflow-wrap:anywhere}
 .poses{bottom:26px}
 @media(max-width:650px){.plaque{top:12px;left:12px;padding:10px 12px;max-width:215px}.plaque h1{font-size:20px}.plaque .row button{font-size:11px;padding:5px 8px}.plaque .sub,.mine{display:none}.practice{bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:10px 12px;width:calc(100vw - 48px);max-width:370px}.practice-title strong{font-size:16px}.poses{bottom:calc(194px + env(safe-area-inset-bottom,0px));right:12px;gap:5px}.poses button{font-size:11px;min-width:70px;padding:6px 9px}#joy{width:84px;height:84px;left:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}.practice{left:106px;right:12px;width:auto;max-width:none;transform:none}.practice .row button{font-size:11.5px;padding:6px 9px}#knob{width:34px;height:34px;margin:-17px 0 0 -17px}.toast{top:210px}.environment{font-size:10px}.eyebrow{font-size:9px}}
 .plaque{max-height:calc(100dvh - 36px);overflow-y:auto}
-.youtube-card{position:fixed;top:65px;right:16px;width:min(360px,calc(100vw - 32px));z-index:4;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px;box-sizing:border-box;box-shadow:0 6px 24px #281e2030}
-.youtube-card .row{margin:0 0 8px;align-items:center;justify-content:space-between}.youtube-card a{color:var(--accent);font-size:12px}
-.youtube-card iframe{display:block;width:100%;height:205px;border:0;border-radius:8px}
-.youtube-card p{font-size:11px;color:var(--soft);margin:7px 0 0}
-.youtube-source{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}
-.youtube-source a{color:var(--accent);font-size:12px}
 @media(max-width:380px){.practice .row{gap:4px}.practice .row button{font-size:10.5px!important;padding:5px 7px!important}}
 /* Keep the garden visible while controls are in use. */
 .plaque{box-sizing:border-box;z-index:3}
@@ -184,25 +165,11 @@ button:disabled{opacity:.5;cursor:default}
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
   <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="leaveBtn" type="button" hidden>나가기</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
-  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
-  <div class="now" id="nowPlaying" hidden></div>
+  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status" style="font-size:11px;color:var(--soft);margin-top:6px">모닥불을 불러오는 중…</div>
-  <div class="panel" id="musicPanel" hidden>
-    <div class="mhead" id="musicNote">고른 곡은 지금 정원에 있는 모두에게 같은 박자로 들려요</div>
-    <div class="tracks" id="tracks"></div>
-    <button class="music-sound" id="soundBtn" type="button" hidden>소리 켜기</button>
-    <div class="youtube-source">
-      <label for="youtubeUrl">반야심경 유튜브 링크<input id="youtubeUrl" type="text" inputmode="url" placeholder="https://youtu.be/…" autocomplete="off"></label>
-      <div class="row"><button id="youtubeLoadBtn" type="button">이 영상 듣기</button><a href="https://www.youtube.com/results?search_query=반야심경+독송" target="_blank" rel="noopener noreferrer">반야심경 찾기 ↗</a></div>
-    </div>
-    <label class="vol" id="synthVolume" for="vol">내 볼륨<input id="vol" type="range" min="0" max="100" value="70"></label>
-  </div>
   </div>
 </header>
-<aside class="youtube-card" id="youtubeCard" aria-label="반야심경 유튜브 플레이어" hidden>
-  <div class="row"><a id="youtubeOriginal" target="_blank" rel="noopener noreferrer">YouTube에서 열기 ↗</a><button id="youtubeCloseBtn" type="button">닫기 · 정지</button></div>
-  <div id="youtubeMount"></div><p>영상의 ▶를 눌러 들어보세요. 볼륨과 일시정지는 영상에서 조절합니다.</p>
-</aside>
+
 <aside class="visitors" aria-label="들어온 친구"><div class="visitors-title">들어온 친구</div><div id="visitorNames" class="visitor-names" aria-live="polite"></div></aside>
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
@@ -936,165 +903,15 @@ function applyMyLook(look,dog,save){
   sendDirty=true;
 }
 
-/* ---------- temple ambience: synthesised live, same beat for everyone ---------- */
-const DEFAULT_BANYA_VIDEO='bTizqvC5X9o';
-const validVideoId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{11}$/.test(id);
-const TRACKS=[
-  {id:'banya',name:'반야심경 · YouTube',desc:'영인스님 독송 · 영상에서 재생을 눌러 주세요'},
-  {id:'dawn',name:'새벽 예불',desc:'목탁과 범종, 낮은 울림'},
-  {id:'wind',name:'산사의 바람',desc:'처마 끝 풍경과 바람 소리'},
-  {id:'bowl',name:'싱잉볼 명상',desc:'길게 퍼지는 그릇 소리'},
-  {id:'melody',name:'고요한 선율',desc:'느린 오음계 피리 가락'}];
-let AC=null,master=null,bus=null,noiseBuf=null,bed=[],audioOn=false,vol=.7;
-let music={track:null,startedAt:0};
-const sched=new Map();
-function h3(){let h=2166136261;for(const x of arguments){h^=x|0;h=Math.imul(h,16777619);h^=h>>>13}return(h>>>0)/4294967296}
-function initAudio(){
-  if(AC)return true;
-  const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
-  AC=new Ctx();master=AC.createGain();master.gain.value=0;
-  const comp=AC.createDynamicsCompressor();master.connect(comp);comp.connect(AC.destination);
-  const len=Math.floor(AC.sampleRate*4),ir=AC.createBuffer(2,len,AC.sampleRate);
-  for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}
-  const verb=AC.createConvolver();verb.buffer=ir;const wet=AC.createGain();wet.gain.value=.4;verb.connect(wet);wet.connect(master);
-  bus=AC.createGain();bus.connect(master);bus.connect(verb);
-  noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
-  return true;
-}
-function env(g,t,a,peak,decay){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+decay)}
-function partials(t,f,ratios,amps,decay,peak){ratios.forEach((r,i)=>{const o=AC.createOscillator();o.frequency.value=f*r;const g=AC.createGain();
-  env(g,t,.006,peak*amps[i],decay*Math.max(.3,1-i*.1));o.connect(g);g.connect(bus);o.start(t);o.stop(t+decay+.3)})}
-const bell=(t,f)=>partials(t,f,[.5,1,1.19,1.56,2,2.74,3.76],[.6,1,.45,.35,.3,.2,.12],14,.15);
-const bowl=(t,f)=>partials(t,f,[1,1.004,2.76,5.4],[1,.7,.3,.1],9,.11);
-const chime=(t,f)=>partials(t,f,[1,2.4,4.1],[1,.3,.12],2.8,.045);
-function moktak(t,f){
-  const o=AC.createOscillator();o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.72,t+.09);
-  const g=AC.createGain();env(g,t,.002,.32,.13);o.connect(g);g.connect(bus);o.start(t);o.stop(t+.3);
-  const n=AC.createBufferSource();n.buffer=noiseBuf;const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=f*2.3;bp.Q.value=5;
-  const g2=AC.createGain();env(g2,t,.001,.22,.04);n.connect(bp);bp.connect(g2);g2.connect(bus);n.start(t);n.stop(t+.1);
-}
-function flute(t,f,dur){
-  const o=AC.createOscillator();o.type='triangle';o.frequency.setValueAtTime(f*.985,t);o.frequency.exponentialRampToValueAtTime(f,t+.25);
-  const lfo=AC.createOscillator();lfo.frequency.value=4.6;const lg=AC.createGain();lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(f*.008,t+dur*.5);
-  lfo.connect(lg);lg.connect(o.frequency);
-  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=f*2.6;
-  const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.085,t+.45);g.gain.setValueAtTime(.085,t+dur*.65);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
-  o.connect(lp);lp.connect(g);g.connect(bus);o.start(t);lfo.start(t);o.stop(t+dur+.1);lfo.stop(t+dur+.1);
-}
-const PENTA_HI=[1318.5,1480,1661.2,1975.5,2217.5],BOWLS=[174.6,196,220,261.6,293.7],FLUTE=[293.7,329.6,392,440,523.3,587.3];
-const VOICES={
-  dawn:[{p:1.5,prob:1,on:k=>k%20<14,fn:(t,k)=>moktak(t,k%20===13?520:640)},{p:30,prob:1,fn:t=>bell(t,98)},{p:11,prob:.5,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)]*.5)}],
-  wind:[{p:.9,prob:.33,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)])},{p:21,prob:.6,fn:t=>bowl(t,196)}],
-  bowl:[{p:7,prob:.9,fn:(t,k,r)=>bowl(t,BOWLS[Math.floor(r*5)])},{p:5,prob:.2,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)])}],
-  melody:[{p:3.4,prob:.78,fn:(t,k,r)=>{const i=Math.floor((Math.sin(k*.61)*.5+.5)*5.99);flute(t,FLUTE[(i+(r<.25?1:0))%6],2.6+r*1.4)}},{p:17,prob:1,fn:t=>bowl(t,146.8)}]};
-const BEDS={dawn:{drone:.05,wind:0},wind:{drone:.02,wind:.05},bowl:{drone:.035,wind:0},melody:{drone:.025,wind:.015}};
-function stopBed(){const t=AC.currentTime;bed.forEach(n=>{try{if(n.gain){n.gain.cancelScheduledValues(t);n.gain.setValueAtTime(n.gain.value,t);n.gain.linearRampToValueAtTime(0,t+1.2)}else n.stop(t+1.3)}catch(e){}});bed=[]}
-function startBed(id){
-  const B=BEDS[id];if(!B)return;const t=AC.currentTime;
-  if(B.drone){const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(B.drone,t+3);g.connect(bus);bed.push(g);
-    [55,82.4,110.2].forEach((f,i)=>{const o=AC.createOscillator();o.frequency.value=f;const og=AC.createGain();og.gain.value=i===2?.4:1;
-      const l=AC.createOscillator();l.frequency.value=.05+i*.03;const lg=AC.createGain();lg.gain.value=.35;l.connect(lg);lg.connect(og.gain);
-      o.connect(og);og.connect(g);o.start(t);l.start(t);bed.push(o,l)})}
-  if(B.wind){const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(B.wind,t+3);
-    const n=AC.createBufferSource();n.buffer=noiseBuf;n.loop=true;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=500;lp.Q.value=.7;
-    const l=AC.createOscillator();l.frequency.value=.08;const lg=AC.createGain();lg.gain.value=300;l.connect(lg);lg.connect(lp.frequency);
-    n.connect(lp);lp.connect(g);g.connect(master);n.start(t);l.start(t);bed.push(g,n,l)}
-}
-function schedule(){
-  if(!AC||!audioOn||!music.track||!VOICES[music.track])return;
-  const ti=TRACKS.findIndex(x=>x.id===music.track),pos=(serverNow()-music.startedAt)/1000,ahead=1.2;
-  VOICES[music.track].forEach((v,vi)=>{
-    for(let k=Math.max(0,Math.floor(pos/v.p));k<=Math.floor((pos+ahead)/v.p);k++){
-      const evT=k*v.p,key=vi+':'+k;if(evT<pos||sched.has(key))continue;sched.set(key,evT);
-      if(v.on&&!v.on(k))continue;if(h3(ti,vi,k)>=v.prob)continue;
-      try{v.fn(AC.currentTime+(evT-pos)+.05,k,h3(ti,vi,k,1))}catch(e){}
-    }});
-  for(const [kk,tt] of sched)if(tt<pos-10)sched.delete(kk);
-}
-setInterval(schedule,250);
-function setAudioOn(on){
-  if(on&&!initAudio()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
-  audioOn=on;if(AC){if(on)AC.resume();master.gain.setTargetAtTime(on&&music.track!=='banya'?vol:0,AC.currentTime,.3);
-    stopBed();sched.clear();if(on&&music.track)startBed(music.track)}
-  renderMusicUI();
-}
-function applyMusic(m){
-  const changed=m.track!==music.track||m.startedAt!==music.startedAt||m.videoId!==music.videoId;music=m;
-  if(changed){if(m.track==='banya')showYouTube();else closeYouTube()}
-  if(AC)master.gain.setTargetAtTime(audioOn&&music.track!=='banya'?vol:0,AC.currentTime,.2);
-  if(changed&&AC&&audioOn){stopBed();sched.clear();if(music.track)startBed(music.track)}
-  renderMusicUI();
-}
-let canPickMusic=true;
-function renderMusicUI(){
-  const tr=TRACKS.find(x=>x.id===music.track);
-  $('nowPlaying').hidden=!tr;$('nowPlaying').textContent=tr?`♪ 함께 듣는 중 · ${tr.name}`:'';
-  $('soundBtn').hidden=!tr;$('soundBtn').textContent=music.track==='banya'?'반야심경 열기':audioOn?'소리 끄기':'소리 켜기';$('soundBtn').classList.toggle('on',music.track!=='banya'&&audioOn);
-  $('synthVolume').hidden=music.track==='banya';$('youtubeLoadBtn').disabled=!canPickMusic;$('youtubeUrl').disabled=!canPickMusic;
-  $('musicNote').textContent=music.track==='banya'?'유튜브 영상의 재생 버튼을 눌러 주세요 · 재생 위치는 각자 조절해요':db?(canPickMusic?'고른 곡을 함께 들어요 · 각자 소리 켜기를 눌러 주세요':'음악은 정원 주인이 골라요 · 볼륨은 내 마음대로'):'정원에서 듣고 싶은 음악을 골라보세요';
-  const box=$('tracks');box.textContent='';
-  [...TRACKS,{id:null,name:'음악 끄기',desc:'모두에게 조용한 정원'}].forEach(x=>{
-    const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed',String(music.track===x.id));b.disabled=!canPickMusic;
-    const n=document.createElement('span');n.textContent=x.name;const d=document.createElement('small');d.textContent=x.desc;b.append(n,d);
-    b.onclick=()=>pickTrack(x.id);box.appendChild(b)});
-}
-async function pickTrack(id,videoId){
-  if(!canPickMusic||id&&!TRACKS.some(x=>x.id===id))return;
-  const m={track:id,startedAt:Date.now()};
-  if(id==='banya')m.videoId=validVideoId(videoId)?videoId:validVideoId(store.get('garden.banyaVideo'))?store.get('garden.banyaVideo'):DEFAULT_BANYA_VIDEO;
-  if(id&&id!=='banya'&&!audioOn)setAudioOn(true);
-  if(room&&room.kind==='ws'){if(!room.connected()){toast('정원에 다시 연결되면 골라 주세요');return}room.send({t:'music',track:id,videoId:m.videoId||null});return}
-  if(db&&canPickMusic){try{await db.doc('memorial/music').set(m)}catch(e){toast('음악을 바꾸지 못했어요. 잠시 뒤 다시 눌러 주세요');return}}
-  applyMusic(m);if(id)toast(id==='banya'?'영상의 재생 버튼을 눌러 반야심경을 들어보세요':`${TRACKS.find(x=>x.id===id).name}을 골랐어요`);
-}
-function closeYouTube(){ $('youtubeMount').textContent='';$('youtubeCard').hidden=true }
-function showYouTube(){
-  const id=validVideoId(music.videoId)?music.videoId:DEFAULT_BANYA_VIDEO;
-  const frame=document.createElement('iframe');frame.title='반야심경 · YouTube';
-  frame.src='https://www.youtube.com/embed/'+id+'?playsinline=1&loop=1&playlist='+id+'&rel=0';
-  frame.allow='encrypted-media; picture-in-picture; fullscreen';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';
-  $('youtubeMount').textContent='';$('youtubeMount').appendChild(frame);
-  $('youtubeOriginal').href='https://www.youtube.com/watch?v='+id;
-  $('youtubeUrl').value='https://youtu.be/'+id;store.set('garden.banyaVideo',id);$('youtubeCard').hidden=false;
-}
-function youtubeIdFromUrl(value){
-  try{
-    const u=new URL(value.trim()),host=u.hostname.toLowerCase().replace(/^www\./,'');
-    if(u.protocol!=='https:'&&u.protocol!=='http:')return null;
-    let id=null;
-    if(host==='youtu.be')id=u.pathname.split('/')[1];
-    else if(['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host))
-      id=u.pathname==='/watch'?u.searchParams.get('v'):['embed','shorts','live'].includes(u.pathname.split('/')[1])?u.pathname.split('/')[2]:null;
-    return validVideoId(id)?id:null;
-  }catch(e){return null}
-}
-$('youtubeUrl').value='https://youtu.be/'+(validVideoId(store.get('garden.banyaVideo'))?store.get('garden.banyaVideo'):DEFAULT_BANYA_VIDEO);
-$('youtubeLoadBtn').onclick=()=>{
-  const id=youtubeIdFromUrl($('youtubeUrl').value);
-  if(!id){toast('유튜브 영상의 공유 링크를 붙여 넣어 주세요');return}
-  pickTrack('banya',id);
-};
-$('youtubeCloseBtn').onclick=closeYouTube;
-$('soundBtn').onclick=()=>music.track==='banya'?showYouTube():setAudioOn(!audioOn);
-function setMusicExpanded(open){
-  if(open)closeOtherMenus('music');
-  $('musicPanel').hidden=!open;$('musicBtn').setAttribute('aria-expanded',String(open));syncMenuSections();
-}
-$('musicBtn').onclick=()=>setMusicExpanded($('musicPanel').hidden);
-$('vol').oninput=e=>{vol=e.target.value/100;if(AC&&audioOn&&music.track!=='banya')master.gain.setTargetAtTime(vol,AC.currentTime,.1)};
-renderMusicUI();
-
-
 /* ---------- folding menus: closed by default so the garden stays visible on phones ---------- */
-/* All expandable controls share one open menu; music belongs to the garden panel. */
+/* All expandable controls share one open menu. */
 function closeOtherMenus(keep){
   if(keep!=='poses')closePoseMenu();
   if(keep!=='phrases')toggleQuickPhrases(false);
   if(keep!=='history')toggleChatHistory(false,false);
   if(keep!=='chat')toggleChat(false,false);
   if(keep!=='order')toggleOrderMenu(false);
-  if(keep!=='music')setMusicExpanded(false);
-  if(keep!=='garden'&&keep!=='music')setGardenExpanded(false);
+  if(keep!=='garden')setGardenExpanded(false);
 }
 function setPoseMenu(open){
   if(open)closeOtherMenus('poses');
@@ -1119,7 +936,6 @@ function setGardenExpanded(open){
   $('gardenPanel').classList.toggle('collapsed',!open);
   $('gardenToggle').setAttribute('aria-expanded',String(open));
   $('gardenToggle').textContent=open?'접기 ▴':'펼치기 ▾';
-  if(!open)setMusicExpanded(false);
   store.set('garden.ui.panel',open?'1':'0');syncMenuSections();
 }
 const initialPoseMenu=store.get('garden.ui.poses')==='1',initialGardenMenu=store.get('garden.ui.panel')==='1';
@@ -1981,7 +1797,7 @@ function leaveGarden(){
   for(const key of [...peers.keys()])removePeer(key);
   disposeBubble('me');me.bubble=null;me.tag.visible=true;
   pendingHello=[];autoJoined=false;userMoved=false;
-  endPractice(false);setAudioOn(false);closeYouTube();closePoseMenu();
+  endPractice(false);closePoseMenu();
   toggleChat(false);toggleChatHistory(false);toggleQuickPhrases(false);$('shareDialog').hidden=true;
   Object.keys(lastSent).forEach(key=>delete lastSent[key]);
   $('chatLog').textContent='';historyKeys.clear();sharedFlowers=null;renderFlowers(localFlowers);
@@ -2006,7 +1822,7 @@ function startGardenConnection(){
   const base=(location.protocol==='https:'?'wss://':'ws://')+location.host;
   room=connectRoomServer(base,GARDEN_SPACE);
   room.onPeers(onPeerList);room.onConnection(()=>{updateWho();renderRps();updateRpsInvite()});
-  canPickMusic=true;renderMusicUI();updateWho();
+  updateWho();
 }
 function connectRoomServer(base,code){
   const peersById=new Map(),connL=[],peerL=[];
@@ -2036,7 +1852,6 @@ function connectRoomServer(base,code){
   function applyShared(sh){
     if(!sh)return;
     if(Array.isArray(sh.flowers)){sharedFlowers=sh.flowers.filter(Number.isInteger).slice(-300);renderFlowers(sharedFlowers)}
-    if(sh.music){const ok=TRACKS.some(x=>x.id===sh.music.track);applyMusic({track:ok?sh.music.track:null,startedAt:Number.isFinite(sh.music.startedAt)?sh.music.startedAt:0,videoId:validVideoId(sh.music.videoId)?sh.music.videoId:DEFAULT_BANYA_VIDEO})}
     if(['auto','clear','rain','snow'].includes(sh.weather)){weatherMode=sh.weather;environmentTick=99}
     setPochaOrders(sh.pocha);
     $('chatLog').textContent='';historyKeys.clear();
@@ -2101,8 +1916,6 @@ function connectRoomServer(base,code){
           showChat(m.id===you?'me':m.id,stripInvisible(m.name).slice(0,12)||'친구',stripInvisible(m.text).slice(0,200),m.at,m.id);break
         }
         case 'flower':sharedFlowers=(sharedFlowers||[]).concat(Number.isInteger(m.c)?m.c:0).slice(-300);renderFlowers(sharedFlowers);break;
-        case 'music':{const mu=m.music||{},ok=TRACKS.some(x=>x.id===mu.track);applyMusic({track:ok?mu.track:null,startedAt:mu.startedAt||serverNow(),videoId:validVideoId(mu.videoId)?mu.videoId:DEFAULT_BANYA_VIDEO});
-          if(mu.by!==you)toast(ok?(stripInvisible(m.name).slice(0,12)||'친구')+'님이 '+TRACKS.find(x=>x.id===mu.track).name+'을 틀었어요':'음악을 껐어요');break}
         case 'order':onFriendOrder(Object.assign({},m.order,{mine:m.order&&m.order.by===you}),stripInvisible(m.name).slice(0,12)||'친구');break;
         case 'pocha':setPochaOrders(m.pocha);break;
         case 'cheers':onFriendCheers(m.id,stripInvisible(m.name).slice(0,12)||'친구');break;

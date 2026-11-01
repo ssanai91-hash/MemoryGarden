@@ -1,6 +1,6 @@
 // 기억의 정원 방 서버.
 // 방 하나 = Durable Object 하나. 접속자 위치·동작은 중계만 하고,
-// 꽃·음악·날씨·최근 대화는 방 저장소에 남겨 늦게 온 사람도 같은 상태를 본다.
+// 꽃·날씨·최근 대화는 방 저장소에 남겨 늦게 온 사람도 같은 상태를 본다.
 import { DurableObject } from 'cloudflare:workers';
 
 const MAX_PEERS = 16;
@@ -10,7 +10,6 @@ const CENTERPIECE='campfire';
 const PRAYER_SPOTS=CENTERPIECE==='campfire'
   ?Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;return{x:Math.round(Math.sin(a)*370)/100,z:Math.round(Math.cos(a)*370)/100}})
   :Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
-const TRACKS = ['dawn', 'wind', 'bowl', 'melody', 'banya'];
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
 
 const RPS_DISTANCE = 4, RPS_BREAK_DISTANCE = 6;
@@ -47,7 +46,6 @@ function cleanState(s) {
   if (x === null || z === null) return null;
   return { x, z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0 };
 }
-const validVideo = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{11}$/.test(v);
 
 export class GardenRoom extends DurableObject {
   constructor(ctx, env) {
@@ -56,9 +54,14 @@ export class GardenRoom extends DurableObject {
     this.rps = [];
     ctx.blockConcurrencyWhile(async () => {
       this.shared = (await ctx.storage.get('shared')) || {
-        flowers: [], music: { track: null, startedAt: 0, videoId: null }, weather: 'auto', chat: [],
+        flowers: [], weather: 'auto', chat: [],
       };
       if (!Array.isArray(this.shared.pocha)) this.shared.pocha = [];
+      // One-time cleanup of the removed soundtrack; preserve all other room data.
+      if (Object.prototype.hasOwnProperty.call(this.shared, 'music')) {
+        delete this.shared.music;
+        await ctx.storage.put('shared', this.shared);
+      }
       this.rps = (await ctx.storage.get('rpsGames')) || [];
       // Preserve a pending alarm when waking from hibernation.
       if (this.rps.length && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
@@ -340,15 +343,6 @@ export class GardenRoom extends DurableObject {
         this.shared.flowers = this.shared.flowers.concat(c).slice(-300);
         await this.save();
         this.broadcast({ t: 'flower', c, by: a.id });
-        return;
-      }
-      case 'music': {
-        if (!this.allow(a, 'm', 1)) return;
-        if (m.track !== null && !TRACKS.includes(m.track)) return;
-        const track = m.track;
-        this.shared.music = { track, startedAt: Date.now(), videoId: track === 'banya' && validVideo(m.videoId) ? m.videoId : null, by: a.id };
-        await this.save();
-        this.broadcast({ t: 'music', music: this.shared.music, name: a.name });
         return;
       }
       case 'order': {
