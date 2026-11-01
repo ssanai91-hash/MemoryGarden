@@ -4,12 +4,15 @@
 import { DurableObject } from 'cloudflare:workers';
 
 const MAX_PEERS = 16;
+const VISIT_AWAY_MS=5*60*1000,VISIT_MEMORY_MS=24*60*60*1000;
 // index.html의 PRAYER_SPOTS와 동일하게 유지한다.
 // index.html의 CENTERPIECE와 같은 값으로 맞춘다.
 const CENTERPIECE='campfire';
 const PRAYER_SPOTS=CENTERPIECE==='campfire'
   ?Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;return{x:Math.round(Math.sin(a)*370)/100,z:Math.round(Math.cos(a)*370)/100}})
   :Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
+const TRACKS=['dawn','wind','bowl','melody','banya'];
+const validVideo=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{11}$/.test(v);
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
 
 const RPS_DISTANCE = 4, RPS_BREAK_DISTANCE = 6;
@@ -18,7 +21,7 @@ const RPS_CHOICES = ['scissors', 'rock', 'paper'];
 const RPS_BEATS = { scissors: 'paper', rock: 'scissors', paper: 'rock' };
 const activeRps = g => g.status === 'invited' || g.status === 'playing';
 
-const POSES = ['stand', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
+const POSES = ['stand', 'standing_pray', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
 const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'soju', 'beer', 'makgeolli', 'cider'];
 
 const POCHA_CENTER={x:-6.3,z:-23.4};
@@ -73,20 +76,17 @@ export class GardenRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.rate = new Map();
-    this.rps = [];
+    this.rps = [];this.visits={};
     ctx.blockConcurrencyWhile(async () => {
       this.shared = (await ctx.storage.get('shared')) || {
-        flowers: [], weather: 'auto', chat: [],
+        flowers: [], music:{track:null,startedAt:0,videoId:null}, weather: 'auto', chat: [],
       };
       if (!Array.isArray(this.shared.pocha)) this.shared.pocha = [];
-      // One-time cleanup of the removed soundtrack; preserve all other room data.
-      if (Object.prototype.hasOwnProperty.call(this.shared, 'music')) {
-        delete this.shared.music;
-        await ctx.storage.put('shared', this.shared);
-      }
+      if(!this.shared.music){this.shared.music={track:null,startedAt:0,videoId:null};await ctx.storage.put('shared',this.shared)}
       this.rps = (await ctx.storage.get('rpsGames')) || [];
+      this.visits=(await ctx.storage.get('visits'))||{};
       // Preserve a pending alarm when waking from hibernation.
-      if (this.rps.length && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
+      if ((this.rps.length||Object.keys(this.visits).length) && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
     });
   }
 
@@ -124,8 +124,36 @@ export class GardenRoom extends DurableObject {
     if (spot) a.s = { ...a.s, x: spot.x, z: Math.round(spot.z * 100) / 100, h: Math.atan2(-spot.x, -spot.z) };
   }
   peerInfo(a) {
-    return { id: a.id, name: a.name, look: a.look, dog: a.dog, prayerSlot: a.prayerSlot, lastChat: a.lastChat || null, s: a.s };
+    return { id: a.id, name: a.name, look: a.look, dog: a.dog, prayerSlot: a.prayerSlot, lastChat: a.lastChat || null, away:!!a.away, s: a.s };
   }
+
+  visiblePeers(exceptId){
+    const live=this.readyPeers(),ids=new Set(live.map(p=>p.a.id));
+    const peers=live.filter(p=>p.a.id!==exceptId).map(p=>this.peerInfo(p.a));
+    const away=Object.values(this.visits).filter(v=>v.peer&&!v.revoked&&!ids.has(v.peer.id)&&v.awayUntil>Date.now()&&v.peer.id!==exceptId);
+    away.sort((a,b)=>b.lastSeen-a.lastSeen);
+    return peers.concat(away.map(v=>({...v.peer,away:true}))).slice(0,MAX_PEERS-1);
+  }
+  async saveVisits(){
+    const live=new Set(this.readyPeers().map(p=>p.a.id));
+    const keys=Object.keys(this.visits).sort((a,b)=>this.visits[a].lastSeen-this.visits[b].lastSeen);
+    for(const id of keys){if(Object.keys(this.visits).length<=64)break;if(!live.has(id))delete this.visits[id]}
+    await this.ctx.storage.put('visits',this.visits);await this.armRpsAlarm();
+  }
+  async rememberVisit(a,awayUntil=null){
+    this.visits[a.id]={peer:this.peerInfo(a),lastSeen:Date.now(),awayUntil,expiresAt:Date.now()+VISIT_MEMORY_MS};
+    await this.saveVisits();
+  }
+  async advanceVisits(now=Date.now()){
+    let changed=false;const leaves=[],live=new Set(this.readyPeers().map(p=>p.a.id));
+    for(const [id,visit] of Object.entries(this.visits)){
+      if(visit.awayUntil&&visit.awayUntil<=now){visit.awayUntil=null;changed=true;if(!live.has(id))leaves.push(id)}
+      if(visit.expiresAt<=now){changed=true;if(live.has(id))visit.expiresAt=now+VISIT_MEMORY_MS;else delete this.visits[id]}
+    }
+    if(changed)await this.saveVisits();
+    for(const id of leaves)this.broadcast({t:'leave',id});
+  }
+
   broadcast(msg, except) {
     const text = JSON.stringify(msg);
     for (const { ws } of this.readyPeers()) {
@@ -172,7 +200,9 @@ export class GardenRoom extends DurableObject {
     }
   }
   async armRpsAlarm() {
-    const next = this.rps.length ? Math.min(...this.rps.map(g => g.expiresAt)) : null;
+    const deadlines=this.rps.map(g=>g.expiresAt);
+    for(const visit of Object.values(this.visits)){if(visit.awayUntil)deadlines.push(visit.awayUntil);deadlines.push(visit.expiresAt)}
+    const next=deadlines.length?Math.min(...deadlines):null;
     if (next !== null) await this.ctx.storage.setAlarm(Math.max(Date.now() + 1, next));
     else await this.ctx.storage.deleteAlarm();
   }
@@ -204,7 +234,7 @@ export class GardenRoom extends DurableObject {
     for (const game of changed) this.sendRps(game);
   }
   async alarm() {
-    await this.advanceRps();
+    await this.advanceRps();await this.advanceVisits();
     await this.armRpsAlarm();
   }
   async cancelRpsFor(id, reason) {
@@ -237,7 +267,7 @@ export class GardenRoom extends DurableObject {
       if (!this.allow(a, 'rpsi', 1)) { error('slow'); return; }
       if (typeof m.peer !== 'string' || m.peer === a.id) { error('peer'); return; }
       const other = this.readyPeers().find(p => p.a.id === m.peer);
-      if (!other) { error('offline'); return; }
+      if (!other||other.a.away) { error('offline'); return; }
       if (this.rps.some(g => activeRps(g) && (g.players.includes(a.id) || g.players.includes(other.a.id)))) { error('busy'); return; }
       if (Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > RPS_DISTANCE) { error('far'); return; }
       // Keep at most one completed match per player; a new invitation always takes priority.
@@ -288,13 +318,18 @@ export class GardenRoom extends DurableObject {
         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.resumeToken));
         a.id = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('').slice(0, 20);
       }
+      await this.advanceVisits();
+      const previous=this.visits[a.id];
+      if(previous&&previous.revoked){ws.send(JSON.stringify({t:'visit_ended'}));ws.close(4003,'visit ended');return}
       const duplicates = this.readyPeers().filter(p => p.a.id === a.id);
+      const resumed=!!previous||duplicates.length>0;
       if (this.readyPeers().length - duplicates.length >= MAX_PEERS) {
         ws.send(JSON.stringify({ t: 'full', max: MAX_PEERS }));
         ws.close(4001, 'room full');
         return;
       }
       if (duplicates.length) a.lastChat = duplicates[0].a.lastChat || null;
+      else if(previous&&previous.peer)a.lastChat=previous.peer.lastChat||null;
       for (const prior of duplicates) {
         prior.a.ready = false;
         prior.ws.serializeAttachment(prior.a);
@@ -306,21 +341,28 @@ export class GardenRoom extends DurableObject {
       a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0 };
       this.assignPrayerSlot(a);
       this.alignPrayerState(a);
-      a.ready = true;
+      a.ready = true;a.away=!!m.away;
       a.handshaking = false;
       ws.serializeAttachment(a);
       await this.advanceRps();
-      const peers = this.readyPeers().filter((p) => p.a.id !== a.id).map((p) => this.peerInfo(p.a));
-      ws.send(JSON.stringify({ t: 'welcome', you: a.id, prayerSlot: a.prayerSlot, now: Date.now(), max: MAX_PEERS, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
-      this.broadcast({ t: 'join', peer: this.peerInfo(a) }, ws);
+      await this.rememberVisit(a);
+      const peers = this.visiblePeers(a.id);
+      ws.send(JSON.stringify({ t: 'welcome', you: a.id, prayerSlot: a.prayerSlot, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }
     if (!a.ready) return;
     if (['rps_invite', 'rps_reply', 'rps_cancel', 'rps_choose', 'rps_sync'].includes(m.t)) return this.handleRps(ws, a, m);
 
     switch (m.t) {
+      case 'background':case 'foreground':{
+        if(!this.allow(a,'visibility',4))return;
+        const away=m.t==='background';if(a.away===away)return;
+        a.away=away;ws.serializeAttachment(a);await this.rememberVisit(a);
+        this.broadcast({t:away?'away':'resume',peer:this.peerInfo(a)},ws);return;
+      }
       case 'leave': {
-        await this.webSocketClose(ws);
+        await this.departVisit(ws,true);
         return;
       }
       case 'state': {
@@ -367,6 +409,15 @@ export class GardenRoom extends DurableObject {
         this.broadcast({ t: 'flower', c, by: a.id });
         return;
       }
+      case 'music': {
+        if (!this.allow(a, 'm', 1)) return;
+        if (m.track !== null && !TRACKS.includes(m.track)) return;
+        const track = m.track;
+        this.shared.music = { track, startedAt: Date.now(), videoId: track === 'banya' && validVideo(m.videoId) ? m.videoId : null, by: a.id };
+        await this.save();
+        this.broadcast({ t: 'music', music: this.shared.music, name: a.name });
+        return;
+      }
       case 'order': {
         const seat=pochaSeatFor(a.s);
         const reject=code=>ws.send(JSON.stringify({t:'pocha_error',code}));
@@ -394,6 +445,14 @@ export class GardenRoom extends DurableObject {
         this.broadcast({ t: 'cheers', id: a.id, name: a.name }, ws);
         return;
       }
+      case 'fireplay':{
+        if(!this.allow(a,'fireplay',1)||!['aurora','fireworks'].includes(m.kind)){ws.send(JSON.stringify({t:'fireplay_error',code:'slow'}));return;}
+        if(m.kind==='aurora'&&Math.hypot(a.s.x,a.s.z)>8){ws.send(JSON.stringify({t:'fireplay_error',code:'far'}));return}
+        const effect=this.shared.fireplay||{auroraUntil:0,fireworks:null},now=Date.now();
+        if(m.kind==='aurora')effect.auroraUntil=now+10000;
+        else effect.fireworks={startedAt:now,seed:crypto.getRandomValues(new Uint32Array(1))[0]};
+        this.shared.fireplay=effect;await this.save();this.broadcast({t:'fireplay',effect,name:a.name});return;
+      }
       case 'stoke': {
         // 장작 넣기: 상태로 남기지 않고 지금 있는 사람들에게만 불꽃 연출을 알린다.
         if (!this.allow(a, 'k', 1)) return;
@@ -415,21 +474,25 @@ export class GardenRoom extends DurableObject {
     }
   }
 
-  async webSocketClose(ws) {
-    const a = ws.deserializeAttachment();
-    if (a && a.ready) {
-      a.ready = false;
-      ws.serializeAttachment(a);
-      if (!this.readyPeers().some(p => p.a.id === a.id)) {
-        this.broadcast({ t: 'leave', id: a.id }, ws);
-        await this.cancelRpsFor(a.id, 'disconnected');
+  async departVisit(ws,explicit){
+    const a=ws.deserializeAttachment();
+    if(a&&a.ready){
+      a.ready=false;ws.serializeAttachment(a);
+      if(!this.readyPeers().some(p=>p.a.id===a.id)){
+        if(explicit){
+          this.visits[a.id]={revoked:true,lastSeen:Date.now(),expiresAt:Date.now()+VISIT_MEMORY_MS};
+          await this.saveVisits();this.broadcast({t:'leave',id:a.id});
+        }else{
+          a.away=true;await this.rememberVisit(a,Date.now()+VISIT_AWAY_MS);
+          this.broadcast({t:'away',peer:this.peerInfo(a)});
+        }
+        await this.cancelRpsFor(a.id,'disconnected');
       }
     }
-    if (a && !this.readyPeers().some(p => p.a.id === a.id)) {
-      for (const key of this.rate.keys()) if (key.startsWith(a.id + ':')) this.rate.delete(key);
-    }
-    try { ws.close(1000, 'bye'); } catch (e) { /* already closed */ }
+    if(a&&!this.readyPeers().some(p=>p.a.id===a.id))for(const key of this.rate.keys())if(key.startsWith(a.id+':'))this.rate.delete(key);
+    try{ws.close(1000,explicit?'left garden':'connection paused')}catch(e){}
   }
+  async webSocketClose(ws){await this.departVisit(ws,false)}
   async webSocketError(ws) {
     await this.webSocketClose(ws);
   }
@@ -460,4 +523,3 @@ export default {
     return env.ROOMS.get(env.ROOMS.idFromName(space)).fetch(req);
   },
 };
-
