@@ -69,7 +69,8 @@ function cleanDog(d) {
     return { kind: 'cat', b: d.b, coat: d.coat, n: clean(d.n, 8) };
   }
   if ((d.kind !== undefined && d.kind !== 'dog') || d.b > 9) return null;
-  return { b: d.b, n: clean(d.n, 8) };
+  if (d.coat !== undefined && (!Number.isInteger(d.coat) || d.coat < 0 || d.coat >= 10)) return null;
+  return { b: d.b, n: clean(d.n, 8), ...(d.coat === undefined ? {} : { coat: d.coat }) };
 }
 function cleanState(s) {
   if (!s || typeof s !== 'object') return null;
