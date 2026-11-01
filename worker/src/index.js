@@ -59,20 +59,30 @@ export class GardenRoom extends DurableObject {
   readyPeers() {
     return this.ctx.getWebSockets().map((ws) => ({ ws, a: ws.deserializeAttachment() })).filter((p) => p.ws.readyState === 1 && p.a && p.a.ready);
   }
-  assignPrayerSlot(a) {
-    const used = new Set(this.readyPeers().filter(p => p.a.id !== a.id).map(p => p.a.prayerSlot).filter(Number.isInteger));
-    if (!Number.isInteger(a.prayerSlot) || !PRAYER_SPOTS[a.prayerSlot] || used.has(a.prayerSlot)) {
+  assignPrayerSlot(a, preferred = null) {
+    // 실제로 기도·절하는 동안만 자리를 사용한다. 서 있거나 떠나면 다시 빈자리다.
+    const used = new Set(this.readyPeers()
+      .filter(p => p.a.id !== a.id && ['pray', 'bow'].includes(p.a.s?.p))
+      .map(p => p.a.prayerSlot).filter(Number.isInteger));
+    if (Number.isInteger(preferred) && PRAYER_SPOTS[preferred] && !used.has(preferred)) {
+      a.prayerSlot = preferred;
+    } else if (!Number.isInteger(a.prayerSlot) || !PRAYER_SPOTS[a.prayerSlot] || used.has(a.prayerSlot)) {
       a.prayerSlot = PRAYER_SPOTS.findIndex((_, i) => !used.has(i));
     }
   }
   alignPrayerState(a) {
     if (!['pray', 'bow'].includes(a.s.p)) return;
-    this.assignPrayerSlot(a);
+    let preferred = 0, distance = Infinity;
+    PRAYER_SPOTS.forEach((spot, slot) => {
+      const d = Math.hypot(spot.x - a.s.x, spot.z - a.s.z);
+      if (d < distance) { preferred = slot; distance = d; }
+    });
+    this.assignPrayerSlot(a, preferred);
     const spot = PRAYER_SPOTS[a.prayerSlot];
     if (spot) a.s = { ...a.s, x: spot.x, z: Math.round(spot.z * 100) / 100, h: Math.atan2(-spot.x, -spot.z) };
   }
   peerInfo(a) {
-    return { id: a.id, name: a.name, look: a.look, dog: a.dog, prayerSlot: a.prayerSlot, s: a.s };
+    return { id: a.id, name: a.name, look: a.look, dog: a.dog, prayerSlot: a.prayerSlot, lastChat: a.lastChat || null, s: a.s };
   }
   broadcast(msg, except) {
     const text = JSON.stringify(msg);
@@ -127,9 +137,13 @@ export class GardenRoom extends DurableObject {
         if (!this.allow(a, 's', 25)) return;
         const s = cleanState(m.s);
         if (!s) return;
+        const wasPraying = ['pray', 'bow'].includes(a.s.p), previousSlot = a.prayerSlot;
         a.s = s;
         this.alignPrayerState(a);
         ws.serializeAttachment(a);
+        if (['pray', 'bow'].includes(a.s.p) && (!wasPraying || previousSlot !== a.prayerSlot || Math.hypot(s.x - a.s.x, s.z - a.s.z) > .02)) {
+          ws.send(JSON.stringify({ t: 'prayer_place', slot: a.prayerSlot }));
+        }
         this.broadcast({ t: 'state', id: a.id, s: a.s }, ws);
         return;
       }
@@ -147,6 +161,8 @@ export class GardenRoom extends DurableObject {
         const text = clean(m.text, 200);
         if (!text) return;
         const msg = { id: a.id, name: a.name, text, at: Date.now() };
+        a.lastChat = { text, at: msg.at };
+        ws.serializeAttachment(a);
         this.shared.chat = this.shared.chat.concat(msg).slice(-50);
         await this.save();
         this.broadcast({ t: 'chat', ...msg });
