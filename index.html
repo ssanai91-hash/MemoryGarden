@@ -1650,19 +1650,143 @@ function skyInit(){
   Object.assign(skyMusic,{ac,master,bus,noise:nb});return true;
 }
 function skyOrgan(t,freq,dur,level){
-  const ac=skyMusic.ac,g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(level,t+2.2);g.gain.setValueAtTime(level,t+dur-1);g.gain.linearRampToValueAtTime(0,t+dur+2.5);g.connect(skyMusic.bus);
+  const ac=skyMusic.ac,g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(level,t+2.2);g.gain.setValueAtTime(level,t+dur-1);g.gain.linearRampToValueAtTime(0,t+dur+2.5);g.connect(skyMusic.dest||skyMusic.bus);
   [[1,1],[2,.55],[3,.28],[4,.2],[6,.09],[8,.06]].forEach(([r,w],i)=>{const o=ac.createOscillator();o.frequency.value=freq*r*(i===1?1.002:1);const og=ac.createGain();og.gain.value=w;o.connect(og);og.connect(g);o.start(t);o.stop(t+dur+2.7)});
 }
 function skyBell(t,freq){
   const ac=skyMusic.ac;[[1,1],[2.76,.32],[5.4,.1]].forEach(([r,w])=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=freq*r;
-    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.05*w,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+4.5);o.connect(g);g.connect(skyMusic.bus);o.start(t);o.stop(t+4.6)});
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.05*w,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+4.5);o.connect(g);g.connect(skyMusic.dest||skyMusic.bus);o.start(t);o.stop(t+4.6)});
 }
 function skyTick(t,accent){
   const ac=skyMusic.ac,n=ac.createBufferSource();n.buffer=skyMusic.noise;const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=accent?2600:3400;bp.Q.value=9;
-  const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(accent?.05:.03,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.05);n.connect(bp);bp.connect(g);g.connect(skyMusic.bus);n.start(t);n.stop(t+.06);
+  const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(accent?.05:.03,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.05);n.connect(bp);bp.connect(g);g.connect(skyMusic.dest||skyMusic.bus);n.start(t);n.stop(t+.06);
+}
+/* ---------- situational BGM: original pieces synthesised live, one per place/mood ---------- */
+// 모두 브라우저가 직접 연주하는 오리지널 곡. 박자는 서버 시각 기준이라 같은 곳에 있는 친구들은 같은 마디를 듣는다.
+const BGM_NAMES={garden:'정원 산책',rain:'비 오는 정원',fire:'모닥불 곁에서',pocha:'포장마차 한 잔',sky:'밤하늘 오르간',gut:'신명 장단'};
+const bgm={scene:'',cand:'',candAt:0,gains:{}};
+function bgmGain(name){
+  let g=bgm.gains[name];if(g&&g.context===skyMusic.ac)return g;
+  g=skyMusic.ac.createGain();g.gain.value=0;g.connect(skyMusic.bus);bgm.gains[name]=g;return g;
+}
+function bgmPick(){
+  if(pose==='pray2')return 'gut';
+  if(cam.sky||['lie','prone','pray','standing_pray','bow'].includes(pose)||practice.mode!=='idle')return 'sky';
+  const x=me.g.position.x,z=me.g.position.z;
+  if(Math.hypot(x-POCHA.x,z-POCHA.z)<(bgm.scene==='pocha'?9.5:7.5))return 'pocha';
+  if(Math.hypot(x,z)<(bgm.scene==='fire'?13.5:11.5))return 'fire';
+  try{if(weatherFrame(serverNow()).rain>.15)return 'rain'}catch(e){}
+  return 'garden';
+}
+function bgmUpdateScene(){
+  const want=bgmPick(),now=performance.now();
+  if(want!==bgm.cand){bgm.cand=want;bgm.candAt=now}
+  if(want===bgm.scene||(bgm.scene&&now-bgm.candAt<(want==='gut'?250:1400)))return;
+  bgm.scene=want;const t=skyMusic.ac.currentTime;
+  for(const name of Object.keys(BGM_NAMES)){const g=bgmGain(name);g.gain.cancelScheduledValues(t);g.gain.setTargetAtTime(name===want?1:0,t,name===want?.5:.7)}
+  try{renderMusicUI()}catch(e){}
+}
+// --- instruments (all route into skyMusic.dest, the current scene's gain) ---
+function bEnv(t,peak,a,dec){const g=skyMusic.ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+dec);g.connect(skyMusic.dest);return g}
+function bOsc(type,f,t,end,g){const o=skyMusic.ac.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);o.connect(g);o.start(t);o.stop(end);return o}
+function ePiano(t,f,dur,lv){
+  const ac=skyMusic.ac,g=bEnv(t,lv,.008,dur),c=ac.createOscillator(),m=ac.createOscillator(),mg=ac.createGain();
+  c.frequency.value=f;m.frequency.value=f;mg.gain.setValueAtTime(f*1.4,t);mg.gain.exponentialRampToValueAtTime(f*.06,t+.7);
+  m.connect(mg);mg.connect(c.frequency);c.connect(g);c.start(t);m.start(t);c.stop(t+dur+.1);m.stop(t+dur+.1);
+  bOsc('sine',f*4,t,t+.3,bEnv(t,lv*.18,.002,.22));
+}
+function kalimba(t,f,lv){bOsc('sine',f,t,t+1.3,bEnv(t,lv,.003,1.15));bOsc('sine',f*5.4,t,t+.16,bEnv(t,lv*.3,.001,.12))}
+function pluck(t,f,lv,dec){
+  const ac=skyMusic.ac,lp=ac.createBiquadFilter();lp.type='lowpass';lp.Q.value=1.1;lp.frequency.setValueAtTime(f*8,t);lp.frequency.exponentialRampToValueAtTime(f*1.4,t+dec*.45);
+  lp.connect(bEnv(t,lv,.003,dec));const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=f;o.connect(lp);o.start(t);o.stop(t+dec+.1);
+}
+function bassNote(t,f,lv,dec){bOsc('triangle',f,t,t+dec+.1,bEnv(t,lv,.012,dec));bOsc('sine',f,t,t+dec,bEnv(t,lv*.7,.006,dec*.6))}
+function softKick(t,lv){const g=bEnv(t,lv,.002,.2),o=bOsc('sine',125,t,t+.3,g);o.frequency.exponentialRampToValueAtTime(44,t+.14)}
+function noiseHit(t,f,q,lv,dec,type){
+  const ac=skyMusic.ac,n=ac.createBufferSource();n.buffer=skyMusic.noise;const bp=ac.createBiquadFilter();bp.type=type||'bandpass';bp.frequency.value=f;bp.Q.value=q;
+  n.connect(bp);bp.connect(bEnv(t,lv,.002,dec));n.start(t,(t*7.31)%.8);n.stop(t+dec+.05);
+}
+function accordion(t,f,dur,lv){
+  const ac=skyMusic.ac,lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=Math.min(3600,f*4.5);
+  const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(lv,t+.035);g.gain.setValueAtTime(lv,t+dur*.75);g.gain.linearRampToValueAtTime(0,t+dur);
+  lp.connect(g);g.connect(skyMusic.dest);
+  [[1,'square',.18],[1.0065,'sawtooth',.3],[.9962,'sawtooth',.3]].forEach(([d,type,w])=>{const o=ac.createOscillator();o.type=type;o.frequency.value=f*d;const og=ac.createGain();og.gain.value=w;o.connect(og);og.connect(lp);o.start(t);o.stop(t+dur+.05)});
+}
+function whistle(t,f,dur,lv){
+  const ac=skyMusic.ac,o=ac.createOscillator();o.type='sine';o.frequency.setValueAtTime(f*.97,t);o.frequency.exponentialRampToValueAtTime(f,t+.08);
+  const l=ac.createOscillator();l.frequency.value=5.2;const lg=ac.createGain();lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(f*.012,t+dur*.6);l.connect(lg);lg.connect(o.frequency);
+  const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(lv,t+.06);g.gain.setValueAtTime(lv,t+dur*.7);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(skyMusic.dest);o.start(t);l.start(t);o.stop(t+dur+.05);l.stop(t+dur+.05);
+}
+function janggu(t,kind,lv){
+  if(kind!=='deok'){const o=bOsc('sine',150,t,t+.45,bEnv(t,lv,.003,.38));o.frequency.exponentialRampToValueAtTime(68,t+.2)}
+  if(kind!=='kung')noiseHit(t,2300,2.5,lv*.8,.07);
+}
+function kkwaeng(t,lv){const g=bEnv(t,lv,.001,.16);[1,1.47,2.09,2.56].forEach(r=>bOsc('square',1180*r,t,t+.18,g))}
+function jing(t,lv){const o=bOsc('sine',176,t,t+4.2,bEnv(t,lv,.02,4));o.frequency.exponentialRampToValueAtTime(168,t+3);bOsc('sine',176*2.03,t,t+2,bEnv(t,lv*.3,.02,1.8))}
+// --- compositions: each step(bar,s,t,st) is called once per step, deterministic from the bar number ---
+function bgmWalk(seed,b,s,len,start){let i=start;for(let k=0;k<=s;k++)i+=Math.round((skyHash(seed*31+b,k)-.5)*3.2);return Math.max(0,Math.min(len-1,i))}
+const GARDEN_PROG=[[41,[57,60,64,67]],[38,[57,60,62,65]],[46,[57,62,65,69]],[36,[58,62,64,67]],[45,[55,60,64,67]],[38,[57,60,62,65]],[43,[58,62,65,69]],[36,[58,62,64,67]]];
+const GARDEN_PENTA=[65,67,69,72,74,77,79,81,84];
+const RAIN_PROG=[[38,[53,57,60,64]],[46,[53,57,62,65]],[43,[57,58,62,65]],[45,[55,57,62,64]]];
+const FIRE_PROG=[[43,[55,59,62,67,71]],[40,[55,59,64,67,71]],[36,[55,60,64,67,72]],[38,[54,57,62,66,69]]];
+const FIRE_PENTA=[74,76,79,81,83,86];
+const POCHA_PROG=[[45,[57,60,64]],[38,[57,62,65]],[40,[56,59,62,64]],[45,[57,60,64]],[41,[57,60,65]],[38,[57,62,65]],[40,[56,59,62,64]],[45,[57,60,64]]];
+const POCHA_SCALE=[69,71,72,76,77,81,83,84];
+const BGM={
+  garden:{st:60/92/2,steps:8,play(bar,s,t,st){
+    const [root,ch]=GARDEN_PROG[bar%8],motif=Math.floor(bar/32)*2+(bar%8<4?0:1),b=bar%4;
+    noiseHit(t,7200,.9,s%2?.008:.014,.05,'highpass');
+    if(s===0){bassNote(t,hz(root),.15,st*3.5);softKick(t,.11);ch.forEach(m=>ePiano(t,hz(m),st*7,.026))}
+    if(s===4){bassNote(t,hz(root+7),.12,st*3);softKick(t,.08)}
+    if(s===2||s===6)noiseHit(t,1900,2,.03,.06);
+    if((s===3||s===7)&&skyHash(bar,s)<.7)ch.slice(1).forEach(m=>ePiano(t,hz(m),st*.8,.016));
+    const r=skyHash(motif*97+b,s+40);if(r<(s%2?.28:.62)&&!(b===3&&s>4))kalimba(t,hz(GARDEN_PENTA[bgmWalk(motif,b,s,GARDEN_PENTA.length,4)]),.07);
+  }},
+  rain:{st:60/70/2,steps:8,play(bar,s,t,st){
+    const [root,ch]=RAIN_PROG[bar%4];
+    if(s===0){bassNote(t,hz(root),.12,st*7);ch.forEach(m=>ePiano(t,hz(m),st*8,.022))}
+    if(s===4&&bar%2)bassNote(t,hz(root+7),.08,st*3);
+    if(s%2===0&&skyHash(bar,s+3)<.55)ePiano(t,hz(ch[(s/2+bar)%ch.length]+12),st*3,.016);
+    if(bar%2&&skyHash(bar,s+70)<.35)kalimba(t,hz(ch[Math.floor(skyHash(bar,s+71)*ch.length)]+24),.03);
+    if(s===4)noiseHit(t,5200,.8,.006,.25,'highpass');
+  }},
+  fire:{st:.3,steps:6,play(bar,s,t,st){
+    const [root,ch]=FIRE_PROG[bar%4],arp=[0,2,3,4,3,1];
+    if(s===0){pluck(t,hz(root),.09,2.2);softKick(t,.05)}
+    pluck(t,hz(ch[arp[s]]),s===0?.05:.035,1.5);
+    if(s===3)noiseHit(t,3000,1,.012,.08);
+    const motif=Math.floor(bar/16),b=bar%8;
+    if(b>=2&&(s===0||s===3)&&skyHash(motif*13+b,s)<.62)whistle(t,hz(FIRE_PENTA[bgmWalk(motif+5,b,s,FIRE_PENTA.length,2)]),st*(s?2.6:2.9),.028);
+  }},
+  pocha:{st:60/104/2,steps:8,play(bar,s,t,st){
+    const [root,ch]=POCHA_PROG[bar%8];
+    if(s===0){bassNote(t,hz(root),.15,st*1.8);softKick(t,.1)}
+    if(s===4){bassNote(t,hz(root+(bar%2?-5:7)),.12,st*1.8);softKick(t,.08)}
+    if(s===2||s===6){ch.forEach(m=>accordion(t,hz(m),st*.8,.012));noiseHit(t,2600,1.4,.03,.09)}
+    if(s%2)noiseHit(t,8000,1,.006,.04,'highpass');
+    const rhythm={0:3,3:1,4:2,6:2},motif=Math.floor(bar/16)*2+(bar%8<4?0:1),b=bar%4;
+    if(rhythm[s]&&(b<3||s<4)&&skyHash(motif*7+b,s+20)<.85)accordion(t,hz(POCHA_SCALE[bgmWalk(motif+9,b,s,POCHA_SCALE.length,3)]),st*rhythm[s]*.92,.03);
+  }},
+  gut:{st:.19,steps:12,play(bar,s,t,st){
+    const p={0:'deong',3:'deok',4:'deok',6:'kung',9:'deok',10:'deok'};
+    if(p[s])janggu(t,p[s],s===0?.2:.13);
+    if([0,2,3,4,6,8,9,10].includes(s))kkwaeng(t,s===0?.05:.03);
+    if(s===0&&bar%2===0)jing(t,.09);
+  }}
+};
+function bgmRun(name){
+  const sc=BGM[name],ac=skyMusic.ac,now=serverNow()/1000,ahead=2.2,at=sec=>ac.currentTime+(sec-now);
+  for(let k=Math.ceil(now/sc.st);k*sc.st<now+ahead;k++){
+    const key=name+k;if(skyMusic.seen.has(key))continue;skyMusic.seen.add(key);
+    try{sc.play(Math.floor(k/sc.steps),k%sc.steps,at(k*sc.st)+.05,sc.st)}catch(e){}
+  }
 }
 function skySchedule(){
-  if(!skyMusic.on||visitEnded||!hasEntered||document.hidden||music.track)return;const ac=skyMusic.ac,now=serverNow()/1000,ahead=2.5;
+  if(!skyMusic.on||visitEnded||!hasEntered||document.hidden||music.track)return;
+  bgmUpdateScene();skyMusic.dest=bgmGain(bgm.scene);
+  if(bgm.scene!=='sky'){bgmRun(bgm.scene);if(skyMusic.seen.size>400)skyMusic.seen=new Set([...skyMusic.seen].slice(-120));return}
+  const ac=skyMusic.ac,now=serverNow()/1000,ahead=2.5;
   const at=sec=>ac.currentTime+(sec-now);
   for(let bar=Math.floor(now/SKY_BAR);bar*SKY_BAR<now+ahead;bar++){
     const k='c'+bar;if(skyMusic.seen.has(k)||bar*SKY_BAR<now-.5)continue;skyMusic.seen.add(k);
@@ -1680,6 +1804,7 @@ function setSkyMusic(on){
   if(!skyMusic.ac)return;const ac=skyMusic.ac;
   if(on){ac.resume().catch(()=>{});skyMusic.master.gain.cancelScheduledValues(ac.currentTime);skyMusic.master.gain.setTargetAtTime(music.track?0:.9,ac.currentTime,.8);clearInterval(skyMusic.timer);skyMusic.timer=setInterval(skySchedule,400);skySchedule()}
   else{skyMusic.master.gain.setTargetAtTime(0,ac.currentTime,.3);clearInterval(skyMusic.timer)}
+  try{renderMusicUI()}catch(e){}
 }
 $('soundToggle').onclick=e=>{e.stopPropagation();setSkyMusic(!skyMusic.on)};
 // 브라우저는 사용자가 한 번 누르기 전에는 소리를 막는다. 첫 터치·클릭·키 입력에 맞춰 켠다.
@@ -1695,7 +1820,7 @@ function syncSkyMusicOutput(){
 }
 function silenceSkyMusic(){
   skyMusic.on=false;clearInterval(skyMusic.timer);skyMusic.timer=0;skyMusic.seen.clear();
-  const previous=skyMusic.ac;skyMusic.ac=null;skyMusic.master=null;skyMusic.bus=null;skyMusic.noise=null;
+  bgm.scene='';bgm.gains={};skyMusic.dest=null;const previous=skyMusic.ac;skyMusic.ac=null;skyMusic.master=null;skyMusic.bus=null;skyMusic.noise=null;
   if(previous)previous.close().catch(()=>{});
   $('soundToggle').setAttribute('aria-pressed','false');$('soundToggle').textContent='♪';$('soundToggle').setAttribute('aria-label','배경음 켜기');$('soundToggle').title='배경음 켜기';
 }
@@ -1794,7 +1919,8 @@ function applyMusic(m){
 let canPickMusic=true;
 function renderMusicUI(){
   const tr=TRACKS.find(x=>x.id===music.track);
-  $('nowPlaying').hidden=!tr;$('nowPlaying').textContent=tr?`♪ 함께 듣는 중 · ${tr.name}`:'';
+  const bgmLabel=!tr&&skyMusic.on&&bgm.scene?BGM_NAMES[bgm.scene]:'';
+  $('nowPlaying').hidden=!tr&&!bgmLabel;$('nowPlaying').textContent=tr?`♪ 함께 듣는 중 · ${tr.name}`:bgmLabel?`♪ 배경음 · ${bgmLabel}`:'';
   $('soundBtn').hidden=!tr;$('soundBtn').textContent=music.track==='banya'?'반야심경 열기':audioOn?'소리 끄기':'소리 켜기';$('soundBtn').classList.toggle('on',music.track!=='banya'&&audioOn);
   $('synthVolume').hidden=music.track==='banya';$('youtubeLoadBtn').disabled=!canPickMusic;$('youtubeUrl').disabled=!canPickMusic;
   $('musicNote').textContent=music.track==='banya'?'유튜브 영상의 재생 버튼을 눌러 주세요 · 재생 위치는 각자 조절해요':db?(canPickMusic?'고른 곡을 함께 들어요 · 각자 소리 켜기를 눌러 주세요':'음악은 정원 주인이 골라요 · 볼륨은 내 마음대로'):'정원에서 듣고 싶은 음악을 골라보세요';
