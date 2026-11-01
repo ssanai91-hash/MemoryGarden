@@ -140,6 +140,12 @@ button:disabled{opacity:.5;cursor:default}
 #poseList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(260px,calc(100vw - 24px));max-height:min(340px,55dvh);overflow-y:auto;gap:6px;padding:3px;box-sizing:border-box}
 #poseList button{min-width:0;white-space:normal}
 .poses{bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+.calm-dim{position:fixed;inset:0;background:#05070c;opacity:0;pointer-events:none;z-index:3}
+.calm-panel{position:fixed;left:50%;top:calc(96px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5;display:grid;justify-items:center;gap:6px;color:#fff;text-shadow:0 1px 6px #000c;pointer-events:none;font-family:var(--display);text-align:center}
+.calm-panel button{pointer-events:auto;margin-top:4px;background:rgba(250,246,238,.92);color:var(--ink);text-shadow:none}
+.calm-orb{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(235,250,255,.8),rgba(150,210,235,.3) 58%,rgba(150,210,235,0) 72%);box-shadow:0 0 40px rgba(190,235,255,.35)}
+.calm-say{font-size:21px}.calm-time{font-size:14px;opacity:.9;font-family:var(--body);font-variant-numeric:tabular-nums}.calm-total{font-size:11px;opacity:.8;font-family:var(--body)}
+.jar-btn{position:fixed;left:14px;bottom:calc(205px + env(safe-area-inset-bottom,0px));z-index:4;padding:6px 11px;border-radius:999px;background:rgba(30,40,22,.82);color:#eaffb0;border-color:rgba(220,255,140,.5);box-shadow:0 0 calc(26px * var(--glow,.3)) rgba(210,255,110,var(--glow,.3));font-size:14px}
 .bow-counter{position:fixed;left:12px;bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:4;max-width:calc(100vw - 24px);box-sizing:border-box;padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--paper);backdrop-filter:blur(6px)}
 .bow-counter .count-line{margin:0;gap:6px;font-size:11px}
 .bow-counter .count-line b{font-size:15px;font-weight:700}
@@ -482,6 +488,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="toast" id="toast"></div>
+<div class="calm-dim" id="calmDim" hidden></div><section class="calm-panel" id="calmPanel" hidden aria-live="polite"><div class="calm-orb" id="calmOrb"></div><div class="calm-say" id="calmSay">들이쉬고…</div><div class="calm-time" id="calmTime">0:00</div><div class="calm-total" id="calmTotal"></div><button id="calmEnd" type="button">마치기</button></section><button class="jar-btn" id="jarBtn" type="button" hidden aria-label="반딧불이 병 · 눌러서 놓아주기">🫙 ✨<span id="jarCount">0</span></button>
 <section class="order-panel menu-book" id="orderPanel" hidden aria-label="기억 포차 메뉴판"><div class="mb-rings" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="mb-head"><div class="mb-title"><small>SINCE 오늘 밤</small>기억 포차</div><button id="orderClose" type="button">닫기</button></div><div class="mb-tabs" role="tablist"><button id="orderTabFood" type="button" role="tab" aria-selected="true" aria-controls="orderFood">안주</button><button id="orderTabDrink" type="button" role="tab" aria-selected="false" aria-controls="orderDrink">술 · 음료</button></div><div class="mb-grid" id="orderFood" role="tabpanel"></div><div class="mb-grid" id="orderDrink" role="tabpanel" hidden></div><div class="mb-memo" id="orderMemo" hidden>📌 <b>사장님 한마디</b> — 술은 한 병씩, 잔은 같이 드는 거예요. 짠은 다 같이!</div><div class="mb-foot"><span>사장님 손맛 · <b>오늘도 정성껏</b></span><button id="orderFlip" type="button">술 · 음료 ▶</button></div></section>
 <section class="chat-history" id="chatHistory" aria-labelledby="chatHistoryTitle" hidden>
   <div class="chat-history-head"><strong id="chatHistoryTitle">대화 목록 · 최근 50개</strong><button id="chatHistoryClose" type="button">접기</button></div>
@@ -1176,6 +1183,7 @@ const waterworks={sheets:[],mist:null,foam:[],tex:null};
   {const p=hutLocal(1.98,.6);obstacles.push({x:p.x,z:p.z,r:.55})}
 }
 function updateWaterworks(dt,t){
+  updateCalm(dt);updateFireflies(dt,t);
   if(!waterworks.tex)return;waterworks.tex.offset.y+=dt*1.6;if(waterworks.stream)waterworks.stream.offset.y+=dt*.55;
   for(const f of waterworks.foam){const s=.45+.12*Math.sin(t*3+f.ph);f.m.scale.set(s,.12,s*.8)}
   const mist=waterworks.mist,q=QUALITY_LEVELS[quality.level];
@@ -1185,8 +1193,89 @@ function updateWaterworks(dt,t){
   if(mist.visible){for(let i=0;i<q.mist*3;i+=3){a[i+1]+=dt*(.5+((i*7)%5)*.12);a[i]+=Math.sin(t+i)*dt*.15;if(a[i+1]>3.4){a[i+1]=0;a[i]=(Math.random()-.5)*3.2}}
   pa.needsUpdate=true;}
   const sh=underHutRoof(me.g.position.x,me.g.position.z);
-  if(sh&&!waterworks.toldHut&&hasEntered){waterworks.toldHut=true;toast('농막 처마 아래예요 · 평상에 앉아 빗소리와 새소리를 들어봐요')}
+  if(sh&&!waterworks.toldHut&&hasEntered){waterworks.toldHut=true;toast('농막 처마 아래예요 · 평상에서 낮잠을 자 보세요')}
 }
+/* ---------- solo calm: waterfall meditation, nap on the hut platform, firefly catching ---------- */
+const calmRec=(()=>{try{return Object.assign({meditate:0,nap:0,caught:0,jar:0},JSON.parse(store.get('garden.calm')||'{}'))}catch(e){return{meditate:0,nap:0,caught:0,jar:0}}})();
+const saveCalm=()=>store.set('garden.calm',JSON.stringify(calmRec));
+const calm={mode:'',start:0,dim:0,told5:false};
+const NAP_SPOT=hutLocal(-1.12,1.12);
+const onPyeongsang=(x,z)=>{const l=hutToLocal(x,z);return l.lx>-2.2&&l.lx<-.05&&l.lz>.3&&l.lz<1.95};
+const nearFallsCalm=(x,z)=>{const d=Math.hypot(x-FALLS.x,z-FALLS.z);return d>FALLS.poolR+.3&&d<11};
+const fmtMin=sec=>{sec=Math.floor(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')};
+function startCalm(mode){
+  if(calm.mode)return;closePoseMenu();endPractice(false);target=null;marker.visible=false;
+  if(mode==='nap'){me.g.position.x=NAP_SPOT.x;me.g.position.z=NAP_SPOT.z;me.g.rotation.y=HUT.h+Math.PI/2;pose='lie';cam.yaw=HUT.h;cam.dist=6.5;cam.pitch=.38}
+  else{const dx=FALLS.x-me.g.position.x,dz=FALLS.z-me.g.position.z;me.g.rotation.y=Math.atan2(dx,dz);pose='sit';cam.yaw=Math.atan2(-dx,-dz);cam.dist=7.5;cam.pitch=.16}
+  calm.mode=mode;calm.start=performance.now();calm.told5=false;sendDirty=true;syncPoseButtons();
+  $('calmPanel').hidden=false;$('calmPanel').dataset.mode=mode;$('calmOrb').hidden=mode!=='meditate';
+  $('calmEnd').textContent=mode==='nap'?'깨어나기':'명상 마치기';
+  $('calmTotal').textContent=mode==='nap'?`평상 낮잠 누적 ${Math.round(calmRec.nap/60)}분`:`폭포 명상 누적 ${Math.round(calmRec.meditate/60)}분`;
+  if(mode==='nap')$('calmDim').hidden=false;
+  toast(mode==='nap'?'평상에 누웠어요 · 빗소리를 들으며 쉬어요':'폭포 앞에 앉았어요 · 원을 따라 천천히 숨 쉬어요');
+}
+function endCalm(byMove){
+  if(!calm.mode)return;const sec=(performance.now()-calm.start)/1000,mode=calm.mode;calm.mode='';
+  calmRec[mode]+=sec;saveCalm();
+  $('calmPanel').hidden=true;$('calmDim').hidden=true;$('calmDim').style.opacity='0';calm.dim=0;
+  if(!byMove){pose='stand';sendDirty=true;syncPoseButtons();if(mode==='nap'){const p=hutLocal(-1.1,2.35);me.g.position.x=p.x;me.g.position.z=p.z}}
+  if(sec>20)toast(mode==='nap'?`${fmtMin(sec)} 동안 푹 쉬었어요`:`폭포 명상 ${fmtMin(sec)} · 마음이 조금 맑아졌어요`);
+}
+function updateCalm(dt){
+  if(!calm.mode)return;
+  if(pose!==(calm.mode==='nap'?'lie':'sit')){endCalm(true);return}
+  const sec=(performance.now()-calm.start)/1000;$('calmTime').textContent=fmtMin(sec);
+  if(calm.mode==='meditate'){
+    const c=sec%10,inhale=c<4,k=inhale?c/4:1-(c-4)/6,ease=.5-.5*Math.cos(Math.PI*k);
+    $('calmOrb').style.transform=`scale(${.55+.45*ease})`;$('calmSay').textContent=inhale?'들이쉬고…':'내쉬고…';
+    if(sec>300&&!calm.told5){calm.told5=true;toast('폭포 명상 5분 · 잘하고 있어요 🌿')}
+  }else{
+    calm.dim=Math.min(.62,calm.dim+dt*.025);$('calmDim').style.opacity=calm.dim.toFixed(3);
+    $('calmSay').textContent=sec<8?'눈을 감아요…':['z','zz','zzz'][Math.floor(sec/1.2)%3];
+  }
+}
+$('calmEnd').onclick=()=>endCalm(false);
+
+// fireflies: wander near the lake shore, the stream and the hut garden; walk close and catch them
+const FIREFLY_N=40,fireflies=[];
+for(let i=0;i<FIREFLY_N;i++){let hx,hz;
+  if(i<26){const a=rnd()*Math.PI*2,r=lakeR(a)+(rnd()*4-.6);hx=LAKE.x+Math.cos(a)*r;hz=LAKE.z+Math.sin(a)*r}
+  else if(i<34){const p=STREAM[Math.floor(rnd()*STREAM.length)];hx=p.x+(rnd()-.5)*4;hz=p.z+(rnd()-.5)*4}
+  else{const p=hutLocal(3+rnd()*4.5,-3+rnd()*4.5);hx=p.x;hz=p.z}
+  fireflies.push({hx,hz,ph:rnd()*20,sp:.25+rnd()*.35,alive:true,back:0,x:hx,y:1,z:hz})}
+const ffGeo=new THREE.BufferGeometry(),ffPos=new Float32Array(FIREFLY_N*3),ffCol=new Float32Array(FIREFLY_N*3);
+ffGeo.setAttribute('position',new THREE.BufferAttribute(ffPos,3));ffGeo.setAttribute('color',new THREE.BufferAttribute(ffCol,3));
+const ffDot=document.createElement('canvas');ffDot.width=ffDot.height=32;{const c=ffDot.getContext('2d'),g=c.createRadialGradient(16,16,0,16,16,16);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.7)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,32,32)}
+const ffPoints=new THREE.Points(ffGeo,new THREE.PointsMaterial({size:.55,map:new THREE.CanvasTexture(ffDot),vertexColors:true,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));
+ffPoints.frustumCulled=false;scene.add(ffPoints);
+const ffFree=[];// released ones flying away
+function updateFireflies(dt,t){
+  const now=performance.now(),mx=me.g.position.x,mz=me.g.position.z;
+  if(Math.hypot(mx-LAKE.x,mz-LAKE.z)>80&&!ffFree.length){ffPoints.visible=false;return}ffPoints.visible=true;
+  fireflies.forEach((f,i)=>{
+    if(!f.alive&&now>f.back)f.alive=true;
+    const w=t*f.sp+f.ph;f.x=f.hx+Math.sin(w)*1.6+Math.sin(w*2.3)*.5;f.z=f.hz+Math.cos(w*.8)*1.6+Math.sin(w*1.7)*.4;f.y=.55+.45*Math.sin(w*1.3)+.2*Math.sin(w*3.1);
+    const blink=f.alive?Math.max(0,Math.sin(t*2.2+f.ph*3))**3*.9+.1:0;
+    ffPos.set([f.x,f.y+groundY(f.x,f.z),f.z],i*3);ffCol.set([.85*blink,1*blink,.35*blink],i*3);
+  });
+  ffGeo.attributes.position.needsUpdate=true;ffGeo.attributes.color.needsUpdate=true;
+  if(ffFree.length){for(let i=ffFree.length-1;i>=0;i--){const f=ffFree[i];f.life-=dt;f.x+=f.vx*dt;f.z+=f.vz*dt;f.y+=f.vy*dt;f.vy*=.995;if(f.life<=0){scene.remove(f.s);f.s.material.dispose();ffFree.splice(i,1);continue}
+    f.s.position.set(f.x,f.y,f.z);f.s.material.opacity=Math.min(1,f.life/1.5)*(.6+.4*Math.sin(t*9+i))}}
+}
+function nearestFirefly(maxD){let best=-1,bd=maxD;const x=me.g.position.x,z=me.g.position.z;fireflies.forEach((f,i)=>{if(!f.alive)return;const d=Math.hypot(f.x-x,f.z-z);if(d<bd){bd=d;best=i}});return best}
+function syncJar(){const n=calmRec.jar;$('jarBtn').hidden=!n;$('jarCount').textContent=n;$('jarBtn').style.setProperty('--glow',Math.min(1,.25+n*.07).toFixed(2))}
+function catchFirefly(){
+  const i=nearestFirefly(2.2);if(i<0)return;const f=fireflies[i];f.alive=false;f.back=performance.now()+45000;
+  calmRec.jar++;calmRec.caught++;saveCalm();syncJar();
+  toast(calmRec.jar===1?'반딧불이를 잡았어요 ✨ 왼쪽 병을 누르면 놓아줄 수 있어요':`반딧불이 ${calmRec.jar}마리째 ✨`);
+}
+function releaseFireflies(){
+  const n=calmRec.jar;if(!n)return;calmRec.jar=0;saveCalm();syncJar();
+  const p=me.g.position;for(let i=0;i<n;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:ffPoints.material.map,color:0xd9ff6a,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));
+    s.scale.setScalar(.35);scene.add(s);const a=Math.random()*Math.PI*2,v=.6+Math.random()*1.2;ffFree.push({s,x:p.x,y:p.y+1.3,z:p.z,vx:Math.cos(a)*v,vz:Math.sin(a)*v,vy:.5+Math.random()*.9,life:5+Math.random()*3})}
+  toast(`반딧불이 ${n}마리를 놓아줬어요 · 잘 가 ✨`);
+}
+$('jarBtn').onclick=releaseFireflies;syncJar();
 
 /* ---------- trees, bushes, rocks (instanced for phones) ---------- */
 {
@@ -2319,6 +2408,7 @@ function ambUpdate(){
   const near=(d,R)=>{const k=Math.max(0,1-d/R);return k*k};
   const dF=Math.hypot(x-FALLS.x,z-FALLS.z),dS=streamDist(x,z),dL=Math.max(0,Math.hypot(x-LAKE.x,z-LAKE.z)-lakeR(Math.atan2(z-LAKE.z,x-LAKE.x)));
   const shelter=underHutRoof(x,z);let rain=0;try{rain=weatherFrame(serverNow()).rain||0}catch(e){}
+  if(calm.mode==='nap')rain=Math.max(rain,.55);
   set('falls',.55*near(dF,60));set('fallsHiss',.18*near(dF,30));set('stream',.22*near(dS,16));set('lake',.16*near(dL,12));
   set('rain',rain*(shelter?.05:.09));set('roof',shelter?rain*.35:0);
   if(shelter&&rain>.05){
@@ -3371,13 +3461,17 @@ function updateContext(dt){
   if(seatedNow()){b.textContent='일어나기';b.dataset.act='up';b.hidden=false;return}
   if(pose!=='stand'&&pose!=='wave'){b.hidden=true;return}
   if(hasEntered&&nearBulletin(x,z,2.7)){b.textContent='게시판 보기';b.dataset.act='board';b.hidden=false;return}
+  if(hasEntered&&underHutRoof(x,z)){b.textContent='평상에서 낮잠';b.dataset.act='nap';b.hidden=false;return}
+  if(hasEntered&&nearestFirefly(2.2)>=0){b.textContent='반딧불이 잡기 ✨';b.dataset.act='firefly';b.hidden=false;return}
+  if(hasEntered&&nearFallsCalm(x,z)){b.textContent='폭포 명상';b.dataset.act='meditate';b.hidden=false;return}
   const nearT=TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<4.6),nearF=CENTERPIECE==='campfire'&&Math.hypot(x,z)<8;
   const front=pochaLocal(0,2.4);if(Math.hypot(front.x-x,front.z-z)<4.2){b.textContent='포차 들어가기';b.dataset.act='enter';b.hidden=false;return}
   if(nearT||nearF){b.textContent=nearT?'테이블에 앉기':'모닥불에 앉기';b.dataset.act='sit';b.hidden=false}else b.hidden=true;
 }
 $('ctxBtn').onclick=()=>{
   closePoseMenu();
-  const act=$('ctxBtn').dataset.act;if(act==='board'){gardenBoard.open();return}if(act==='enter'){enterPocha();ctxTick=1;updateContext(0);return}if(act==='leave'){leavePocha();ctxTick=1;updateContext(0);return}
+  const act=$('ctxBtn').dataset.act;if(act==='board'){gardenBoard.open();return}
+  if(act==='firefly'||act==='nap'||act==='meditate'){if(act==='firefly')catchFirefly();else startCalm(act);ctxTick=1;updateContext(0);return}if(act==='enter'){enterPocha();ctxTick=1;updateContext(0);return}if(act==='leave'){leavePocha();ctxTick=1;updateContext(0);return}
   if(act==='up'){const sp=me.g.position,h=me.g.rotation.y;pose='stand';const [x,z]=collide(sp.x-Math.sin(h)*.8,sp.z-Math.cos(h)*.8,.4);me.g.position.x=x;me.g.position.z=z;sendDirty=true;syncPoseButtons()}
   else setPose('sit');
   ctxTick=1;updateContext(0);
