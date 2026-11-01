@@ -3212,6 +3212,55 @@ function moonTexture(phase){
   x.putImageData(image,0,0);
   const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;return texture;
 }
+// One unmodified reference photograph is shared by both phase-transition sprites.
+// The SpriteMaterial still supplies billboarding, opacity and the curved-world vertex shader.
+// This fragment shader keeps the JPEG's display values; no additive surface or tone mapping.
+const PHOTO_MOON_FRAGMENT=`
+uniform sampler2D map;
+uniform float opacity;
+uniform float uMoonPhase;
+varying vec2 vUv;
+void main(){
+  vec2 p=(vUv-.5)*(512./118.);
+  float r=length(p),angle=uMoonPhase*6.28318530718;
+  float lit=(1.-cos(angle))*.5;
+  if(r>=1.){
+    float halo=exp(-(r-1.)*8.)*.065*lit;
+    if(halo<.001)discard;
+    gl_FragColor=vec4(.69,.73,.82,halo*opacity);
+    return;
+  }
+  // Source is 1536 x 1520. Sample the lunar disc, not the surrounding black rectangle.
+  vec2 photoUv=vec2(758./1536.,1.-766.5/1520.)+p*vec2(711.5/1536.,711.5/1520.);
+  vec3 surface=texture2D(map,photoUv).rgb;
+  float luma=dot(surface,vec3(.2126,.7152,.0722));
+  float nz=sqrt(max(0.,1.-r*r));
+  float incidence=p.x*sin(angle)-nz*cos(angle);
+  float daylight=smoothstep(-.025,.025,incidence);
+  // Gentle limb shading and faint earthshine retain the real maria/crater contrast.
+  vec3 colour=surface*vec3(1.,.995,.98)*(.9+.1*nz)*mix(.045,1.,daylight);
+  float edge=smoothstep(0.,.009,1.-r)*smoothstep(.012,.065,luma);
+  gl_FragColor=vec4(colour,opacity*edge);
+}`;
+function loadPhotographicMoon(){
+  const photo=new THREE.TextureLoader().load('/assets/moon-reference.jpg?v=1',texture=>{
+    // The shader samples display-space photo values directly, avoiding a second gamma pass.
+    texture.encoding=THREE.LinearEncoding;texture.generateMipmaps=true;
+    texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;
+    texture.needsUpdate=true;
+    nightSky.moons.forEach((moon,i)=>{
+      const material=moon.material;
+      moon.userData.photoPhase.value=MOON_PHASES[nightSky.moonSlots[i]??3];
+      material.map=texture;
+      material.onBeforeCompile=shader=>{shader.uniforms.uMoonPhase=moon.userData.photoPhase;shader.fragmentShader=PHOTO_MOON_FRAGMENT};
+      material.customProgramCacheKey=()=> 'garden-photo-moon-v1';material.needsUpdate=true;
+    });
+    nightSky.moonPhotoReady=true;
+    // Release the seven temporary phase maps; the photograph is uploaded only once.
+    nightSky.moonMaps.forEach(map=>map.dispose());nightSky.moonMaps=[];
+  },undefined,()=>{photo.dispose()});
+  nightSky.moonPhoto=photo;
+}
 function moonPhaseAt(slot){return Math.floor(environmentRandom((slot^0x31b7f49a)>>>0)()*MOON_PHASES.length)}
 function updateNightSky(now,weather,daylight){
   const darkness=1-THREE.MathUtils.smoothstep(daylight,.05,.85),cloud=weather.cloud;
@@ -3224,7 +3273,7 @@ function updateNightSky(now,weather,daylight){
   const phases=[moonPhaseAt(slot-1),moonPhaseAt(slot)],weights=[1-blend,blend];
   let moonLight=0;
   nightSky.moons.forEach((moon,i)=>{
-    const phase=phases[i];if(nightSky.moonSlots[i]!==phase){moon.material.map=nightSky.moonMaps[phase];nightSky.moonSlots[i]=phase}
+    const phase=phases[i];if(nightSky.moonSlots[i]!==phase){if(!nightSky.moonPhotoReady)moon.material.map=nightSky.moonMaps[phase];moon.userData.photoPhase.value=MOON_PHASES[phase];nightSky.moonSlots[i]=phase}
     moon.material.opacity=weights[i]*darkness*(1-cloud*.94);moon.visible=moon.material.opacity>.001;
     moonLight+=weights[i]*(1-Math.cos(MOON_PHASES[phase]*Math.PI*2))*.5;
   });
@@ -3252,8 +3301,10 @@ function updateNightSky(now,weather,daylight){
   nightSky.moonMaps=MOON_PHASES.map(moonTexture);
   nightSky.moons=[0,1].map(()=>{
     const moon=new THREE.Sprite(new THREE.SpriteMaterial({map:nightSky.moonMaps[3],transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false}));
+    moon.userData.photoPhase={value:.5};
     moon.position.set(-120,95,-200);moon.scale.set(145,145,1);moon.renderOrder=2;nightSky.group.add(moon);return moon;
   });
+  loadPhotographicMoon();
 }
 
 
@@ -4584,6 +4635,7 @@ requestGardenFrame();
 </script>
 
 </body></html>
+
 
 
 

@@ -8,3 +8,8 @@
 !icons/garden-512.png
 !music/
 !music/yoiyami-core-theme.mp3
+
+
+# 달 표면에 사용하는 원본 사진 한 장만 허용한다.
+!assets/
+!assets/moon-reference.jpg
