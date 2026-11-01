@@ -234,6 +234,9 @@ button:disabled{opacity:.5;cursor:default}
 }
 
 #gardenPanel #homeInstallBtn,#gardenPanel #qualityBtn{grid-column:1/-1}
+#exitCloseStatus:empty{display:none}
+#exitCloseHelp{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#eee7d9;font-size:13px;line-height:1.7;word-break:keep-all}
+#exitCloseHelp p{margin:6px 0 0}
 body.listening-room #skyViewBtn,body.listening-room #firePlayList,body.listening-room #firePlayBtn,body.listening-room #pFuel,body.listening-room #auroraBtn,body.listening-room #fireworksBtn,body.listening-room #jarBtn,body.listening-room #campfireStatus{display:none!important}
 #listeningControls{display:flex;flex-direction:column;gap:4px;pointer-events:auto}
 #listeningRecords{display:grid;gap:8px;margin:14px 0}
@@ -526,8 +529,13 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <div class="welcome exit-screen" id="exitScreen" hidden>
   <section class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="exitTitle">
     <h2 id="exitTitle">정원에서 나왔어요</h2>
-    <p>이 창을 닫아도 돼요. 다시 들어가려면 아래 버튼을 눌러 주세요.</p>
-    <div class="row"><button id="reenterBtn" class="primary" type="button">다시 입장하기</button><button id="exitCloseBtn" type="button">창 닫기</button></div>
+    <p id="exitSummary">정원 연결과 소리는 종료됐어요. 다시 들어가려면 아래 버튼을 눌러 주세요.</p>
+    <div class="row"><button id="reenterBtn" class="primary" type="button">다시 입장하기</button><button id="exitCloseBtn" type="button" aria-describedby="exitCloseStatus">창 닫기</button></div>
+    <p id="exitCloseStatus" role="status" aria-live="polite"></p>
+    <div id="exitCloseHelp" hidden tabindex="-1">
+      <strong>브라우저에서 직접 닫아 주세요</strong>
+      <p id="exitCloseSteps"></p>
+    </div>
   </section>
 </div>
 <div id="stormFlash" aria-hidden="true"></div>
@@ -724,8 +732,35 @@ const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},se
 const $=id=>document.getElementById(id);
 const LEFT_KEY='garden.visit.left.v1';
 function readExitFlag(){try{return sessionStorage.getItem(LEFT_KEY)==='1'}catch(e){return false}}
-$('exitCloseBtn').onclick=()=>{try{window.close()}catch(e){}};
-$('reenterBtn').onclick=()=>{try{sessionStorage.removeItem(LEFT_KEY);sessionStorage.removeItem('garden.visit.v1')}catch(e){}location.reload()};
+// window.close() may silently do nothing on a user-opened browser tab.
+// Bind once before WebGL setup so this exit control also works if 3D initialisation fails.
+const exitWindowControls=(()=>{
+  const screen=$('exitScreen'),button=$('exitCloseBtn'),status=$('exitCloseStatus'),help=$('exitCloseHelp'),steps=$('exitCloseSteps');
+  let timer=null;
+  function reset(){
+    clearTimeout(timer);timer=null;button.hidden=false;button.disabled=false;button.textContent='창 닫기';
+    status.textContent='';help.hidden=true;
+  }
+  function showHelp(){
+    timer=null;if(screen.hidden||!document.body.classList.contains('visit-ended'))return;
+    button.hidden=true;button.disabled=false;
+    status.textContent='이 브라우저에서는 탭을 자동으로 닫을 수 없어요. 정원에서는 이미 나왔어요.';
+    const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+    const mobile=matchMedia('(pointer: coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    steps.textContent=standalone&&mobile?'휴대폰의 최근 앱 화면에서 정원을 닫아 주세요. 다시 이용할 때는 바탕화면의 정원 아이콘을 눌러 주세요.':mobile?'브라우저의 탭 목록을 열어 이 정원 탭의 ×를 눌러 주세요. 다른 앱 안에서 열었다면 그 앱의 상단 × 또는 닫기 메뉴를 이용해 주세요.':standalone?'정원 창의 ×를 눌러 닫아 주세요.':/Mac|iPhone|iPad/.test(navigator.platform||'')?'브라우저 탭의 ×를 누르거나 ⌘ + W를 눌러 주세요.':'브라우저 탭의 ×를 누르거나 Ctrl + W를 눌러 주세요.';
+    help.hidden=false;help.focus({preventScroll:true});help.scrollIntoView({block:'nearest'});
+  }
+  function requestClose(){
+    if(screen.hidden||!document.body.classList.contains('visit-ended')||timer!==null)return;
+    button.disabled=true;button.textContent='닫는 중…';status.textContent='창을 닫는 중이에요…';
+    // The fallback is installed first because a blocked close need not throw an exception.
+    timer=setTimeout(()=>{if(!window.closed)showHelp()},400);
+    try{window.close()}catch(e){clearTimeout(timer);showHelp()}
+  }
+  button.onclick=requestClose;
+  return{reset,requestClose};
+})();
+$('reenterBtn').onclick=()=>{exitWindowControls.reset();try{sessionStorage.removeItem(LEFT_KEY);sessionStorage.removeItem('garden.visit.v1')}catch(e){}location.reload()};
 const isTouch=matchMedia('(pointer:coarse)').matches;
 function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2000)}
 const hex=n=>'#'+(n>>>0).toString(16).padStart(6,'0');
@@ -4182,6 +4217,7 @@ function refreshGarden(){
 }
 $('refreshBtn').onclick=refreshGarden;
 function showExitScreen(){
+  exitWindowControls.reset();
   document.body.classList.add('visit-ended');$('exitScreen').hidden=false;$('welcome').hidden=true;$('shareDialog').hidden=true;$('leaveConfirm').hidden=true;
   me.g.visible=false;myDogObj.g.visible=false;quietThunder(true);silenceMusicOnExit();
   if(animationFrameId!==null){cancelAnimationFrame(animationFrameId);animationFrameId=null}
@@ -4202,9 +4238,10 @@ function leaveGarden(closeWindow=true,notifyServer=true){
   Object.keys(lastSent).forEach(key=>delete lastSent[key]);
   $('chatLog').textContent='';historyKeys.clear();sharedFlowers=null;renderFlowers(localFlowers);
   showExitScreen();updateWho();
-  if(closeWindow)try{window.close()}catch(e){}
+  if(closeWindow)exitWindowControls.requestClose();
 }
 function beginManualEntry(){
+  exitWindowControls.reset();
   visitEnded=false;try{sessionStorage.removeItem(LEFT_KEY)}catch(e){}
   clearVisit();visitToken='';hasEntered=false;
   $('exitScreen').hidden=true;document.body.classList.remove('visit-ended');me.g.visible=true;myDogObj.g.visible=true;
@@ -4212,7 +4249,7 @@ function beginManualEntry(){
   clock.getDelta();installGardenHistory();requestGardenFrame();openNameDialog(true);updateWho();
 }
 $('leaveBtn').onclick=showLeaveConfirm;
-$('exitCloseBtn').onclick=()=>{try{window.close()}catch(e){}};
+
 $('reenterBtn').onclick=beginManualEntry;
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveVisit()});
 addEventListener('pagehide',saveVisit);
