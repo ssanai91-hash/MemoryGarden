@@ -396,7 +396,7 @@ export class GardenRoom extends DurableObject {
       await this.advanceRps();
       await this.rememberVisit(a);
       const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', you: a.id, prayerSlot: a.prayerSlot, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      ws.send(JSON.stringify({ t: 'welcome', features:{board:1}, you: a.id, prayerSlot: a.prayerSlot, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }
@@ -551,7 +551,7 @@ export class GardenRoom extends DurableObject {
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    if (url.pathname === '/health') return new Response('ok');
+    if (url.pathname === '/health') return new Response('ok',{headers:{'X-Garden-Protocol':'board-v2'}});
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{6,40})$/);
     if (!m) {
       if (env.ASSETS) {
