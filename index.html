@@ -1,0 +1,579 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>기억의 정원</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: full-screen blocky garden; plaque top-left, joystick bottom-left, poses bottom-right. One warm dusk look. */
+:root{
+  --ink:#2b2a33; --paper:rgba(250,246,238,.93); --line:rgba(60,52,40,.18);
+  --accent:#b8743c; --soft:#6e6a62; --sky:#cfd9e4; --chip:#fff;
+  --display:"Gowun Batang","Nanum Myeongjo",serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(--ink);font-family:var(--body)}
+#c{position:fixed;left:0;top:0;width:100%;height:100%;display:block;touch-action:none}
+.plaque{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));
+  background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:11px 13px;max-width:min(300px,calc(100vw - 32px));
+  backdrop-filter:blur(6px);box-shadow:0 6px 24px rgba(40,30,20,.12)}
+.plaque h1{font-family:var(--display);font-size:19px;margin:0;text-wrap:balance;font-weight:700}
+.plaque .sub{font-size:12.5px;color:var(--soft);margin-top:2px}
+.who{display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:8px;color:var(--ink)}
+.who .dot{width:8px;height:8px;border-radius:50%;background:#7aa35a;box-shadow:0 0 0 3px rgba(122,163,90,.22);flex:none}
+.who .dot.off{background:#b3ada3;box-shadow:none}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+button,.filebtn{font-family:var(--body);font-size:13px;border:1px solid var(--line);background:var(--chip);color:var(--ink);
+  border-radius:999px;padding:7px 12px;cursor:pointer;line-height:1.2}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{margin-top:10px;display:grid;gap:8px}
+.panel label{font-size:12px;color:var(--soft);display:grid;gap:4px}
+.panel input[type=text]{font-family:var(--body);font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+.filebtn input{display:none}
+.mine{font-size:12px;color:var(--soft);margin-top:8px}
+.poses{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.poses button{background:var(--paper);backdrop-filter:blur(6px);min-width:84px;box-shadow:0 4px 14px rgba(40,30,20,.12)}
+.poses button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px);text-align:center;
+  background:rgba(43,42,51,.72);color:#f6f1e7;font-size:12.5px;padding:7px 12px;border-radius:14px;pointer-events:none;transition:opacity .6s}
+.toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13px;padding:8px 14px;border-radius:999px;opacity:0;transition:opacity .4s;pointer-events:none;z-index:5;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1}
+#joy{position:fixed;left:calc(max(16px,env(safe-area-inset-left,0px)) + 6px);bottom:calc(24px + env(safe-area-inset-bottom,0px));width:120px;height:120px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.8);background:rgba(43,42,51,.22);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#joy.on{background:rgba(43,42,51,.32)}
+#knob{pointer-events:none;position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.88)}
+@media (prefers-reduced-motion: reduce){.hint,.toast{transition:none}}
+@media (max-width:420px){.plaque{padding:9px 11px;max-width:min(250px,calc(100vw - 32px))}.plaque h1{font-size:16px}.plaque .sub,.mine{display:none}.row{margin-top:7px}.row button{padding:6px 10px;font-size:12.5px}}
+</style>
+
+<canvas id="c" aria-label="친구들과 함께 걷는 추모 정원"></canvas>
+
+<div class="plaque">
+  <h1 id="titleName">기억의 정원</h1>
+  <div class="sub" id="titleSub">우리 아이를 기억하는 산책길</div>
+  <div class="who"><span class="dot off" id="dot"></span><span id="whoText">혼자 산책 중</span></div>
+  <div class="row">
+    <button class="primary" id="flowerBtn" type="button">꽃 놓기</button>
+    <button id="rerollBtn" type="button">새 강아지 뽑기</button>
+    <button id="goBtn" type="button" hidden>친구에게 가기</button>
+    <button id="editBtn" type="button" aria-expanded="false" hidden>꾸미기</button>
+  </div>
+  <div class="mine" id="mine"></div>
+  <div class="panel" id="panel" hidden>
+    <label class="filebtn" for="photo">추모 사진 올리기<input id="photo" type="file" accept="image/*"></label>
+    <label for="petName">이름<input id="petName" type="text" maxlength="16" placeholder="예: 보리"></label>
+    <label for="petDates">함께한 날<input id="petDates" type="text" maxlength="30" placeholder="예: 2012.04 – 2026.09"></label>
+    <button id="saveBtn" type="button">저장</button>
+  </div>
+</div>
+
+<div class="poses">
+  <button id="pWave" type="button" aria-pressed="false">손 흔들기</button>
+  <button id="pSit" type="button" aria-pressed="false">앉기</button>
+  <button id="pLie" type="button" aria-pressed="false">눕기</button>
+</div>
+
+<div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
+<div class="hint" id="hint">조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}};
+const $=id=>document.getElementById(id);
+const isTouch=matchMedia('(pointer:coarse)').matches;
+$('hint').textContent=isTouch?'조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기':'조이스틱·WASD로 걷기 · 땅을 클릭하면 그곳으로 · 드래그로 둘러보기';
+setTimeout(()=>$('hint').style.opacity=0,8000);
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2000)}
+const hex=n=>'#'+(n>>>0).toString(16).padStart(6,'0');
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* ---------- renderer & scene ---------- */
+const canvas=$('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0xe9dccb,30,95);
+const camera=new THREE.PerspectiveCamera(60,1,0.1,300);
+const sky=new THREE.Mesh(new THREE.SphereGeometry(200,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+  uniforms:{top:{value:new THREE.Color(0x9fb7d1)},bot:{value:new THREE.Color(0xf3dcc0)}},
+  vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'uniform vec3 top;uniform vec3 bot;varying vec3 p;void main(){float h=clamp(normalize(p).y*1.6+.15,0.,1.);gl_FragColor=vec4(mix(bot,top,h),1.);}'}));
+scene.add(sky);
+scene.add(new THREE.HemisphereLight(0xfff1dc,0x6b7a4a,.78));
+const sun=new THREE.DirectionalLight(0xffe2bd,.85);
+sun.position.set(-30,40,20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera,{left:-40,right:40,top:40,bottom:-40,far:120});
+scene.add(sun);
+const matCache={};const M=c=>matCache[c]||(matCache[c]=new THREE.MeshLambertMaterial({color:c}));
+const BOX=new THREE.BoxGeometry(1,1,1);
+function box(w,h,d,color,x,y,z,parent){const m=new THREE.Mesh(BOX,typeof color==='number'?M(color):color);m.scale.set(w,h,d);m.position.set(x||0,y||0,z||0);m.castShadow=true;if(parent)parent.add(m);return m}
+
+/* ---------- ground, paths, pond ---------- */
+const ground=new THREE.Mesh(new THREE.CircleGeometry(110,64),M(0x8fa860));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const pathMat=M(0xd8c7a5);
+const ring=new THREE.Mesh(new THREE.RingGeometry(17,19.2,96),pathMat);ring.rotation.x=-Math.PI/2;ring.position.y=.02;ring.receiveShadow=true;scene.add(ring);
+const entry=new THREE.Mesh(new THREE.PlaneGeometry(2.2,15),pathMat);entry.rotation.x=-Math.PI/2;entry.position.set(0,.021,10);entry.receiveShadow=true;scene.add(entry);
+const plaza=new THREE.Mesh(new THREE.CircleGeometry(4.5,48),M(0xcdbb98));plaza.rotation.x=-Math.PI/2;plaza.position.y=.022;plaza.receiveShadow=true;scene.add(plaza);
+const pond=new THREE.Mesh(new THREE.CircleGeometry(6,48),new THREE.MeshPhongMaterial({color:0x7fa7b8,shininess:80}));pond.rotation.x=-Math.PI/2;pond.position.set(-28,.03,-10);scene.add(pond);
+const pondEdge=new THREE.Mesh(new THREE.RingGeometry(6,6.6,48),M(0xb3a68c));pondEdge.rotation.x=-Math.PI/2;pondEdge.position.set(-28,.025,-10);scene.add(pondEdge);
+
+/* ---------- blocky trees ---------- */
+let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
+const leafCols=[0x5f8a4a,0x6f9a52,0x86a85a,0xc9a04f,0xd98a5a];
+const obstacles=[];
+function tree(x,z,s){
+  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+  box(.45*s,2.2*s,.45*s,0x7a5a3f,0,1.1*s,0,g);
+  const c=leafCols[Math.floor(rnd()*leafCols.length)];
+  box(2.2*s,1.1*s,2.2*s,c,0,2.6*s,0,g);box(1.5*s,.8*s,1.5*s,c,0,3.5*s,0,g);
+  if(rnd()<.5)box(1*s,.7*s,1*s,c,(rnd()-.5)*.8*s,3.2*s,1.1*s,g);
+  obstacles.push({x,z,r:.5*s});
+}
+for(let i=0;i<110;i++){
+  const a=rnd()*Math.PI*2,r=8+rnd()*48;
+  if(r>15.5&&r<21)continue;
+  const x=Math.cos(a)*r,z=Math.sin(a)*r;
+  if(Math.abs(x)<3.2&&z>0&&z<20)continue;
+  if(Math.hypot(x+28,z+10)<8)continue;
+  if(r<10&&rnd()<.5)continue;
+  tree(x,z,.8+rnd()*.6);
+}
+function bench(a){
+  const g=new THREE.Group();
+  box(1.8,.1,.5,0x8b6845,0,.48,0,g);box(1.8,.45,.08,0x8b6845,0,.8,-.24,g);
+  box(.08,.48,.45,0x3e3b38,-.8,.24,0,g);box(.08,.48,.45,0x3e3b38,.8,.24,0,g);
+  const r=20.4;g.position.set(Math.cos(a)*r,0,Math.sin(a)*r);g.lookAt(0,0,0);scene.add(g);
+  obstacles.push({x:g.position.x,z:g.position.z,r:1});
+}
+[.6,2.2,3.6,5.0].forEach(bench);
+
+/* ---------- memorial ---------- */
+const memorial=new THREE.Group();scene.add(memorial);
+const stone=0xe4ddd0;
+const base=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.9,.35,40),M(stone));base.position.y=.175;base.castShadow=base.receiveShadow=true;memorial.add(base);
+box(1.5,1,.5,stone,0,.85,0,memorial);
+box(1.5,1.8,.12,0x6d4b30,0,2.25,0,memorial);
+const photoMat=new THREE.MeshBasicMaterial({color:0xffffff});
+const photoPlane=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.6),photoMat);photoPlane.position.set(0,2.25,.065);memorial.add(photoPlane);
+const plaqueMat=new THREE.MeshBasicMaterial({color:0xffffff});
+const plaqueMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.4,.6),plaqueMat);plaqueMesh.position.set(0,.88,.26);memorial.add(plaqueMesh);
+const posts=[[-2.6,-2.6],[2.6,-2.6],[-2.6,2.6],[2.6,2.6]];
+posts.forEach(([x,z])=>box(.26,3.6,.26,0xf1ebe0,x,1.8,z,memorial));
+for(let i=-5;i<=5;i++)box(.1,.16,6,0xf1ebe0,i*.52,3.65,0,memorial);
+const glow=new THREE.PointLight(0xffc98a,.8,9);glow.position.set(0,1.6,1.6);memorial.add(glow);
+obstacles.push({x:0,z:0,r:2.1});posts.forEach(([x,z])=>obstacles.push({x,z,r:.35}));
+
+function placeholderTex(){
+  const c=document.createElement('canvas');c.width=416;c.height=512;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#f4ead9');g.addColorStop(1,'#e2d2b8');x.fillStyle=g;x.fillRect(0,0,416,512);
+  x.fillStyle='#b8743c';const paw=(cx,cy,r)=>{x.beginPath();x.ellipse(cx,cy,r,r*1.15,0,0,7);x.fill()};
+  paw(208,250,48);paw(150,180,20);paw(186,150,20);paw(230,150,20);paw(266,180,20);
+  x.fillStyle='#6e6a62';x.textAlign='center';x.font='26px "Gowun Dodum", sans-serif';x.fillText('추모 사진이 걸릴 자리',208,380);
+  return new THREE.CanvasTexture(c);
+}
+let photoShown=false;
+function setPhotoFromURL(url){
+  const img=new Image();img.onload=()=>{
+    const W=520,H=640,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+    const s=Math.max(W/img.width,H/img.height);x.drawImage(img,(W-img.width*s)/2,(H-img.height*s)/2,img.width*s,img.height*s);
+    const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
+    if(photoMat.map)photoMat.map.dispose();photoMat.map=t;photoMat.needsUpdate=true;photoShown=true;
+  };img.src=url;
+}
+function drawPlaque(name,dates){
+  const c=document.createElement('canvas');c.width=560;c.height=240;const x=c.getContext('2d');
+  x.fillStyle='#e9e2d5';x.fillRect(0,0,560,240);x.strokeStyle='#b49d78';x.lineWidth=4;x.strokeRect(14,14,532,212);
+  x.fillStyle='#3a3530';x.textAlign='center';x.font='bold 64px "Gowun Batang", serif';x.fillText(name||'사랑하는 친구',280,118);
+  x.font='30px "Gowun Dodum", sans-serif';x.fillStyle='#6e6a62';x.fillText(dates||'언제나 함께',280,176);
+  if(plaqueMat.map)plaqueMat.map.dispose();plaqueMat.map=new THREE.CanvasTexture(c);plaqueMat.needsUpdate=true;
+}
+let info={name:'',dates:'',photoId:null};
+function applyInfo(){
+  $('titleName').textContent=info.name?info.name+'의 정원':'기억의 정원';
+  $('titleSub').textContent=info.dates||'우리 아이를 기억하는 산책길';
+  $('petName').value=info.name;$('petDates').value=info.dates;drawPlaque(info.name,info.dates);
+}
+photoMat.map=placeholderTex();
+
+/* ---------- flowers ---------- */
+const petalCols=[0xf2c1c9,0xffffff,0xf7d77a,0xc9b6e8,0xf0a07a];
+const flowerGroup=new THREE.Group();scene.add(flowerGroup);
+function addFlower(i,col){
+  const g=new THREE.Group(),a=i*2.399,r=1.95+(i%4)*.2;
+  box(.03,.35,.03,0x4f7a3a,0,.17,0,g);
+  const pc=petalCols[Math.abs(col)%petalCols.length];
+  box(.16,.06,.06,pc,0,.36,0,g);box(.06,.06,.16,pc,0,.36,0,g);box(.06,.07,.06,0xe0a43a,0,.37,0,g);
+  g.position.set(Math.cos(a)*r,0,Math.sin(a)*r);flowerGroup.add(g);
+}
+function renderFlowers(list){while(flowerGroup.children.length)flowerGroup.remove(flowerGroup.children[0]);list.slice(-300).forEach((c,i)=>addFlower(i,c))}
+
+/* ---------- blocky people ---------- */
+const PAL={skin:[0xf3d2b5,0xe8b994,0xd9a07a,0xb57a52,0x8a5a3b],hair:[0x2a211d,0x4a3426,0x7a5236,0xc9a46a,0x8c8c8c,0x6b2f2a],
+  shirt:[0xd96c5f,0x5b8fb9,0x7fae6a,0xe2b04a,0x9b79c6,0xef9bb4,0x4fa3a0,0xf2efe8],pants:[0x3d3a44,0x4b6a8f,0x6e5a46,0x2e4a3a,0x8a8478],
+  shoe:[0x2a2622,0xf2efe8,0x8b4a2b]};
+function randLook(){return{skin:pick(PAL.skin),hair:pick(PAL.hair),shirt:pick(PAL.shirt),pants:pick(PAL.pants),shoe:pick(PAL.shoe),hs:Math.random()<.45?1:0,hat:Math.random()<.25}}
+const pixTex=(fn)=>{const c=document.createElement('canvas');c.width=c.height=8;const x=c.getContext('2d');fn(x);const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;return new THREE.MeshLambertMaterial({map:t})};
+function headMats(L){
+  const sk=hex(L.skin),hr=hex(L.hair),long=L.hs===1;
+  const front=pixTex(x=>{x.fillStyle=sk;x.fillRect(0,0,8,8);x.fillStyle=hr;x.fillRect(0,0,8,2);x.fillRect(0,2,1,long?5:1);x.fillRect(7,2,1,long?5:1);
+    x.fillStyle='#fff';x.fillRect(1,4,2,1);x.fillRect(5,4,2,1);x.fillStyle='#2b2420';x.fillRect(2,4,1,1);x.fillRect(5,4,1,1);
+    x.fillStyle='rgba(120,50,40,.55)';x.fillRect(3,6,2,1);x.fillStyle='rgba(230,120,120,.35)';x.fillRect(1,5,1,1);x.fillRect(6,5,1,1)});
+  const side=pixTex(x=>{x.fillStyle=sk;x.fillRect(0,0,8,8);x.fillStyle=hr;x.fillRect(0,0,8,2);if(long)x.fillRect(0,2,8,5);else x.fillRect(5,2,3,2)});
+  const back=pixTex(x=>{x.fillStyle=hr;x.fillRect(0,0,8,8);if(!long){x.fillStyle=sk;x.fillRect(0,6,8,2)}});
+  return[side,side,M(L.hair),M(L.skin),front,back];
+}
+function makeTag(text){
+  const c=document.createElement('canvas');c.width=512;c.height=96;
+  const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));
+  s.scale.set(2.4,.45,1);s.renderOrder=10;s.userData.c=c;setTag(s,text);return s;
+}
+function setTag(s,text){
+  if(s.userData.text===text)return;s.userData.text=text;
+  const c=s.userData.c,x=c.getContext('2d');x.clearRect(0,0,512,96);if(!text){s.material.map.needsUpdate=true;return}
+  x.font='34px "Gowun Dodum", sans-serif';const w=Math.min(500,x.measureText(text).width+36);
+  x.fillStyle='rgba(30,28,36,.6)';const r=26,l=256-w/2,tp=22,h=52;
+  x.beginPath();x.moveTo(l+r,tp);x.arcTo(l+w,tp,l+w,tp+h,r);x.arcTo(l+w,tp+h,l,tp+h,r);x.arcTo(l,tp+h,l,tp,r);x.arcTo(l,tp,l+w,tp,r);x.fill();
+  x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';x.fillText(text,256,49);s.material.map.needsUpdate=true;
+}
+function makePerson(L){
+  const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);rig.scale.setScalar(.9);
+  const legs=[],arms=[];
+  for(const s of[-1,1]){
+    const hip=new THREE.Group();hip.position.set(.125*s,.7,0);rig.add(hip);
+    box(.24,.55,.24,L.pants,0,-.275,0,hip);box(.25,.15,.27,L.shoe,0,-.625,.01,hip);legs.push(hip);
+    const sh=new THREE.Group();sh.position.set(.37*s,1.38,0);rig.add(sh);
+    box(.22,.44,.24,L.shirt,0,-.2,0,sh);box(.2,.26,.22,L.skin,0,-.55,0,sh);arms.push(sh);
+  }
+  box(.5,.7,.26,L.shirt,0,1.05,0,rig);box(.51,.06,.27,L.pants,0,.73,0,rig);
+  const head=new THREE.Mesh(BOX,headMats(L));head.scale.setScalar(.5);head.position.y=1.65;head.castShadow=true;rig.add(head);
+  if(L.hat){box(.54,.14,.54,L.shirt,0,1.93,0,rig);box(.54,.05,.22,L.shirt,0,1.88,.35,rig)}
+  const tag=makeTag('');tag.position.y=2.25;g.add(tag);
+  scene.add(g);
+  return{g,rig,legs,arms,head,tag,walkT:0,speed:0};
+}
+function posePerson(P,pose,dt,t){
+  const w=Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
+  const sw=Math.sin(P.walkT)*.7*w,k=Math.min(1,dt*10);
+  const L=(o,v)=>o+(v-o)*k;
+  let rx=0,ry=Math.abs(Math.cos(P.walkT))*.04*w,rz=0,tagY=2.25;
+  let leg=[sw,-sw],arm=[-sw*.8,sw*.8],armZ=[-.06,.06];
+  const still=w<.1;
+  if(pose==='sit'&&still){ry=-.5;leg=[-1.5,-1.5];arm=[-.7,-.7];tagY=1.8}
+  else if(pose==='lie'&&still){rx=-Math.PI/2;ry=.13;rz=.85;leg=[0,0];arm=[0,0];armZ=[-.5,.5];tagY=.9}
+  else if(pose==='wave'&&still){arm=[0,0];armZ=[-.06,2.6+Math.sin(t*8)*.3]}
+  P.rig.rotation.x=L(P.rig.rotation.x,rx);P.rig.position.y=L(P.rig.position.y,ry);P.rig.position.z=L(P.rig.position.z,rz);
+  for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
+  P.tag.position.y=L(P.tag.position.y,tagY);
+}
+
+/* ---------- blocky dogs ---------- */
+const BREEDS=[
+  {k:'시바',c1:0xd4874a,c2:0xf3e6d3,len:.62,leg:.22,bw:.26,bh:.26,hs:.26,ear:'up',tail:'curl'},
+  {k:'몰티즈',c1:0xf7f3ec,c2:0xece4d8,len:.42,leg:.13,bw:.24,bh:.24,hs:.25,ear:'down',tail:'curl'},
+  {k:'진돗개',c1:0xeadcc3,c2:0xfaf4ea,len:.72,leg:.3,bw:.28,bh:.28,hs:.28,ear:'up',tail:'curl'},
+  {k:'푸들',c1:0x8a5a3a,c2:0x7a4c30,len:.5,leg:.26,bw:.24,bh:.26,hs:.26,ear:'down',tail:'up'},
+  {k:'허스키',c1:0x6f7480,c2:0xf2f2f2,len:.74,leg:.3,bw:.3,bh:.3,hs:.29,ear:'up',tail:'up'},
+  {k:'닥스훈트',c1:0x8b4a2b,c2:0xb36a3e,len:.74,leg:.1,bw:.22,bh:.22,hs:.24,ear:'down',tail:'straight'},
+  {k:'래브라도',c1:0x2d2b30,c2:0x3d3a40,len:.78,leg:.32,bw:.32,bh:.32,hs:.3,ear:'down',tail:'straight'},
+  {k:'웰시코기',c1:0xd9893f,c2:0xfaf6ee,len:.64,leg:.11,bw:.28,bh:.26,hs:.27,ear:'big',tail:'straight'},
+  {k:'비글',c1:0xa8693a,c2:0xfaf6ee,len:.6,leg:.22,bw:.26,bh:.26,hs:.26,ear:'down',tail:'up',earC:0x6e3f22},
+  {k:'포메라니안',c1:0xe7a75b,c2:0xf4cf93,len:.4,leg:.12,bw:.28,bh:.28,hs:.26,ear:'up',tail:'curl'}];
+const DOGNAMES=['콩이','보리','초코','두부','하루','몽이','별이','감자','라떼','구름','호두','쿠키','모카','뭉치'];
+function randDog(){return{b:Math.floor(Math.random()*BREEDS.length),n:pick(DOGNAMES)}}
+function makeDog(spec){
+  const B=BREEDS[spec.b]||BREEDS[0];
+  const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);scene.add(g);
+  const y0=B.leg+B.bh/2;
+  box(B.bw,B.bh,B.len,B.c1,0,y0,0,rig);box(B.bw*.82,B.bh*.4,B.len*.5,B.c2,0,y0-B.bh*.32,.05,rig);
+  const head=new THREE.Group();head.position.set(0,y0+B.bh*.45,B.len/2+B.hs*.2);rig.add(head);
+  box(B.hs,B.hs,B.hs,B.c1,0,0,0,head);box(B.hs*.6,B.hs*.4,B.hs*.4,B.c2,0,-B.hs*.18,B.hs*.65,head);
+  box(B.hs*.2,B.hs*.15,B.hs*.08,0x231e1c,0,-B.hs*.08,B.hs*.86,head);
+  for(const s of[-1,1]){box(B.hs*.12,B.hs*.12,.02,0x231e1c,s*B.hs*.22,B.hs*.12,B.hs*.5,head);
+    if(B.ear==='up')box(B.hs*.24,B.hs*.34,B.hs*.1,B.c1,s*B.hs*.3,B.hs*.62,-B.hs*.05,head);
+    else if(B.ear==='big')box(B.hs*.34,B.hs*.5,B.hs*.1,B.c1,s*B.hs*.32,B.hs*.68,-B.hs*.05,head);
+    else box(B.hs*.14,B.hs*.6,B.hs*.4,B.earC||B.c1,s*B.hs*.56,-.02,-B.hs*.05,head)}
+  const legs=[];for(const[x,z]of[[-1,1],[1,1],[-1,-1],[1,-1]]){const l=new THREE.Group();l.position.set(x*B.bw*.3,B.leg,z*(B.len/2-.07));
+    box(.09,B.leg,.09,B.c1,0,-B.leg/2,0,l);box(.1,.04,.11,B.c2,0,-B.leg+.02,.01,l);rig.add(l);legs.push(l)}
+  const tail=new THREE.Group();tail.position.set(0,y0+B.bh*.35,-B.len/2);rig.add(tail);
+  const tl=B.tail==='curl'?.2:.26;box(.07,.07,tl,B.c1,0,0,-tl/2,tail);box(.075,.075,.06,B.c2,0,0,-tl+.02,tail);
+  tail.rotation.x=B.tail==='curl'?-1.2:B.tail==='up'?-.7:-.2;
+  return{g,rig,head,legs,tail,B,walk:0};
+}
+const angLerp=(a,b,k)=>{let d=b-a;d=Math.atan2(Math.sin(d),Math.cos(d));return a+d*k};
+function collide(x,z,r){
+  const d=Math.hypot(x,z);if(d>60){x*=60/d;z*=60/d}
+  for(const o of obstacles){const dx=x-o.x,dz=z-o.z,dd=Math.hypot(dx,dz),min=o.r+r;if(dd<min&&dd>1e-4){x=o.x+dx/dd*min;z=o.z+dz/dd*min}}
+  const px=x+28,pz=z+10,pd=Math.hypot(px,pz);if(pd<6.2){x=-28+px/pd*6.2;z=-10+pz/pd*6.2}
+  return[x,z];
+}
+function updateDog(D,ox,oz,oh,ownerPose,ownerMoving,dt,t){
+  const resting=(ownerPose==='sit'||ownerPose==='lie')&&!ownerMoving;
+  const back=resting?-.2:.3;
+  const tx=ox-Math.cos(oh)*1.0-Math.sin(oh)*back,tz=oz+Math.sin(oh)*1.0-Math.cos(oh)*back;
+  const dx=tx-D.g.position.x,dz=tz-D.g.position.z,dd=Math.hypot(dx,dz);
+  let dm=0;
+  if(dd>.3){const v=Math.min(dd*2.4,5)*dt;const[x,z]=collide(D.g.position.x+dx/dd*v,D.g.position.z+dz/dd*v,.35);D.g.position.x=x;D.g.position.z=z;dm=v;
+    D.g.rotation.y=angLerp(D.g.rotation.y,Math.atan2(dx,dz),Math.min(1,dt*6))}
+  else D.g.rotation.y=angLerp(D.g.rotation.y,resting?oh:Math.atan2(ox-D.g.position.x,oz-D.g.position.z),Math.min(1,dt*3));
+  if(dm>0)D.walk+=dm*9;
+  const lying=resting&&dd<.6,k=Math.min(1,dt*6);
+  D.legs.forEach((l,i)=>{const tg=lying?(i<2?-1.4:1.4):dm>0?Math.sin(D.walk+(i===0||i===3?0:Math.PI))*.6:0;l.rotation.x+=(tg-l.rotation.x)*(dm>0?1:k)});
+  D.rig.position.y+=((lying?-D.B.leg*.8:0)-D.rig.position.y)*k;
+  D.tail.rotation.y=Math.sin(t*(dd<1.5?12:6))*(lying?.25:.6);
+  D.head.rotation.x=dm>0?Math.sin(D.walk*2)*.05:Math.sin(t*1.5)*.06;
+}
+
+/* ---------- me ---------- */
+function loadJSON(k){try{return JSON.parse(store.get(k)||'null')}catch(e){return null}}
+function validLook(l){return!!l&&typeof l==='object'&&['skin','hair','shirt','pants','shoe'].every(k=>Number.isFinite(l[k]))}
+function validDog(d){return!!d&&Number.isInteger(d.b)&&d.b>=0&&d.b<BREEDS.length}
+let myLook=loadJSON('mem.look'),myDog=loadJSON('mem.dog');
+if(!validLook(myLook))myLook=randLook();if(!validDog(myDog))myDog=randDog();
+store.set('mem.look',JSON.stringify(myLook));store.set('mem.dog',JSON.stringify(myDog));
+let me=makePerson(myLook),myDogObj=makeDog(myDog);
+me.g.position.set((Math.random()-.5)*1.6,0,24+Math.random()*2);me.g.rotation.y=Math.PI;
+myDogObj.g.position.set(me.g.position.x+1,0,me.g.position.z);
+let myName='나';
+function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${BREEDS[d.b].k})`}
+function refreshMine(){setTag(me.tag,`${myName} · ${dogLabel(myDog)}`);$('mine').textContent=`함께 걷는 강아지: ${dogLabel(myDog)}`}
+refreshMine();
+let pose='stand',sendDirty=true;
+function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
+function setPose(p){pose=pose===p?'stand':p;target=null;marker.visible=false;syncPoseButtons();sendDirty=true}
+$('pWave').onclick=()=>setPose('wave');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');
+
+/* ---------- input ---------- */
+const cam={yaw:0,pitch:.32,dist:5.6};
+const keys={};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;keys[e.code]=true});
+addEventListener('keyup',e=>keys[e.code]=false);
+let move={x:0,y:0},target=null;
+const joy=$('joy'),knob=$('knob');let joyId=null;
+function joyUpdate(e){const r=joy.getBoundingClientRect();let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+  const m=r.width/2-14,d=Math.hypot(dx,dy);if(d>m){dx*=m/d;dy*=m/d}knob.style.transform=`translate(${dx}px,${dy}px)`;move={x:dx/m,y:-dy/m}}
+joy.addEventListener('pointerdown',e=>{e.preventDefault();joyId=e.pointerId;try{joy.setPointerCapture(e.pointerId)}catch(_){}joy.classList.add('on');target=null;joyUpdate(e)});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===joyId)joyUpdate(e)});
+function joyEnd(e){if(e.pointerId!==joyId)return;joyId=null;move={x:0,y:0};knob.style.transform='';joy.classList.remove('on')}
+joy.addEventListener('pointerup',joyEnd);joy.addEventListener('pointercancel',joyEnd);
+const looks=new Map();
+canvas.addEventListener('pointerdown',e=>{try{canvas.setPointerCapture(e.pointerId)}catch(_){}
+  looks.set(e.pointerId,{sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,t:performance.now(),moved:false})});
+canvas.addEventListener('pointermove',e=>{const p=looks.get(e.pointerId);if(!p)return;
+  if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>8)p.moved=true;
+  if(p.moved){cam.yaw-=(e.clientX-p.lx)*.006;cam.pitch=Math.max(.05,Math.min(1.2,cam.pitch+(e.clientY-p.ly)*.004))}
+  p.lx=e.clientX;p.ly=e.clientY});
+const ray=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hit=new THREE.Vector3();
+const marker=new THREE.Mesh(new THREE.RingGeometry(.25,.36,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8}));
+marker.rotation.x=-Math.PI/2;marker.visible=false;scene.add(marker);
+function lookEnd(e){const p=looks.get(e.pointerId);looks.delete(e.pointerId);if(!p||e.type==='pointercancel')return;
+  if(!p.moved&&performance.now()-p.t<400){
+    ray.setFromCamera({x:e.clientX/innerWidth*2-1,y:-(e.clientY/innerHeight)*2+1},camera);
+    if(ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.position.set(x,.04,z);marker.visible=true}}}
+canvas.addEventListener('pointerup',lookEnd);canvas.addEventListener('pointercancel',lookEnd);
+canvas.addEventListener('wheel',e=>{e.preventDefault();cam.dist=Math.max(2.5,Math.min(12,cam.dist+e.deltaY*.005))},{passive:false});
+
+/* ---------- friends (room presence) ---------- */
+let room=null,userNS=null,db=null,assets=null,myId=null;
+const peers=new Map();
+let pendingHello=[],userMoved=false,autoJoined=false;
+function goToFriend(auto){
+  let best=null,bd=1e9;for(const e of peers.values()){const d=Math.hypot(e.x-me.g.position.x,e.z-me.g.position.z);if(d<bd){bd=d;best=e}}
+  if(!best)return;
+  const a=Math.random()*Math.PI*2;const[x,z]=collide(best.x+Math.cos(a)*1.8,best.z+Math.sin(a)*1.8,.4);
+  me.g.position.set(x,0,z);me.g.rotation.y=Math.atan2(best.x-x,best.z-z);
+  myDogObj.g.position.set(x+.8,0,z);cam.yaw=me.g.rotation.y+Math.PI;
+  target=null;marker.visible=false;sendDirty=true;
+  if(!auto)toast(`${best.nm||'친구'} 옆으로 왔어요`);
+}
+const lastSent={};
+function sendPresence(){
+  if(!room)return;const p=me.g.position;
+  const patch={x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,look:myLook,dog:myDog,uid:myId};
+  const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
+  if(Object.keys(out).length)room.presence(out).catch(()=>{});
+}
+function removePeer(k){const e=peers.get(k);if(!e)return;scene.remove(e.P.g);scene.remove(e.D.g);peers.delete(k)}
+function onPeerList(change){
+  const seen=new Set();
+  for(const pr of change.peers){
+    if(pr.sameTab||pr.kind!=='viewer')continue;
+    const s=pr.presence||{};if(!Number.isFinite(s.x)||!Number.isFinite(s.z))continue;
+    seen.add(pr.peer);
+    const look=validLook(s.look)?s.look:null,dog=validDog(s.dog)?s.dog:null;
+    const key=JSON.stringify([look,dog]);
+    let e=peers.get(pr.peer);
+    if(e&&e.key!==key){removePeer(pr.peer);e=null}
+    if(!e){
+      const P=makePerson(look||randLook()),D=makeDog(dog||randDog());
+      P.g.position.set(s.x,0,s.z);D.g.position.set(s.x+1,0,s.z);
+      e={P,D,key,x:s.x,z:s.z,h:0,pose:'stand',by:pr.by||(typeof s.uid==='string'?s.uid:null),dog:dog};
+      peers.set(pr.peer,e);pendingHello.push(pr.peer);
+    }
+    e.x=Math.max(-60,Math.min(60,s.x));e.z=Math.max(-60,Math.min(60,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
+    e.pose=['stand','sit','lie','wave'].includes(s.p)?s.p:'stand';
+  }
+  for(const k of[...peers.keys()])if(!seen.has(k))removePeer(k);
+  if(!userMoved&&!autoJoined&&peers.size){autoJoined=true;goToFriend(true)}
+  updateWho();resolveNames();
+}
+function updateWho(){
+  const n=peers.size;
+  $('goBtn').hidden=!room||n===0;
+  $('whoText').textContent=!room?'혼자 산책 중':n===0?'지금은 나 혼자예요':`지금 ${n+1}명이 함께 있어요`;
+}
+async function resolveNames(){
+  const ids=[...peers.values()].map(e=>e.by).filter(Boolean);
+  let ps={};if(userNS&&ids.length){try{ps=await userNS.profiles(ids)}catch(e){}}
+  for(const e of peers.values()){const nm=(e.by&&ps[e.by]&&ps[e.by].name)||'친구';e.nm=nm;
+    setTag(e.P.tag,e.dog?`${nm} · ${dogLabel(e.dog)}`:nm)}
+  const hello=pendingHello.filter(k=>peers.has(k));pendingHello=[];
+  if(hello.length)toast(hello.length===1?`${peers.get(hello[0]).nm}님이 정원에 들어왔어요`:`친구 ${hello.length}명이 정원에 있어요`);
+}
+
+/* ---------- memorial data: shared when available, this device otherwise ---------- */
+let localFlowers=[];try{localFlowers=JSON.parse(store.get('mem.flowerList')||'[]')}catch(e){}
+if(!Array.isArray(localFlowers))localFlowers=[];
+const legacy=parseInt(store.get('mem.flowers')||'0',10);if(!localFlowers.length&&legacy>0)localFlowers=Array.from({length:Math.min(legacy,300)},(_,i)=>i);
+let sharedFlowers=null,canEditMemorial=true;
+info={name:store.get('mem.name')||'',dates:store.get('mem.dates')||'',photoId:null};
+applyInfo();const localPhoto=store.get('mem.photo');if(localPhoto)setPhotoFromURL(localPhoto);
+renderFlowers(localFlowers);
+$('editBtn').hidden=false;
+if(document.fonts)document.fonts.ready.then(()=>{applyInfo();refreshMine();resolveNames();if(!photoShown){photoMat.map=placeholderTex();photoMat.needsUpdate=true}});
+
+function applyMyLook(look,dog,save){
+  const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
+  scene.remove(me.g);scene.remove(myDogObj.g);
+  myLook=look;myDog=dog;me=makePerson(myLook);myDogObj=makeDog(myDog);
+  me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);refreshMine();
+  store.set('mem.look',JSON.stringify(myLook));store.set('mem.dog',JSON.stringify(myDog));
+  if(save&&db&&myId)db.doc('data/users/'+myId+'/garden').set({look:myLook,dog:myDog}).catch(()=>{});
+  sendDirty=true;
+}
+
+(async()=>{
+  if(!window.claude||typeof claude.use!=='function')return;
+  const [r,u,d,a]=await Promise.all(['room','user','db','assets'].map(n=>Promise.resolve().then(()=>claude.use(n)).catch(()=>null)));
+  room=r;userNS=u;db=d;assets=a;
+  if(userNS){
+    const m=await userNS.me();myId=m.id;if(m.name)myName=m.name;refreshMine();
+    if(db){canEditMemorial=!!(await userNS.canEdit());$('editBtn').hidden=!canEditMemorial;if(!canEditMemorial)$('panel').hidden=true}
+  }
+  if(db){
+    db.doc('memorial/info').onSnapshot(s=>{
+      if(!s.exists)return;const v=s.data()||{};
+      info={name:typeof v.name==='string'?v.name.slice(0,16):'',dates:typeof v.dates==='string'?v.dates.slice(0,30):'',
+        photoId:typeof v.photoId==='string'&&/^[0-9a-f]{32}$/i.test(v.photoId)?v.photoId:null};
+      applyInfo();if(info.photoId)setPhotoFromURL('/_blob/'+info.photoId);
+    },()=>{});
+    db.collection('flowers').orderBy('at').limit(300).onSnapshot(s=>{
+      sharedFlowers=s.docs.map(x=>{const c=(x.data()||{}).c;return Number.isInteger(c)?c:0});renderFlowers(sharedFlowers);
+    },()=>{});
+    if(myId){
+      try{const ref=db.doc('data/users/'+myId+'/garden');const s=await ref.get();const v=s.exists?s.data():null;
+        if(v&&validLook(v.look)&&validDog(v.dog))applyMyLook(v.look,v.dog,false);
+        else ref.set({look:myLook,dog:myDog}).catch(()=>{});
+      }catch(e){}
+    }
+  }
+  if(room){
+    $('dot').classList.remove('off');
+    room.onPeers(onPeerList,()=>{room=null;$('dot').classList.add('off');updateWho()});
+    room.onConnection(c=>{$('dot').classList.toggle('off',!c)});
+    sendPresence();
+  }
+  updateWho();
+})();
+
+$('goBtn').onclick=()=>goToFriend(false);
+$('rerollBtn').onclick=()=>{let d=randDog();while(d.b===myDog.b)d=randDog();applyMyLook(randLook(),d,true);toast(`${dogLabel(myDog)}와 함께 걸어요`)};
+$('editBtn').onclick=()=>{const p=$('panel');p.hidden=!p.hidden;$('editBtn').setAttribute('aria-expanded',String(!p.hidden))};
+$('saveBtn').onclick=async()=>{
+  const name=$('petName').value.trim().slice(0,16),dates=$('petDates').value.trim().slice(0,30);
+  if(db&&canEditMemorial){try{await db.doc('memorial/info').set({name,dates,photoId:info.photoId||null});toast('모두에게 보이도록 저장했어요')}catch(e){toast('저장하지 못했어요. 잠시 뒤 다시 눌러 주세요')}}
+  else{store.set('mem.name',name);store.set('mem.dates',dates);info.name=name;info.dates=dates;applyInfo();toast('이 기기에 저장했어요')}
+  $('panel').hidden=true;$('editBtn').setAttribute('aria-expanded','false');
+};
+$('photo').onchange=e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{
+    const c=document.createElement('canvas'),s=Math.min(1,1200/Math.max(img.width,img.height));
+    c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    const url=c.toDataURL('image/jpeg',.88);setPhotoFromURL(url);
+    if(assets&&db&&canEditMemorial){
+      c.toBlob(async b=>{try{const up=await assets.upload(b,{type:'image/jpeg'});info.photoId=up.id;
+        await db.doc('memorial/info').set({name:info.name,dates:info.dates,photoId:up.id});toast('사진을 모두의 액자에 걸었어요')}
+        catch(err){toast('사진을 올리지 못했어요. 더 작은 사진으로 다시 해 주세요')}},'image/jpeg',.88);
+    }else toast(store.set('mem.photo',url)?'이 기기의 액자에 걸었어요':'사진을 걸었어요 (새로고침하면 사라져요)');
+  };img.src=r.result};r.readAsDataURL(f);
+  e.target.value='';
+};
+$('flowerBtn').onclick=async()=>{
+  const c=Math.floor(Math.random()*petalCols.length);
+  if(db&&sharedFlowers){try{await db.collection('flowers').add({at:Date.now(),c});toast('꽃을 놓았어요');return}catch(e){}}
+  localFlowers.push(c);localFlowers=localFlowers.slice(-300);store.set('mem.flowerList',JSON.stringify(localFlowers));renderFlowers(localFlowers);toast(`꽃 ${localFlowers.length}송이`);
+};
+
+/* ---------- loop ---------- */
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PN=160,pg=new THREE.BufferGeometry(),pp=new Float32Array(PN*3);
+for(let i=0;i<PN;i++){pp[i*3]=(rnd()-.5)*60;pp[i*3+1]=rnd()*8+.5;pp[i*3+2]=(rnd()-.5)*60}
+pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
+scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0xfff2e0,size:.09,transparent:true,opacity:.85})));
+const clock=new THREE.Clock();let sendAcc=0;
+function tick(){
+  const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
+  let f=move.y,s=move.x;
+  if(keys.KeyW||keys.ArrowUp)f=1;if(keys.KeyS||keys.ArrowDown)f=-1;
+  if(keys.KeyA||keys.ArrowLeft)s=-1;if(keys.KeyD||keys.ArrowRight)s=1;
+  if(keys.KeyQ)cam.yaw+=dt*1.8;if(keys.KeyE)cam.yaw-=dt*1.8;
+  const sy=Math.sin(cam.yaw),cy=Math.cos(cam.yaw);
+  let vx=-sy*f+cy*s,vz=-cy*f-sy*s,mag=Math.min(1,Math.hypot(vx,vz));
+  if(mag>.08){target=null;marker.visible=false;const l=Math.hypot(vx,vz);vx/=l;vz/=l}
+  else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
+    if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
+  else mag=0;
+  if(mag>0&&pose!=='stand'){pose='stand';syncPoseButtons();sendDirty=true}
+  const ox=me.g.position.x,oz=me.g.position.z;
+  if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
+    me.g.rotation.y=angLerp(me.g.rotation.y,Math.atan2(vx,vz),Math.min(1,dt*10))}
+  const moved=Math.hypot(me.g.position.x-ox,me.g.position.z-oz)/Math.max(dt,1e-4);
+  me.speed+=(moved-me.speed)*Math.min(1,dt*10);
+  posePerson(me,pose,dt,t);
+  updateDog(myDogObj,me.g.position.x,me.g.position.z,me.g.rotation.y,pose,me.speed>.3,dt,t);
+
+  for(const e of peers.values()){
+    const P=e.P,px=P.g.position.x,pz=P.g.position.z,k=Math.min(1,dt*6);
+    if(Math.hypot(e.x-px,e.z-pz)>4){P.g.position.x=e.x;P.g.position.z=e.z}
+    else{P.g.position.x+=(e.x-px)*k;P.g.position.z+=(e.z-pz)*k}
+    P.g.rotation.y=angLerp(P.g.rotation.y,e.h,k);
+    const sp=Math.hypot(P.g.position.x-px,P.g.position.z-pz)/Math.max(dt,1e-4);
+    P.speed+=(Math.min(sp,4)-P.speed)*Math.min(1,dt*8);
+    posePerson(P,e.pose,dt,t);
+    updateDog(e.D,P.g.position.x,P.g.position.z,P.g.rotation.y,e.pose,P.speed>.3,dt,t);
+  }
+
+  const ax=me.g.position.x,az=me.g.position.z,cp=Math.cos(cam.pitch);
+  camera.position.set(ax+sy*cam.dist*cp,1.3+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
+  camera.lookAt(ax,pose==='lie'?.6:1.35,az);
+
+  sendAcc+=dt;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
+  if(marker.visible)marker.material.opacity=.5+Math.sin(t*5)*.3;
+  if(!reduce){const a=pg.attributes.position.array;
+    for(let i=0;i<PN;i++){a[i*3+1]-=dt*.25;a[i*3]+=Math.sin(t+i)*dt*.2;if(a[i*3+1]<0)a[i*3+1]=8}
+    pg.attributes.position.needsUpdate=true;glow.intensity=.75+Math.sin(t*3)*.05+Math.sin(t*7.3)*.03}
+  renderer.render(scene,camera);requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+})();
+</script>
+
+</body></html>
