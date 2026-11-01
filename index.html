@@ -175,13 +175,13 @@ button:disabled{opacity:.5;cursor:default}
 <form class="chatbar" id="chatBar" hidden autocomplete="off">
   <div class="chatrow"><input id="chatInput" type="text" maxlength="200" placeholder="정원에 한마디" enterkeyhint="send" aria-label="보낼 말"><button class="primary" type="submit">보내기</button><button id="chatClose" type="button" aria-label="대화창 접기">접기</button></div>
 </form>
-<div class="welcome" id="welcome" hidden>
+<div class="welcome" id="welcome">
   <form class="welcome-card" id="nameForm" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" autocomplete="off">
     <div class="eyebrow">기억의 정원</div>
     <h2 id="welcomeTitle">정원에서 불릴 이름</h2>
-    <p>친구들 머리 위에 보이는 이름이에요. 나중에 메뉴에서 바꿀 수 있어요.</p>
-    <input id="nameInput" type="text" maxlength="12" placeholder="예: 숭열" aria-label="이름" autocomplete="nickname">
-    <div class="row"><button class="primary" type="submit">들어가기</button><button id="nameSkip" type="button">나중에</button></div>
+    <p>친구들에게 보일 이름을 확인한 뒤 들어가 주세요. 이전 이름은 미리 채워 드려요.</p>
+    <input id="nameInput" type="text" maxlength="12" placeholder="예: 숭열" aria-label="이름" autocomplete="nickname" required>
+    <div class="row"><button class="primary" id="nameSubmit" type="submit">들어가기</button><button id="nameCancel" type="button" hidden>취소</button></div>
   </form>
 </div>
 
@@ -633,6 +633,7 @@ myDogObj.g.position.set(me.g.position.x+1,0,me.g.position.z);
 let myName='나';
 const stripInvisible=v=>String(v||'').replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]/g,'').trim();
 let myNick=stripInvisible(store.get('garden.name')).slice(0,12);
+let hasEntered=false;
 const shownName=()=>myNick||myName;
 function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${BREEDS[d.b].k})`}
 function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 걷는 강아지: '+BREEDS[myDog.b].k}
@@ -645,7 +646,7 @@ $('pWave').onclick=()=>setPose('wave');$('pCoffee').onclick=()=>setPose('coffee'
 /* ---------- input ---------- */
 const cam={yaw:0,pitch:.25,dist:11.5};
 const keys={};
-addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;keys[e.code]=true});
+addEventListener('keydown',e=>{if(!$('welcome').hidden||e.target.tagName==='INPUT')return;keys[e.code]=true});
 addEventListener('keyup',e=>keys[e.code]=false);
 let move={x:0,y:0},target=null;
 const joy=$('joy'),knob=$('knob');let joyId=null;
@@ -723,7 +724,7 @@ function updateWho(){
   const n=peers.size,connected=room&&room.connected();
   $('goBtn').hidden=!connected||n===0;
   $('chatBtn').hidden=!room;
-  $('whoText').textContent=!room?'지금은 혼자 산책 중이에요':!connected?room.status():n===0?'지금은 나 혼자예요 · 친구를 불러 보세요':'지금 '+(n+1)+'명이 함께 있어요';
+  $('whoText').textContent=!hasEntered?'이름을 확인하고 들어와 주세요':!room?'지금은 혼자 산책 중이에요':!connected?room.status():n===0?'지금은 나 혼자예요 · 친구를 불러 보세요':'지금 '+(n+1)+'명이 함께 있어요';
   $('dot').classList.toggle('off',!connected);renderVisitors();
 }
 function renderVisitors(){
@@ -1068,14 +1069,28 @@ function updateCampfire(dt){if(!fireState.loaded)return;if(firePlaying)fireTime+
 /* ---------- shared clock: room server time when connected ---------- */
 function serverNow(){return Date.now()+(room&&room.clockOffset||0)}
 
-/* ---------- name on entry ---------- */
-function openNameDialog(focus){$('nameInput').value=myNick;$('welcome').hidden=false;if(focus)setTimeout(()=>{try{$('nameInput').focus({preventScroll:true})}catch(e){}},50)}
-function closeNameDialog(){$('welcome').hidden=true}
-$('nameForm').onsubmit=e=>{e.preventDefault();const v=stripInvisible($('nameInput').value).slice(0,12);if(!v){$('nameInput').focus();return}
-  myNick=v;store.set('garden.name',v);refreshMine();restoreLastBubble('me',shownName());renderVisitors();sendDirty=true;if(room&&room.kind==='ws')room.profile();closeNameDialog();toast(`${v}님, 어서 오세요`)};
-$('nameSkip').onclick=()=>{store.set('garden.nameAsked','1');closeNameDialog()};
+/* ---------- a confirmed name is required before joining ---------- */
+function openNameDialog(focus){
+  $('nameInput').value=myNick;$('nameInput').setCustomValidity('');
+  $('nameSubmit').textContent=hasEntered?'이름 바꾸기':'들어가기';$('nameCancel').hidden=!hasEntered;
+  $('welcome').hidden=false;
+  target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
+  Object.keys(keys).forEach(key=>delete keys[key]);
+  if(focus)setTimeout(()=>{try{$('nameInput').focus({preventScroll:true})}catch(e){}},50);
+}
+function closeNameDialog(){if(!hasEntered)return;$('nameInput').blur();$('welcome').hidden=true}
+$('nameInput').addEventListener('input',()=>$('nameInput').setCustomValidity(''));
+$('nameForm').onsubmit=e=>{
+  e.preventDefault();const name=stripInvisible($('nameInput').value).slice(0,12);
+  if(!name){$('nameInput').setCustomValidity('정원에서 사용할 이름을 입력해 주세요.');$('nameInput').reportValidity();$('nameInput').focus({preventScroll:true});return}
+  myNick=name;store.set('garden.name',name);hasEntered=true;
+  refreshMine();restoreLastBubble('me',shownName());renderVisitors();sendDirty=true;
+  closeNameDialog();
+  if(room&&room.kind==='ws')room.profile();else startGardenConnection();
+  toast(name+'님, 어서 오세요');
+};
+$('nameCancel').onclick=closeNameDialog;
 $('nameBtn').onclick=()=>openNameDialog(true);
-if(!myNick&&store.get('garden.nameAsked')!=='1')openNameDialog();
 
 /* ---------- separate chat history and a persistent last-message bubble ---------- */
 const bubbles=new Map(),lastMessages=new Map(),historyKeys=new Set();
@@ -1212,6 +1227,7 @@ $('chatBar').onsubmit=e=>{e.preventDefault();const text=stripInvisible($('chatIn
 const PUBLIC_GARDEN_URL='https://memorygarden.ajit-worker.workers.dev/';
 const GARDEN_SPACE='memorygarden';
 function startGardenConnection(){
+  if(!hasEntered||!myNick||room)return;
   if(!['https:','http:'].includes(location.protocol)){updateWho();return}
   // 이전 초대 링크와 브라우저별 방 설정은 더 이상 사용하지 않는다.
   const current=new URL(location.href);current.searchParams.delete('gardenServer');
@@ -1235,7 +1251,7 @@ function connectRoomServer(base,code){
       if(k!==sentState&&Number.isFinite(st.x)&&connected&&api.send({t:'state',s:st}))sentState=k;
       if(connected&&('look' in patch||'dog' in patch||'nick' in patch))api.profile();
       return Promise.resolve()},
-    profile(){if(connected)api.send({t:'profile',name:shownName()==='나'?'친구':shownName(),look:myLook,dog:myDog})},
+    profile(){if(connected)api.send({t:'profile',name:myNick,look:myLook,dog:myDog})},
     close(){
       stop=true;clearTimeout(retryTimer);clearTimeout(handshakeTimer);clearInterval(pingTimer);
       removeEventListener('online',wake);document.removeEventListener('visibilitychange',wake);
@@ -1271,7 +1287,7 @@ function connectRoomServer(base,code){
     let socket;try{socket=new WebSocket(base+'/room/'+code);ws=socket}catch(e){disconnected('친구 연결을 다시 시도하는 중…');return}
     handshakeTimer=setTimeout(()=>{if(ws===socket&&!connected)disconnected('친구 연결이 지연되고 있어요 · 다시 시도하는 중…')},12000);
     socket.onopen=()=>{if(stop||ws!==socket)return;const p=me.g.position;lastReceived=Date.now();
-      api.send({t:'hello',name:shownName()==='나'?'친구':shownName(),look:myLook,dog:myDog,s:{x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0}});
+      api.send({t:'hello',name:myNick,look:myLook,dog:myDog,s:{x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0}});
       clearInterval(pingTimer);pingTimer=setInterval(()=>{
         if(Date.now()-lastReceived>60000){disconnected('연결이 끊어졌어요 · 다시 연결하는 중…');return}
         api.send({t:'ping',c:Date.now()});
@@ -1349,7 +1365,7 @@ $('inviteBtn').onclick=callFriends;
 $('shareCopy').onclick=copyGardenLink;$('shareClose').onclick=closeShareDialog;
 $('shareLink').onclick=e=>e.target.select();
 $('shareDialog').addEventListener('keydown',e=>{if(e.key==='Escape')closeShareDialog()});
-startGardenConnection();
+openNameDialog();updateWho();
 
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.8?72:55;camera.updateProjectionMatrix()}
