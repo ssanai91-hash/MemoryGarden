@@ -12,7 +12,8 @@ const PRAYER_SPOTS=CENTERPIECE==='campfire'
   :Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
 const TRACKS = ['dawn', 'wind', 'bowl', 'melody', 'banya'];
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
-const POSES = ['stand', 'sit', 'lie', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers'];
+const POSES = ['stand', 'sit', 'lie', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
+const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'soju', 'beer', 'makgeolli', 'cider'];
 const INVISIBLE = /[\u0000-\u001f\u007f​-‏‪-‮⁠-⁤﻿]/g;
 
 const clean = (v, n) => (typeof v === 'string' ? v.replace(INVISIBLE, '').trim().slice(0, n) : '');
@@ -49,6 +50,7 @@ export class GardenRoom extends DurableObject {
       this.shared = (await ctx.storage.get('shared')) || {
         flowers: [], music: { track: null, startedAt: 0, videoId: null }, weather: 'auto', chat: [],
       };
+      if (!Array.isArray(this.shared.pocha)) this.shared.pocha = [];
     });
   }
 
@@ -206,6 +208,22 @@ export class GardenRoom extends DurableObject {
         this.shared.music = { track, startedAt: Date.now(), videoId: track === 'banya' && validVideo(m.videoId) ? m.videoId : null, by: a.id };
         await this.save();
         this.broadcast({ t: 'music', music: this.shared.music, name: a.name });
+        return;
+      }
+      case 'order': {
+        // 포장마차 주문: 자리(0~7)와 차림표 항목만 받는다. 상차림은 방에 남겨 늦게 온 사람도 본다.
+        if (!this.allow(a, 'o', 1) || !Number.isInteger(m.seat) || m.seat < 0 || m.seat > 7 || !POCHA_ITEMS.includes(m.item)) return;
+        const order = { seat: m.seat, item: m.item, at: Date.now(), by: a.id };
+        this.shared.pocha = this.shared.pocha.concat(order).slice(-48);
+        await this.save();
+        this.broadcast({ t: 'order', order, name: a.name });
+        return;
+      }
+      case 'clearSeat': {
+        if (!this.allow(a, 'x', 1) || !Number.isInteger(m.seat) || m.seat < 0 || m.seat > 7) return;
+        this.shared.pocha = this.shared.pocha.filter(o => o.seat !== m.seat);
+        await this.save();
+        this.broadcast({ t: 'pocha', pocha: this.shared.pocha });
         return;
       }
       case 'cheers': {
