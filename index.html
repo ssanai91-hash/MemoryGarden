@@ -1,5 +1,11 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>기억의 정원</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#243e34">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="기억의 정원">
+<link rel="apple-touch-icon" href="/icons/garden-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/garden-192.png">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
@@ -213,6 +219,15 @@ button:disabled{opacity:.5;cursor:default}
   #gardenPanel .plaque-heading h1{font-size:14px}
 }
 
+#gardenPanel #homeInstallBtn{grid-column:1/-1}
+.home-install-help{box-sizing:border-box;width:min(340px,calc(100vw - 32px));max-height:calc(100dvh - 40px);overflow:auto;border:1px solid var(--line);border-radius:18px;padding:20px;background:#faf6ee;color:var(--ink);box-shadow:0 12px 40px #20180e40}
+.home-install-help::backdrop{background:rgba(30,28,36,.45)}
+.home-install-help h2{margin:0 0 12px;font:700 20px/1.3 var(--display)}
+.home-install-help p{margin:10px 0;font-size:13px;line-height:1.7;word-break:keep-all}
+#homeInstallOnce{font-size:12px;color:var(--soft)}
+.home-install-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-top:16px}
+.home-install-actions button{min-height:40px;border-radius:10px;font-size:12px;padding:7px 8px}
+
 /* Selected welcome design: exact artwork from the approved first concept. */
 #welcome{place-items:start center;padding:clamp(64px,11.5dvh,96px) 0 20px!important;background:rgba(25,24,31,.38);overscroll-behavior:contain}
 #nameForm{--entry-ink:#332d2a;--entry-muted:#8d8478;--entry-orange:#b87539;width:min(420px,84vw);padding:22px 22px 7px;border:1px solid #ded8cb;border-radius:21px;background:#f8f4e9;color:var(--entry-ink);gap:0;box-shadow:0 14px 44px #18151033;align-self:start}
@@ -300,7 +315,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   <div id="gardenDetails" hidden>
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
-  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button></div>
+  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button><button id="homeInstallBtn" type="button">바탕화면에 추가</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
   <div class="garden-actions">
     <div class="garden-action-row"><button id="boardBtn" type="button">게시판 보기</button><button id="flowerBtn" type="button">꽃 놓기</button></div>
@@ -321,6 +336,82 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   </div>
   </div>
 </header>
+
+<dialog class="home-install-help" id="homeInstallHelp" aria-labelledby="homeInstallTitle" aria-describedby="homeInstallSteps homeInstallOnce">
+  <h2 id="homeInstallTitle">바탕화면에 정원 추가</h2>
+  <p id="homeInstallSteps"></p>
+  <p id="homeInstallOnce">정원 아이콘이 이미 있다면 새로 추가하지 않고 ‘이미 추가했어요’를 눌러 주세요.</p>
+  <div class="home-install-actions"><button id="homeInstallClose" type="button">닫기</button><button id="homeInstallDone" class="primary" type="button">이미 추가했어요</button></div>
+</dialog>
+<script>
+/* Home-screen install controls are independent of the 3D scene. */
+(function(){
+  const button=document.getElementById('homeInstallBtn'),help=document.getElementById('homeInstallHelp');
+  const KEY='garden.home.install.v1',display=matchMedia('(display-mode: standalone)'),minimal=matchMedia('(display-mode: minimal-ui)');
+  let deferred=null,busy=false,probing=false,installed=false,requested=false;
+  const saved=()=>{try{return localStorage.getItem(KEY)||''}catch(e){return''}};
+  const standalone=()=>display.matches||minimal.matches||navigator.standalone===true;
+  function sync(){
+    const value=saved();installed=installed||value==='installed'||standalone();requested=!installed&&(requested||value==='requested');
+    button.disabled=installed||requested||busy;
+    button.textContent=installed?'바탕화면에 추가됨':requested?'바탕화면 추가 요청됨':busy?'추가하는 중…':'바탕화면에 추가';
+    if(installed)deferred=null;
+  }
+  function remember(state){
+    if(state==='installed'){installed=true;requested=false}else if(!installed)requested=true;
+    deferred=null;try{localStorage.setItem(KEY,installed?'installed':state)}catch(e){}
+    sync();if(help.open)help.close();
+  }
+  async function probe(){
+    if(standalone())remember('installed');
+    sync();if(probing||typeof navigator.getInstalledRelatedApps!=='function')return;
+    probing=true;
+    try{
+      const apps=await navigator.getInstalledRelatedApps();
+      if(apps.some(app=>{
+        if(app.platform!=='webapp')return false;
+        try{
+          const manifest=new URL(app.url||'',location.origin),id=new URL(app.id||'',location.origin);
+          return app.url&&manifest.origin===location.origin&&manifest.pathname==='/manifest.webmanifest'||app.id&&id.href===new URL('/',location.origin).href;
+        }catch(e){return false}
+      }))remember('installed');
+    }catch(e){}finally{probing=false;sync()}
+  }
+  function showHelp(){
+    const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
+    const samsung=/SamsungBrowser/i.test(navigator.userAgent);
+    document.getElementById('homeInstallSteps').textContent=ios
+      ?'브라우저의 공유 버튼 → 홈 화면에 추가 → 추가를 눌러 주세요.'
+      :samsung?'삼성 인터넷 메뉴(☰) → 현재 페이지 추가 → 홈 화면을 선택해 주세요.'
+      :'브라우저 메뉴(⋮)에서 홈 화면에 추가 또는 앱 설치를 선택해 주세요. 메뉴가 없다면 Chrome이나 삼성 인터넷에서 정원을 열어 주세요.';
+    if(typeof help.showModal!=='function'){alert(document.getElementById('homeInstallSteps').textContent);return}
+    if(!help.open)help.showModal();
+  }
+  addEventListener('beforeinstallprompt',event=>{
+    event.preventDefault();sync();if(installed||requested)return;deferred=event;sync();
+  });
+  addEventListener('appinstalled',()=>remember('installed'));
+  button.onclick=async()=>{
+    sync();if(installed||requested||busy)return;
+    if(!deferred){showHelp();return}
+    const prompt=deferred;deferred=null;busy=true;sync();
+    try{
+      const result=await prompt.prompt();
+      const choice=result&&result.outcome?result:await prompt.userChoice;
+      if(choice?.outcome==='accepted'&&!installed)remember('requested');
+    }catch(e){showHelp()}finally{busy=false;sync()}
+  };
+  document.getElementById('homeInstallDone').onclick=()=>remember('installed');
+  document.getElementById('homeInstallClose').onclick=()=>help.close();
+  help.addEventListener('close',()=>{if(!button.disabled)button.focus({preventScroll:true})});
+  addEventListener('storage',event=>{if(event.key===KEY)sync()});
+  addEventListener('focus',probe);addEventListener('pageshow',probe);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)probe()});
+  if(display.addEventListener)display.addEventListener('change',probe);
+  if(minimal.addEventListener)minimal.addEventListener('change',probe);
+  probe();
+})();
+</script>
 
 <aside class="youtube-card" id="youtubeCard" aria-label="반야심경 유튜브 플레이어" hidden>
   <div class="row"><a id="youtubeOriginal" target="_blank" rel="noopener noreferrer">YouTube에서 열기 ↗</a><button id="youtubeCloseBtn" type="button">닫기 · 정지</button></div>
@@ -1396,7 +1487,7 @@ function setSkyView(open,fromHistory=false){
 $('skyViewBtn').onclick=()=>setSkyView(true);
 $('skyReturn').onclick=()=>setSkyView(false);
 const keys={};
-addEventListener('keydown',e=>{if(!$('welcome').hidden||gardenBoard.isOpen()||e.target.closest?.('input,textarea,[contenteditable=true]'))return;keys[e.code]=true});
+addEventListener('keydown',e=>{if(!$('welcome').hidden||gardenBoard.isOpen()||$('homeInstallHelp').open||e.target.closest?.('input,textarea,[contenteditable=true]'))return;keys[e.code]=true});
 addEventListener('keyup',e=>keys[e.code]=false);
 let move={x:0,y:0},target=null;
 const joy=$('joy'),knob=$('knob');let joyId=null;
@@ -3370,7 +3461,7 @@ function tick(){
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
-  if(cam.sky||gardenBoard.isOpen()||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
+  if(cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
   if(mag>0&&pose!=='stand'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
