@@ -2484,13 +2484,16 @@ function skyTick(t,accent){
 }
 /* ---------- situational BGM: original pieces synthesised live, one per place/mood ---------- */
 // 모두 브라우저가 직접 연주하는 오리지널 곡. 박자는 서버 시각 기준이라 같은 곳에 있는 친구들은 같은 마디를 듣는다.
-const BGM_NAMES={garden:'정원 산책',rain:'비 오는 정원',fire:'모닥불 곁에서',pocha:'포장마차 한 잔',sky:'밤하늘 오르간',gut:'신명 장단',nature:'자연의 소리'};
+const BGM_NAMES={track:'Yoiyami · Core Theme',garden:'정원 산책',rain:'비 오는 정원',fire:'모닥불 곁에서',pocha:'포장마차 한 잔',sky:'밤하늘 오르간',gut:'신명 장단',nature:'자연의 소리'};
 const bgm={scene:'',cand:'',candAt:0,gains:{}};
 function bgmGain(name){
   let g=bgm.gains[name];if(g&&g.context===skyMusic.ac)return g;
   g=skyMusic.ac.createGain();g.gain.value=0;g.connect(skyMusic.bus);bgm.gains[name]=g;return g;
 }
 function bgmPick(){
+  const p=bgmPickPlace();return(!bgTrack.failed&&p!=='nature'&&p!=='gut')?'track':p;
+}
+function bgmPickPlace(){
   if(pose==='pray2')return 'gut';
   if(cam.sky||['lie','prone','pray','standing_pray','bow'].includes(pose)||practice.mode!=='idle')return 'sky';
   const x=me.g.position.x,z=me.g.position.z;
@@ -2591,6 +2594,7 @@ const BGM={
     if(rhythm[s]&&(b<3||s<4)&&skyHash(motif*7+b,s+20)<.85)accordion(t,hz(POCHA_SCALE[bgmWalk(motif+9,b,s,POCHA_SCALE.length,3)]),st*rhythm[s]*.92,.03);
   }},
   nature:{st:1,steps:1,play(){}},
+  track:{st:1,steps:1,play(){}},
   gut:{st:.19,steps:12,play(bar,s,t,st){
     const p={0:'deong',3:'deok',4:'deok',6:'kung',9:'deok',10:'deok'};
     if(p[s])janggu(t,p[s],s===0?.2:.13);
@@ -2654,10 +2658,40 @@ function ambUpdate(){
   const dH=Math.hypot(x-HUT.x,z-HUT.z),birdy=Math.max(near(dH,34),near(dF,40),near(dL,22)*.8);
   if(birdy>.02&&now>amb.birdAt){amb.birdAt=now+1.2+Math.random()*(rain>.3?7:3.2);if(Math.random()<.8)ambBird(now+.1+Math.random()*.3,(.012+.03*birdy)*(rain>.3?.5:1))}
 }
+/* ---------- background track: Yoiyami 'Core Theme' (CC0, opengameart.org), looped with an overlap, same spot for everyone ---------- */
+const BG_TRACK={src:'music/yoiyami-core-theme.mp3',period:228,level:.5};
+const bgTrack={ac:null,els:[],gains:[],want:[false,false],failed:false};
+function bgTrackInit(){
+  const ac=skyMusic.ac;if(!ac||bgTrack.ac===ac||bgTrack.failed)return;
+  bgTrack.els.forEach(a=>{try{a.pause();a.removeAttribute('src');a.load()}catch(e){}});
+  bgTrack.ac=ac;bgTrack.els=[];bgTrack.gains=[];bgTrack.want=[false,false];
+  for(let i=0;i<2;i++){
+    const a=new Audio();a.preload='auto';a.playsInline=true;a.setAttribute('playsinline','');a.src=BG_TRACK.src;
+    a.addEventListener('error',()=>{bgTrack.failed=true;bgTrack.els.forEach(x=>x.pause());try{renderMusicUI()}catch(e){}});
+    try{const src=ac.createMediaElementSource(a),g=ac.createGain();g.gain.value=0;src.connect(g);g.connect(bgmGain('track'));bgTrack.gains.push(g)}catch(e){bgTrack.failed=true;return}
+    bgTrack.els.push(a);
+    a.play().then(()=>{if(!bgTrack.want[i])a.pause()}).catch(()=>{});// 첫 터치 안에서 두 플레이어를 모두 깨워 둔다(iPhone)
+  }
+}
+function bgTrackPlay(i,pos){
+  const a=bgTrack.els[i],g=bgTrack.gains[i];if(!a)return;bgTrack.want[i]=true;
+  if(a.readyState>=1&&(Math.abs(a.currentTime-pos)>1.2||a.paused)){try{a.currentTime=pos}catch(e){}}
+  if(a.paused)a.play().catch(()=>{});
+  g.gain.setTargetAtTime(BG_TRACK.level,bgTrack.ac.currentTime,.4);
+}
+function bgTrackStop(i){const a=bgTrack.els[i],g=bgTrack.gains[i];if(!a)return;bgTrack.want[i]=false;if(!a.paused)a.pause();g.gain.setTargetAtTime(0,bgTrack.ac.currentTime,.05)}
+function bgTrackPause(){bgTrack.els.forEach((a,i)=>bgTrackStop(i))}
+function bgTrackRun(){
+  bgTrackInit();if(bgTrack.failed||bgTrack.els.length<2)return;
+  const P=BG_TRACK.period,now=serverNow()/1000,cycle=Math.floor(now/P),pos=now-cycle*P,i=cycle%2;
+  bgTrackPlay(i,pos);
+  if(pos<7)bgTrackPlay(1-i,pos+P);else bgTrackStop(1-i);// 앞 곡의 잦아드는 끝과 다음 곡의 시작을 겹친다
+}
 function skySchedule(){
   if(skyMusic.on&&!visitEnded&&hasEntered&&!document.hidden){try{ambUpdate()}catch(e){}}
-  if(worldSpace==='listening'||!skyMusic.on||visitEnded||!hasEntered||document.hidden||music.track)return;
+  if(worldSpace==='listening'||!skyMusic.on||visitEnded||!hasEntered||document.hidden||music.track){bgTrackPause();return}
   bgmUpdateScene();skyMusic.dest=bgmGain(bgm.scene);
+  if(bgm.scene==='track')bgTrackRun();else if(bgmGain('track').gain.value<.02)bgTrackPause();
   if(bgm.scene!=='sky'){bgmRun(bgm.scene);if(skyMusic.seen.size>400)skyMusic.seen=new Set([...skyMusic.seen].slice(-120));return}
   const ac=skyMusic.ac,now=serverNow()/1000,ahead=2.5;
   const at=sec=>ac.currentTime+(sec-now);
@@ -2676,7 +2710,7 @@ function setSkyMusic(on){
   skyMusic.on=on;skyMusic.want=on;store.set('garden.music',on?'1':'0');$('soundToggle').setAttribute('aria-pressed',String(on));$('soundToggle').textContent='♪';$('soundToggle').setAttribute('aria-label',on?'배경음 끄기':'배경음 켜기');$('soundToggle').title=on?'배경음 끄기':'배경음 켜기';
   if(!skyMusic.ac)return;const ac=skyMusic.ac;
   if(on){ac.resume().catch(()=>{});skyMusic.master.gain.cancelScheduledValues(ac.currentTime);skyMusic.master.gain.setTargetAtTime(worldSpace==='listening'||music.track?0:.9,ac.currentTime,.8);clearInterval(skyMusic.timer);skyMusic.timer=setInterval(skySchedule,400);skySchedule()}
-  else{skyMusic.master.gain.setTargetAtTime(0,ac.currentTime,.3);clearInterval(skyMusic.timer)}
+  else{skyMusic.master.gain.setTargetAtTime(0,ac.currentTime,.3);clearInterval(skyMusic.timer);bgTrackPause()}
   try{renderMusicUI()}catch(e){}
 }
 $('soundToggle').onclick=e=>{e.stopPropagation();if(worldSpace==='listening'){$('listeningMute').click();return}setSkyMusic(!skyMusic.on)};
@@ -2693,7 +2727,7 @@ function syncSkyMusicOutput(){
 }
 function silenceSkyMusic(){
   skyMusic.on=false;clearInterval(skyMusic.timer);skyMusic.timer=0;skyMusic.seen.clear();
-  bgm.scene='';bgm.gains={};skyMusic.dest=null;amb.ac=null;const previous=skyMusic.ac;skyMusic.ac=null;skyMusic.master=null;skyMusic.bus=null;skyMusic.noise=null;
+  bgTrackPause();bgTrack.ac=null;bgm.scene='';bgm.gains={};skyMusic.dest=null;amb.ac=null;const previous=skyMusic.ac;skyMusic.ac=null;skyMusic.master=null;skyMusic.bus=null;skyMusic.noise=null;
   if(previous)previous.close().catch(()=>{});
   $('soundToggle').setAttribute('aria-pressed','false');$('soundToggle').textContent='♪';$('soundToggle').setAttribute('aria-label','배경음 켜기');$('soundToggle').title='배경음 켜기';
 }
