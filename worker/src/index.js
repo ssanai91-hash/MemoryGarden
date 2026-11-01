@@ -69,7 +69,7 @@ function cleanState(s) {
   if (!s || typeof s !== 'object') return null;
   const x = num(s.x, -WORLD_R, WORLD_R), z = num(s.z, -WORLD_R, WORLD_R);
   if (x === null || z === null) return null;
-  return { x, z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0 };
+  return { x, z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true };
 }
 
 export class GardenRoom extends DurableObject {
@@ -359,7 +359,7 @@ export class GardenRoom extends DurableObject {
       a.name = clean(m.name, 12) || '친구';
       a.look = cleanLook(m.look);
       a.dog = cleanDog(m.dog);
-      a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0 };
+      a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0, u:false };
       a.ready = true;a.away=!!m.away;
       a.handshaking = false;
       ws.serializeAttachment(a);
