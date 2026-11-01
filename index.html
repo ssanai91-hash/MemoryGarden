@@ -1101,7 +1101,7 @@ function showBubble(key,name,text){
   const P=bubbleFor(key);if(!P)return;
   let b=bubbles.get(key);
   if(!b){
-    const c=document.createElement('canvas');c.width=640;c.height=200;
+    const c=document.createElement('canvas');c.width=80;c.height=96;
     const texture=new THREE.CanvasTexture(c);texture.encoding=THREE.sRGBEncoding;
     b=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,transparent:true,toneMapped:false}));
     b.renderOrder=11;b.userData.c=c;bubbles.set(key,b);
@@ -1111,23 +1111,39 @@ function showBubble(key,name,text){
   const signature=name+'\n'+text;
   if(b.userData.signature!==signature){
     b.userData.signature=signature;
-    const c=b.userData.c,x=c.getContext('2d');x.font='30px "Gowun Dodum", sans-serif';
+    const c=b.userData.c,x=c.getContext('2d');
+    const nameFont='bold 22px "Gowun Dodum", sans-serif',textFont='26px "Gowun Dodum", sans-serif';
+    const maxTextWidth=340,padding=16,lineHeight=32,tailHeight=10,unitsPerPixel=.0043;
+    x.font=textFont;
     const wrapped=[];let line='';
     for(const ch of [...text]){
-      if(line&&x.measureText(line+ch).width>550){wrapped.push(line);line=''}
+      if(line&&x.measureText(line+ch).width>maxTextWidth){wrapped.push(line);line=''}
       line+=ch;
     }
     if(line)wrapped.push(line);
     const lines=wrapped.slice(0,3);
-    if(wrapped.length>3){let last=lines[2];while(last&&x.measureText(last+'…').width>550)last=last.slice(0,-1);lines[2]=last+'…'}
-    const height=68+lines.length*38+24;c.height=height;
-    x.clearRect(0,0,640,height);const l=12,tp=5,w=616,h=height-27;
-    x.fillStyle='rgba(255,252,244,.97)';x.strokeStyle='rgba(60,52,40,.25)';x.lineWidth=2;
-    x.beginPath();x.moveTo(l+20,tp);x.arcTo(l+w,tp,l+w,tp+h,20);x.arcTo(l+w,tp+h,l,tp+h,20);
-    x.lineTo(337,tp+h);x.lineTo(320,tp+h+20);x.lineTo(303,tp+h);x.arcTo(l,tp+h,l,tp,20);x.arcTo(l,tp,l+w,tp,20);x.closePath();x.fill();x.stroke();
-    x.textAlign='center';x.textBaseline='middle';x.fillStyle='#a36a37';x.font='bold 26px "Gowun Dodum", sans-serif';x.fillText(name,320,31);
-    x.fillStyle='#2b2a33';x.font='30px "Gowun Dodum", sans-serif';lines.forEach((ln,i)=>x.fillText(ln,320,70+i*38));
-    b.material.map.needsUpdate=true;b.scale.set(2.9,height/640*2.9,1);
+    if(wrapped.length>3){
+      const last=[...lines[2]];
+      while(last.length&&x.measureText(last.join('')+'…').width>maxTextWidth)last.pop();
+      lines[2]=last.join('')+'…';
+    }
+    const textWidth=Math.max(0,...lines.map(ln=>x.measureText(ln).width));
+    x.font=nameFont;
+    const contentWidth=Math.min(maxTextWidth,Math.max(40,textWidth,x.measureText(name).width));
+    const width=Math.ceil(contentWidth+padding*2+4),bodyHeight=50+lines.length*lineHeight,height=bodyHeight+tailHeight+4;
+    c.width=width;c.height=height;
+    const l=2,tp=2,w=width-4,h=bodyHeight,cx=width/2,r=14;
+    x.fillStyle='rgba(255,252,244,.96)';x.strokeStyle='rgba(60,52,40,.25)';x.lineWidth=1.5;
+    x.beginPath();x.moveTo(l+r,tp);x.arcTo(l+w,tp,l+w,tp+h,r);x.arcTo(l+w,tp+h,l,tp+h,r);
+    x.lineTo(cx+9,tp+h);x.lineTo(cx,tp+h+tailHeight);x.lineTo(cx-9,tp+h);
+    x.arcTo(l,tp+h,l,tp,r);x.arcTo(l,tp,l+w,tp,r);x.closePath();x.fill();x.stroke();
+    x.textAlign='center';x.textBaseline='middle';x.fillStyle='#a36a37';x.font=nameFont;
+    x.fillText(name,cx,25,maxTextWidth);
+    x.fillStyle='#2b2a33';x.font=textFont;
+    lines.forEach((ln,i)=>x.fillText(ln,cx,56+i*lineHeight));
+    b.material.map.needsUpdate=true;
+    // 글자 크기는 유지하고, 실제 내용이 차지하는 가로·세로만 줄이거나 늘린다.
+    b.scale.set(width*unitsPerPixel,height*unitsPerPixel,1);
   }
   b.position.y=P.tag.position.y+.15+b.scale.y/2;
 }
