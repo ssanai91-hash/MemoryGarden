@@ -18,6 +18,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(-
   background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:11px 13px;max-width:min(300px,calc(100vw - 32px));
   backdrop-filter:blur(6px);box-shadow:0 6px 24px rgba(40,30,20,.12)}
 .plaque h1{font-family:var(--display);font-size:19px;margin:0;text-wrap:balance;font-weight:700}
+.sound-toggle{padding:4px 9px;font-size:13px;margin-left:auto;margin-right:4px;color:var(--soft)}.sound-toggle[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
 .plaque .sub{font-size:12.5px;color:var(--soft);margin-top:2px}
 .who{display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:8px;color:var(--ink)}
 .who .dot{width:8px;height:8px;border-radius:50%;background:#7aa35a;box-shadow:0 0 0 3px rgba(122,163,90,.22);flex:none}
@@ -168,7 +169,7 @@ button:disabled{opacity:.5;cursor:default}
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
 <header class="plaque collapsed" id="gardenPanel">
-  <div class="plaque-heading"><h1>기억의 정원</h1><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button></div>
+  <div class="plaque-heading"><h1>기억의 정원</h1><button id="soundToggle" class="sound-toggle" type="button" aria-pressed="false" title="배경음">♪</button><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button></div>
   <div id="gardenDetails" hidden>
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
@@ -2252,6 +2253,60 @@ function layoutBubbles(dt){
     g.updateMatrixWorld(true);g.worldToLocal(_bv);b.position.copy(_bv);
   }
 }
+
+
+/* ---------- night-sky organ: an original ambient piece, synthesised live ---------- */
+// 저작권 음원이 아니라 브라우저가 직접 만드는 오리지널 곡. 서버 시각 기준이라 접속자 모두 같은 화음을 듣는다.
+const skyMusic={ac:null,master:null,bus:null,on:false,want:store.get('garden.music')!=='0',seen:new Set(),timer:0};
+const SKY_BAR=8,SKY_CHORDS=[[38,50,57,60,64,69],[34,46,53,57,62,65],[33,45,53,57,60,64],[31,43,50,55,58,62],[38,50,57,62,65,69],[34,46,53,58,62,65],[36,48,55,60,64,67],[33,45,52,57,62,64]];
+const hz=m=>440*Math.pow(2,(m-69)/12);
+function skyHash(a,b){let h=2166136261;h^=a;h=Math.imul(h,16777619);h^=b;h=Math.imul(h,16777619);h^=h>>>13;return(h>>>0)/4294967296}
+function skyInit(){
+  if(skyMusic.ac)return true;const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
+  const ac=new Ctx(),master=ac.createGain();master.gain.value=0;const comp=ac.createDynamicsCompressor();master.connect(comp);comp.connect(ac.destination);
+  const len=Math.floor(ac.sampleRate*5.5),ir=ac.createBuffer(2,len,ac.sampleRate);
+  for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.2)}
+  const verb=ac.createConvolver();verb.buffer=ir;const wet=ac.createGain();wet.gain.value=.55;verb.connect(wet);wet.connect(master);
+  const bus=ac.createGain();bus.gain.value=.8;bus.connect(master);bus.connect(verb);
+  const nb=ac.createBuffer(1,ac.sampleRate,ac.sampleRate),nd=nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  Object.assign(skyMusic,{ac,master,bus,noise:nb});return true;
+}
+function skyOrgan(t,freq,dur,level){
+  const ac=skyMusic.ac,g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(level,t+2.2);g.gain.setValueAtTime(level,t+dur-1);g.gain.linearRampToValueAtTime(0,t+dur+2.5);g.connect(skyMusic.bus);
+  [[1,1],[2,.55],[3,.28],[4,.2],[6,.09],[8,.06]].forEach(([r,w],i)=>{const o=ac.createOscillator();o.frequency.value=freq*r*(i===1?1.002:1);const og=ac.createGain();og.gain.value=w;o.connect(og);og.connect(g);o.start(t);o.stop(t+dur+2.7)});
+}
+function skyBell(t,freq){
+  const ac=skyMusic.ac;[[1,1],[2.76,.32],[5.4,.1]].forEach(([r,w])=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=freq*r;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.05*w,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+4.5);o.connect(g);g.connect(skyMusic.bus);o.start(t);o.stop(t+4.6)});
+}
+function skyTick(t,accent){
+  const ac=skyMusic.ac,n=ac.createBufferSource();n.buffer=skyMusic.noise;const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=accent?2600:3400;bp.Q.value=9;
+  const g=ac.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(accent?.05:.03,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.05);n.connect(bp);bp.connect(g);g.connect(skyMusic.bus);n.start(t);n.stop(t+.06);
+}
+function skySchedule(){
+  if(!skyMusic.on)return;const ac=skyMusic.ac,now=serverNow()/1000,ahead=2.5;
+  const at=sec=>ac.currentTime+(sec-now);
+  for(let bar=Math.floor(now/SKY_BAR);bar*SKY_BAR<now+ahead;bar++){
+    const k='c'+bar;if(skyMusic.seen.has(k)||bar*SKY_BAR<now-.5)continue;skyMusic.seen.add(k);
+    const ch=SKY_CHORDS[((bar%SKY_CHORDS.length)+SKY_CHORDS.length)%SKY_CHORDS.length],t=at(bar*SKY_BAR);
+    skyOrgan(t,hz(ch[0]-12),SKY_BAR,.05);ch.forEach((m,i)=>skyOrgan(t,hz(m),SKY_BAR,i===0?.045:.022));
+    for(let j=0;j<3;j++){const r=skyHash(bar,j);if(r<.55){const m=ch[2+Math.floor(skyHash(bar,j+9)*4)]+24;skyBell(at(bar*SKY_BAR+1+r*11),hz(m))}}
+  }
+  for(let b=Math.ceil(now);b<now+ahead;b++){const k='t'+b;if(skyMusic.seen.has(k))continue;skyMusic.seen.add(k);skyTick(at(b),b%4===0)}
+  if(skyMusic.seen.size>400)skyMusic.seen=new Set([...skyMusic.seen].slice(-120));
+}
+function setSkyMusic(on){
+  if(on&&!skyInit()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
+  skyMusic.on=on;skyMusic.want=on;store.set('garden.music',on?'1':'0');$('soundToggle').setAttribute('aria-pressed',String(on));$('soundToggle').textContent=on?'♪ 켜짐':'♪';
+  if(!skyMusic.ac)return;const ac=skyMusic.ac;
+  if(on){ac.resume();skyMusic.master.gain.cancelScheduledValues(ac.currentTime);skyMusic.master.gain.setTargetAtTime(.9,ac.currentTime,.8);clearInterval(skyMusic.timer);skyMusic.timer=setInterval(skySchedule,400);skySchedule()}
+  else{skyMusic.master.gain.setTargetAtTime(0,ac.currentTime,.3);clearInterval(skyMusic.timer)}
+}
+$('soundToggle').onclick=e=>{e.stopPropagation();setSkyMusic(!skyMusic.on)};
+// 브라우저는 사용자가 한 번 누르기 전에는 소리를 막는다. 첫 터치·클릭·키 입력에 맞춰 켠다.
+function skyFirstGesture(){removeEventListener('pointerdown',skyFirstGesture,true);removeEventListener('keydown',skyFirstGesture,true);if(skyMusic.want&&!skyMusic.on)setSkyMusic(true)}
+addEventListener('pointerdown',skyFirstGesture,true);addEventListener('keydown',skyFirstGesture,true);
+document.addEventListener('visibilitychange',()=>{if(!skyMusic.ac)return;if(document.hidden)skyMusic.ac.suspend();else if(skyMusic.on){skyMusic.ac.resume();skyMusic.seen.clear()}});
 
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=cam.sky?cam.skyFov:w/h<.8?72:55;camera.updateProjectionMatrix()}
