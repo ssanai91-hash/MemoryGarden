@@ -61,6 +61,7 @@ function cleanLook(l) {
   }
   o.hs = l.hs === 1 ? 1 : 0;
   o.hat = !!l.hat;
+  if (['male', 'female'].includes(l.gender)) { o.gender = l.gender; o.hs = l.gender === 'female' ? 1 : 0; }
   return o;
 }
 function cleanDog(d) {
@@ -525,3 +526,4 @@ export default {
     return env.ROOMS.get(env.ROOMS.idFromName(space)).fetch(req);
   },
 };
+
