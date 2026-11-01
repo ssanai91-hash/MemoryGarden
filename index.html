@@ -133,53 +133,146 @@ const canvas=$('c');
 let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true})}catch(error){$('toast').textContent='3D 화면을 열 수 없어요. WebGL을 지원하는 브라우저에서 다시 열어 주세요.';$('toast').classList.add('on');document.querySelectorAll('button,select').forEach(el=>el.disabled=true);return}
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.85;
+renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0xe9dccb,30,95);
-const camera=new THREE.PerspectiveCamera(60,1,0.1,300);
-const sky=new THREE.Mesh(new THREE.SphereGeometry(200,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+const camera=new THREE.PerspectiveCamera(55,1,0.1,400);
+const sky=new THREE.Mesh(new THREE.SphereGeometry(300,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
   uniforms:{top:{value:new THREE.Color(0x9fb7d1)},bot:{value:new THREE.Color(0xf3dcc0)}},
   vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
   fragmentShader:'uniform vec3 top;uniform vec3 bot;varying vec3 p;void main(){float h=clamp(normalize(p).y*1.6+.15,0.,1.);gl_FragColor=vec4(mix(bot,top,h),1.);}'}));
 scene.add(sky);
-const ambient=new THREE.HemisphereLight(0xfff1dc,0x6b7a4a,.78);scene.add(ambient);
+const ambient=new THREE.HemisphereLight(0xdcecff,0x5d6b3c,.75);scene.add(ambient);
 const sun=new THREE.DirectionalLight(0xffe2bd,.85);
 sun.position.set(-30,40,20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.normalBias=.045;sun.shadow.bias=-.00015;
-Object.assign(sun.shadow.camera,{left:-26,right:26,top:26,bottom:-26,far:120});
+Object.assign(sun.shadow.camera,{left:-40,right:40,top:40,bottom:-40,far:160});
 scene.add(sun);
-const matCache={};const M=c=>matCache[c]||(matCache[c]=new THREE.MeshLambertMaterial({color:c}));
+const C=h=>new THREE.Color(h).convertSRGBToLinear();
+const matCache={};const M=c=>matCache[c]||(matCache[c]=new THREE.MeshLambertMaterial({color:C(c)}));
 const BOX=new THREE.BoxGeometry(1,1,1);
 function box(w,h,d,color,x,y,z,parent){const m=new THREE.Mesh(BOX,typeof color==='number'?M(color):color);m.scale.set(w,h,d);m.position.set(x||0,y||0,z||0);m.castShadow=true;if(parent)parent.add(m);return m}
 
-/* ---------- ground, paths, pond ---------- */
-const ground=new THREE.Mesh(new THREE.CircleGeometry(110,64),M(0x78845c));
-ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
-const pathMat=M(0xd8c7a5);
-const ring=new THREE.Mesh(new THREE.RingGeometry(17,19.2,96),pathMat);ring.rotation.x=-Math.PI/2;ring.position.y=.02;ring.receiveShadow=true;scene.add(ring);
-const entry=new THREE.Mesh(new THREE.PlaneGeometry(2.2,15),pathMat);entry.rotation.x=-Math.PI/2;entry.position.set(0,.021,10);entry.receiveShadow=true;scene.add(entry);
-const plaza=new THREE.Mesh(new THREE.CircleGeometry(4.5,48),M(0xcdbb98));plaza.rotation.x=-Math.PI/2;plaza.position.y=.022;plaza.receiveShadow=true;scene.add(plaza);
-const pond=new THREE.Mesh(new THREE.CircleGeometry(6,48),new THREE.MeshPhongMaterial({color:0x7fa7b8,shininess:80}));pond.rotation.x=-Math.PI/2;pond.position.set(-28,.03,-10);scene.add(pond);
-const pondEdge=new THREE.Mesh(new THREE.RingGeometry(6,6.6,48),M(0xb3a68c));pondEdge.rotation.x=-Math.PI/2;pondEdge.position.set(-28,.025,-10);scene.add(pondEdge);
-
-/* ---------- blocky trees ---------- */
-let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
-const leafCols=[0x5f8a4a,0x6f9a52,0x86a85a,0xc9a04f,0xd98a5a];
-const obstacles=[];
-function tree(x,z,s){
-  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
-  box(.45*s,2.2*s,.45*s,0x7a5a3f,0,1.1*s,0,g);
-  const c=leafCols[Math.floor(rnd()*leafCols.length)];
-  for(let j=0;j<5;j++){const leaf=new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),new THREE.MeshPhongMaterial({color:c,flatShading:true,shininess:0}));leaf.position.set((rnd()-.5)*1.7*s,(2.4+rnd()*1.6)*s,(rnd()-.5)*1.7*s);leaf.scale.set(1.2*s,1.1*s,1.15*s);leaf.castShadow=true;g.add(leaf)}
-  obstacles.push({x,z,r:.5*s});
+/* ---------- shared helpers for the garden ---------- */
+const dummy=new THREE.Object3D();
+const F=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:C(c),roughness:.92,metalness:0,flatShading:true},o||{}));
+function part(geo,mat,p,s,r,parent){const m=new THREE.Mesh(geo,mat);m.position.set(p[0],p[1],p[2]);if(s)m.scale.set(s[0],s[1],s[2]);if(r)m.rotation.set(r[0],r[1],r[2]);m.castShadow=m.receiveShadow=true;(parent||scene).add(m);return m}
+function instanced(geo,mat,items,shadow){
+  const m=new THREE.InstancedMesh(geo,mat,items.length);
+  items.forEach((it,i)=>{dummy.position.set(it.x,it.y,it.z);dummy.rotation.set(it.rx||0,it.ry||0,it.rz||0);
+    dummy.scale.set(it.sx,it.sy===undefined?it.sx:it.sy,it.sz===undefined?it.sx:it.sz);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);if(it.c)m.setColorAt(i,it.c)});
+  m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true;
+  m.castShadow=shadow!==false;m.receiveShadow=true;scene.add(m);return m;
 }
-for(let i=0;i<110;i++){
-  const a=rnd()*Math.PI*2,r=8+rnd()*48;
-  if(r>15.5&&r<21)continue;
-  const x=Math.cos(a)*r,z=Math.sin(a)*r;
-  if(Math.abs(x)<3.2&&z>0&&z<20)continue;
-  if(Math.hypot(x+28,z+10)<8)continue;
-  if(r<10||Math.abs(x)<7&&z>0&&z<15)continue;
-  tree(x,z,.8+rnd()*.6);
+let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
+const obstacles=[];
+const POND={x:26,z:-14,r:8.6};
+
+/* ---------- ground: grass with gentle colour variation ---------- */
+{
+  const geo=new THREE.PlaneGeometry(280,280,110,110);geo.rotateX(-Math.PI/2);
+  const pos=geo.attributes.position,cols=new Float32Array(pos.count*3);
+  const g1=C(0x527a30),g2=C(0x6e9440),g3=C(0x8aa84e),tmp=new THREE.Color();
+  for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);
+    const n=Math.sin(x*.11+Math.cos(z*.07)*2)*.5+Math.sin(z*.13-x*.05)*.35+Math.sin((x+z)*.31)*.15;
+    tmp.copy(g1).lerp(g2,THREE.MathUtils.clamp(.5+n*.5,0,1));if(n>.55)tmp.lerp(g3,(n-.55)*1.4);
+    cols[i*3]=tmp.r;cols[i*3+1]=tmp.g;cols[i*3+2]=tmp.b}
+  geo.setAttribute('color',new THREE.BufferAttribute(cols,3));
+  const ground=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true}));ground.receiveShadow=true;scene.add(ground);
+}
+
+/* ---------- paving: stone courtyard texture, ring walk, entry path ---------- */
+function pavingTexture(){
+  const S=1024,c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d');
+  x.fillStyle='#a99f8c';x.fillRect(0,0,S,S);const R=S/2,rings=11,shades=['#cbc2ae','#c2b8a3','#b8ad97','#d1c9b7','#bfb5a1'];
+  for(let i=0;i<rings;i++){const r0=i*R/rings,r1=(i+1)*R/rings,n=Math.max(6,Math.round(2*Math.PI*r1/(R/rings)*.9));
+    for(let j=0;j<n;j++){const a0=(j+(i%2)*.5)/n*Math.PI*2,a1=(j+1+(i%2)*.5)/n*Math.PI*2;
+      x.beginPath();x.arc(R,R,r1-2,a0+.004,a1-.004);x.arc(R,R,r0+2,a1-.004,a0+.004,true);x.closePath();
+      x.fillStyle=shades[Math.floor(rnd()*shades.length)];x.fill()}}
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;
+}
+const plaza=new THREE.Mesh(new THREE.CircleGeometry(11,96),new THREE.MeshLambertMaterial({map:pavingTexture()}));
+plaza.rotation.x=-Math.PI/2;plaza.position.y=.03;plaza.receiveShadow=true;scene.add(plaza);
+const curb=new THREE.Mesh(new THREE.RingGeometry(11,11.45,96),M(0x8f8676));curb.rotation.x=-Math.PI/2;curb.position.y=.05;curb.receiveShadow=true;scene.add(curb);
+const walk=new THREE.Mesh(new THREE.RingGeometry(17,19.2,128),M(0xcdbfa2));walk.rotation.x=-Math.PI/2;walk.position.y=.02;walk.receiveShadow=true;scene.add(walk);
+const entry=new THREE.Mesh(new THREE.PlaneGeometry(2.8,7),M(0xcdbfa2));entry.rotation.x=-Math.PI/2;entry.position.set(0,.021,14.3);entry.receiveShadow=true;scene.add(entry);
+
+/* ---------- distant mountains, conifer belt and clouds ---------- */
+{
+  const mGeo=new THREE.SphereGeometry(1,10,6,0,Math.PI*2,0,Math.PI/2);
+  for(let i=0;i<22;i++){
+    const a=Math.PI*(.55+i/21*1.9),far=i%2===0,r=(far?150:118)+rnd()*25,h=(far?34:22)+rnd()*18,w=40+rnd()*28;
+    const m=new THREE.Mesh(mGeo,F(far?0x6b8a86:0x4f7444,{roughness:1}));
+    m.position.set(Math.cos(a)*r,-1,Math.sin(a)*r);m.scale.set(w,h,w*.75);m.rotation.y=rnd()*3;scene.add(m);
+  }
+  const pines=[];const pineCols=[0x3d6637,0x4a7640,0x56824a,0x46703b];
+  for(let i=0;i<260;i++){const a=rnd()*Math.PI*2,r=62+rnd()*34,h=6+rnd()*6;
+    pines.push({x:Math.cos(a)*r,y:h/2,z:Math.sin(a)*r,sx:1.5+rnd()*1.3,sy:h,sz:1.5+rnd()*1.3,ry:rnd()*3,c:C(pineCols[i%4])})}
+  instanced(new THREE.ConeGeometry(1,1,7),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),pines,false);
+}
+const clouds=[];
+{
+  const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,4,64,64,62);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.55,'rgba(255,255,255,.75)');g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);const tex=new THREE.CanvasTexture(c);
+  for(let k=0;k<9;k++){const a=Math.PI*(.75+rnd()*1.5),r=120+rnd()*40,cy=48+rnd()*30;
+    for(let j=0;j<7;j++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,fog:false,toneMapped:false,opacity:.9}));
+      const sc=14+rnd()*16;s.scale.set(sc*1.6,sc,1);s.position.set(Math.cos(a)*r+(j-3)*7+rnd()*4,cy+rnd()*6-(Math.abs(j-3))*1.5,Math.sin(a)*r+rnd()*6);scene.add(s);clouds.push(s)}}
+}
+
+/* ---------- pond and arched bridge ---------- */
+{
+  const water=new THREE.Mesh(new THREE.CircleGeometry(POND.r,64),new THREE.MeshPhongMaterial({color:C(0x5d93a8),shininess:110,specular:0xffffff,transparent:true,opacity:.93}));
+  water.rotation.x=-Math.PI/2;water.position.set(POND.x,.06,POND.z);scene.add(water);
+  const bank=new THREE.Mesh(new THREE.RingGeometry(POND.r,POND.r+.9,64),M(0xa49a83));bank.rotation.x=-Math.PI/2;bank.position.set(POND.x,.04,POND.z);bank.receiveShadow=true;scene.add(bank);
+  const stones=[];for(let i=0;i<46;i++){const a=i/46*Math.PI*2+rnd()*.1,r=POND.r+.3+rnd()*.5;
+    stones.push({x:POND.x+Math.cos(a)*r,y:.15,z:POND.z+Math.sin(a)*r,sx:.45+rnd()*.5,sy:.3+rnd()*.3,sz:.45+rnd()*.4,ry:rnd()*3,c:C([0x9d9a8d,0x8c8a7e,0xb0ab9b][i%3])})}
+  instanced(new THREE.DodecahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),stones);
+  const wood=F(0x8a6240),bridge=new THREE.Group();bridge.position.set(POND.x,0,POND.z);bridge.rotation.y=.35;scene.add(bridge);
+  const plank=new THREE.BoxGeometry(1,1,1),span=POND.r+1.2,arcY=t=>.35+1.5*(1-t*t);
+  for(let i=0;i<=26;i++){const t=i/26*2-1,x=t*span,y=arcY(t),sl=-3*t/span;
+    part(plank,wood,[x,y,0],[.62,.14,2.3],[0,0,Math.atan(sl)],bridge)}
+  for(const zz of[-1.1,1.1]){
+    for(let i=0;i<=8;i++){const t=i/8*2-1;part(plank,wood,[t*span,arcY(t)+.45,zz],[.12,.9,.12],null,bridge)}
+    for(let i=0;i<16;i++){const t0=i/16*2-1,t1=(i+1)/16*2-1,x0=t0*span,x1=t1*span,y0=arcY(t0)+.88,y1=arcY(t1)+.88;
+      part(plank,F(0x9a3c2c),[(x0+x1)/2,(y0+y1)/2,zz],[Math.hypot(x1-x0,y1-y0)+.04,.12,.14],[0,0,Math.atan2(y1-y0,x1-x0)],bridge)}
+  }
+}
+
+/* ---------- trees, bushes, rocks (instanced for phones) ---------- */
+{
+  const trunks=[],leaves=[],leafPal=[0x5b8a3a,0x6c9a43,0x7ea84c,0x8fb357,0x4e7a35,0xa2b955];
+  function tree(x,z,s){
+    trunks.push({x,y:1.3*s,z,sx:.3*s,sy:2.6*s,sz:.3*s,ry:rnd()*3});
+    const base=C(leafPal[Math.floor(rnd()*leafPal.length)]),n=7+Math.floor(rnd()*4);
+    for(let j=0;j<n;j++){const a=rnd()*Math.PI*2,r=rnd()*1.5*s;
+      leaves.push({x:x+Math.cos(a)*r,y:(3+rnd()*1.7)*s,z:z+Math.sin(a)*r,sx:(.95+rnd()*.6)*s,sy:(.8+rnd()*.5)*s,sz:(.95+rnd()*.6)*s,ry:rnd()*3,rx:rnd()*.6,
+        c:base.clone().offsetHSL((rnd()-.5)*.03,0,(rnd()-.5)*.07)})}
+    obstacles.push({x,z,r:.45*s});
+  }
+  for(let i=0;i<170;i++){
+    const a=rnd()*Math.PI*2,r=13+rnd()*45,x=Math.cos(a)*r,z=Math.sin(a)*r;
+    if(r>15.3&&r<21.3)continue;if(z>6&&z<32&&Math.abs(x)<14)continue;
+    if(Math.hypot(x-POND.x,z-POND.z)<POND.r+3)continue;
+    tree(x,z,.85+rnd()*.65);
+  }
+  [[-12.5,-8],[12.5,-9],[-8,-13],[8,-13.5]].forEach(([x,z])=>tree(x,z,1.2));
+  instanced(new THREE.CylinderGeometry(.6,1,1,6),F(0x6b4a32),trunks);
+  instanced(new THREE.IcosahedronGeometry(1,1),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:.95}),leaves);
+
+  const bushes=[],blooms=[];
+  function bush(x,z,s){const base=C(rnd()<.5?0x5f8f3e:0x72a04a);
+    for(let j=0;j<3;j++){bushes.push({x:x+(rnd()-.5)*s,y:.35*s,z:z+(rnd()-.5)*s,sx:(.55+rnd()*.35)*s,sy:(.45+rnd()*.25)*s,ry:rnd()*3,c:base.clone().offsetHSL(0,0,(rnd()-.5)*.06)})}
+    for(let j=0;j<6;j++){const a=rnd()*Math.PI*2,r=rnd()*.7*s;blooms.push({x:x+Math.cos(a)*r,y:(.55+rnd()*.25)*s,z:z+Math.sin(a)*r,sx:.09,c:C([0xffffff,0xfff4d6,0xf6d36b,0xf4c2cf][Math.floor(rnd()*4)])})}}
+  const nearFire=(x,z)=>Math.hypot(x+6,z-13)<3;
+  for(let i=0;i<40;i++){const a=rnd()*Math.PI*2;if(Math.cos(a)>.92)continue;const r=12+rnd()*2.4,bx=Math.sin(a)*r,bz=Math.cos(a)*r;if(nearFire(bx,bz))continue;bush(bx,bz,.9+rnd()*.6)}
+  for(let i=0;i<60;i++){const a=rnd()*Math.PI*2,r=21.5+rnd()*30,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x-POND.x,z-POND.z)<POND.r+1.5)continue;bush(x,z,.8+rnd()*.7)}
+  instanced(new THREE.IcosahedronGeometry(1,1),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),bushes);
+  instanced(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),blooms,false);
+
+  const rocks=[];
+  for(let i=0;i<55;i++){const a=rnd()*Math.PI*2,r=12.5+rnd()*40,x=Math.cos(a)*r,z=Math.sin(a)*r;if(r>15.6&&r<20.8)continue;if(Math.abs(x)<9&&z>8&&z<30)continue;if(nearFire(x,z))continue;if(Math.hypot(x-POND.x,z-POND.z)<POND.r+1.4)continue;
+    const s=.5+rnd()*1.1;rocks.push({x,y:s*.35,z,sx:s*1.3,sy:s*.8,sz:s,ry:rnd()*3,c:C([0x9b988b,0xaaa697,0x8e8b7f][i%3])});if(s>.9)obstacles.push({x,z,r:s})}
+  instanced(new THREE.DodecahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),rocks);
 }
 function bench(a){
   const g=new THREE.Group();
@@ -190,137 +283,103 @@ function bench(a){
 }
 [.6,2.2,3.6,5.0].forEach(bench);
 
-/* ---------- temple-inspired seated Buddha (original procedural sculpture) ---------- */
-const memorial=new THREE.Group();memorial.name='TempleBuddha';scene.add(memorial);
-const gold=new THREE.MeshStandardMaterial({color:0xc29a51,roughness:.48,metalness:.28});
-const robe=new THREE.MeshStandardMaterial({color:0xb38b45,roughness:.59,metalness:.22});
-const raisedGold=new THREE.MeshStandardMaterial({color:0xc6a361,roughness:.52,metalness:.25});
-const recess=new THREE.MeshStandardMaterial({color:0x77603d,roughness:.85,metalness:.1});
-const stone=M(0x9e9b8d),lotus=new THREE.MeshStandardMaterial({color:0xaaa08b,roughness:.85,metalness:.05});
-function shape(geo,mat,x,y,z,sx=1,sy=1,sz=1,parent=memorial){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=m.receiveShadow=true;parent.add(m);return m}
-const sphere=new THREE.SphereGeometry(1,40,28);
-function oval(mat,x,y,z,sx,sy,sz){return shape(sphere,mat,x,y,z,sx,sy,sz)}
-function sculptLine(points,r,mat=raisedGold,parent=memorial){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));return shape(new THREE.TubeGeometry(curve,Math.max(20,points.length*8),r,8,false),mat,0,0,0,1,1,1,parent)}
-function turned(profile,mat,sx=1,sz=1){return shape(new THREE.LatheGeometry(profile.map(p=>new THREE.Vector2(...p)),80),mat,0,0,0,sx,1,sz)}
-// Three stone mouldings and two overlapping rows of shaped lotus petals.
-turned([[0,0],[4.25,0],[4.35,.1],[4.35,.24],[4.15,.34],[3.9,.36],[3.9,.5],[3.65,.57],[3.65,.72],[3.3,.8],[0,.8]],stone);
-for(const y of [.14,.42,.64]){const rim=shape(new THREE.TorusGeometry(y<.2?4.27:y<.5?3.91:3.6,.055,10,96),M(0xc4bdac),0,y,0);rim.rotation.x=Math.PI/2}
-function lotusPetal(angle,upper){
-  const vertices=[],indices=[],rows=15,cols=12;
-  for(let i=0;i<=rows;i++){const u=i/rows;for(let j=0;j<=cols;j++){const v=j/cols*2-1;
-    const width=Math.pow(Math.sin(Math.PI*u),.78)*(upper?.5:.62);
-    const radial=(upper?2.83:3.02)+Math.sin(Math.PI*u)*.4-u*.27+(1-v*v)*.09;
-    const y=(upper?1.02:.71)+u*(upper?.85:.84)+Math.sin(Math.PI*u)*(1-v*v)*.08;
-    vertices.push(Math.sin(angle)*radial+Math.cos(angle)*v*width,y,Math.cos(angle)*radial-Math.sin(angle)*v*width);
-  }}
-  for(let i=0;i<rows;i++)for(let j=0;j<cols;j++){const a=i*(cols+1)+j,b=a+cols+1;indices.push(a,b,a+1,b,b+1,a+1)}
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
-  const petalMat=lotus.clone();petalMat.side=THREE.DoubleSide;shape(geo,petalMat,0,0,0);
+/* ---------- seated Buddha on a lotus pedestal (low-poly, facing the path) ---------- */
+const memorial=new THREE.Group();scene.add(memorial);
+const goldMat=new THREE.MeshStandardMaterial({color:C(0xe3b24c),roughness:.5,metalness:.28,flatShading:true,emissive:C(0x5a3c08),emissiveIntensity:.35});
+const goldDeep=new THREE.MeshStandardMaterial({color:C(0xc99634),roughness:.55,metalness:.25,flatShading:true,emissive:C(0x40280a),emissiveIntensity:.3});
+const lineMat=new THREE.MeshStandardMaterial({color:C(0x7a5320),roughness:.7,flatShading:true});
+const stoneA=F(0xbab3a5),stoneB=F(0xa59d8f),petalMat=F(0xc8c0b2);
+const S10=new THREE.SphereGeometry(1,10,7),S14=new THREE.SphereGeometry(1,14,10),PET=new THREE.SphereGeometry(1,6,5);
+part(new THREE.CylinderGeometry(5.5,5.7,.4,24),stoneB,[0,.2,0],null,null,memorial);
+part(new THREE.CylinderGeometry(5.0,5.2,.4,24),stoneA,[0,.6,0],null,null,memorial);
+part(new THREE.CylinderGeometry(4.0,3.4,1,20),petalMat,[0,1.3,0],null,null,memorial);
+for(let row=0;row<2;row++)for(let i=0;i<16;i++){
+  const a=(i+row*.5)/16*Math.PI*2,piv=new THREE.Group();piv.rotation.y=a;memorial.add(piv);
+  part(PET,petalMat,[0,row?1.95:1.35,row?3.55:4.05],row?[.82,.72,.4]:[.98,1.02,.48],[row?-.2:-.28,0,0],piv);
 }
-for(let i=0;i<24;i++){lotusPetal(i/24*Math.PI*2,false);lotusPetal((i+.5)/24*Math.PI*2,true)}
-turned([[0,1.45],[2.8,1.45],[2.88,1.57],[2.84,1.72],[0,1.72]],robe);
-// The draped lap is one continuous curved surface, not a pair of detached ellipsoids.
-const lap=turned([[0,1.68],[1.05,1.71],[1.34,1.86],[1.55,2.07],[1.65,2.3],[1.52,2.58],[1.23,2.79],[.85,2.91],[0,2.96]],robe,1.73,.9);
-// Foot resting over the opposite thigh. Individually shaped toes remain subordinate to the robe.
-const foot=oval(gold,.65,2.62,1.1,.78,.22,.33);foot.rotation.z=-.13;
-for(let i=0;i<5;i++)oval(gold,.19+i*.17,2.67+i*.012,1.34,.085-i*.005,.1,.15-i*.011);
-// Neck, shoulders and waist joined by a smooth, custom revolved silhouette.
-turned([[0,2.42],[1.15,2.42],[1.28,2.8],[1.27,3.35],[1.35,3.9],[1.55,4.48],[1.5,4.83],[1.18,5.12],[.69,5.35],[.4,5.42],[0,5.42]],robe,1,.67);
-oval(gold,0,5.49,.02,.43,.53,.4);
-// Robe neckline: overlapping collars, with chest and diagonal shoulder folds.
-// The robe stays continuous across the upper chest.
-sculptLine([[-1.21,5.02,.67],[-.87,4.68,.98],[-.46,4.2,1.04],[.12,3.86,1.02],[.86,3.62,.78]],.065,raisedGold);
-sculptLine([[1.21,5.02,.67],[.95,4.62,.98],[.56,4.1,1.04],[.05,3.8,1.04]],.055,raisedGold);
-sculptLine([[-.94,4.82,.93],[-.47,4.6,1.04],[0,4.54,1.09],[.53,4.7,1.01]],.026,robe);
-for(let i=0;i<5;i++){
-  const y=3.05+i*.2;
-  sculptLine([[-1.15,y+.48,.5],[-.63,y+.1,.81],[0,y,.88],[.69,y+.22,.75],[1.13,y+.55,.47]],.024,raisedGold);
+part(new THREE.CylinderGeometry(3.9,4.0,.3,24),stoneA,[0,2.2,0],null,null,memorial);
+const fig=new THREE.Group();fig.position.y=2.33;memorial.add(fig);
+// legs crossed in lotus seat, robe falling between the knees
+part(S14,goldMat,[0,.78,.35],[2.8,.88,1.8],null,fig);
+for(const s of[-1,1]){part(S10,goldMat,[s*2.2,.72,.8],[1.15,.78,1.05],[0,0,s*.1],fig);part(S10,goldDeep,[s*.95,1.28,1.45],[.52,.17,.32],[0,s*.4,0],fig)}
+part(S10,goldDeep,[0,.62,1.85],[1.05,.55,.5],null,fig);
+for(let i=-2;i<=2;i++)part(BOX,lineMat,[i*.32,.72,2.32],[.05,.6,.05],[.25,0,i*.12],fig);
+// torso and shoulders under the robe
+part(new THREE.CylinderGeometry(1.28,1.62,2.5,16),goldMat,[0,2.35,-.05],[1,1,.74],null,fig);
+part(S10,goldMat,[0,2.3,.28],[1.35,1.25,.82],null,fig);
+part(S14,goldMat,[0,3.45,-.05],[1.95,.85,1.0],null,fig);
+// robe edges: diagonal sash over the left shoulder and an open neckline
+function seam(a,b,r){const d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]),len=d.length();
+  const m=part(new THREE.CylinderGeometry(r,r,len,5),lineMat,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],null,null,fig);m.castShadow=false;
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());}
+seam([-.62,3.78,.62],[0,2.75,1.06],.04);seam([.62,3.78,.62],[0,2.75,1.06],.04);
+seam([-1.45,3.7,.55],[.95,1.75,1.08],.045);seam([-1.25,1.68,1.05],[1.25,1.68,1.05],.035);
+// arms with broad sleeves, hands resting in the meditation mudra
+function limb(a,b,r1,r2,mat){const d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]),len=d.length();
+  const m=part(new THREE.CylinderGeometry(r2,r1,len,8),mat,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],null,null,fig);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return m}
+for(const s of[-1,1]){
+  limb([s*1.75,3.45,0],[s*2.0,1.8,.35],.55,.5,goldMat);
+  part(S10,goldMat,[s*2.0,1.8,.4],[.58,.55,.6],null,fig);
+  part(S10,goldDeep,[s*1.95,1.7,.15],[.62,.95,.68],null,fig);
+  limb([s*2.0,1.75,.45],[s*.55,1.48,1.3],.47,.4,goldMat);
+  part(S10,goldMat,[s*.3,1.46,1.38],[.62,.22,.46],[0,s*.25,0],fig);
+  part(S10,goldMat,[s*.13,1.64,1.5],[.12,.1,.3],[0,s*.5,0],fig);
 }
-for(const side of [-1,1])oval(robe,side*1.22,4.78,.02,.31,.32,.3);
-// Arms curve continuously from the shoulders through the elbows to the wrists.
-sculptLine([[-1.28,4.83,.04],[-1.58,4.34,.12],[-1.72,3.72,.33],[-1.79,3.26,.63]],.34,robe);
-sculptLine([[1.28,4.83,.04],[1.6,4.24,.12],[1.7,3.6,.44],[1.14,3.05,.92],[.48,2.99,1.08]],.32,robe);
-for(const side of [-1,1])for(let i=0;i<3;i++)sculptLine([[side*1.49,4.46-i*.18,.32],[side*1.66,4.12-i*.18,.43],[side*1.66,3.8-i*.18,.55]],.023,raisedGold);
-// Earth-touching right hand (viewer left), left palm rests on the lap.
-oval(gold,-1.8,2.99,.87,.24,.36,.16);
-for(let i=0;i<4;i++){const x=-1.96+i*.115;sculptLine([[x,2.96,1],[x-.015,2.67,1.08],[x+.01,2.42+Math.abs(i-1.5)*.055,1.02]],.052,gold)}
-sculptLine([[-1.58,3.1,.94],[-1.5,2.9,1.05],[-1.61,2.77,1.1]],.07,gold);
-oval(gold,.24,2.99,1.16,.47,.12,.28);
-for(let i=0;i<4;i++)sculptLine([[-.05,3.01,1.05+i*.1],[-.25,3.02,1.06+i*.1],[-.39,3.06,1.07+i*.09]],.047,gold);
-sculptLine([[.42,3.03,1.3],[.25,3.15,1.38],[.02,3.14,1.33]],.065,gold);
-// Flowing folds continue across the lap rather than straight engraved stripes.
-for(let i=0;i<6;i++){
- const a=.12+i*.16;
- sculptLine([[-2.35+a,2.2,.66],[-1.4,2.03-a*.07,1.16],[0,1.91-a*.08,1.43],[1.45,2.08-a*.06,1.13],[2.35-a,2.3,.57]],.022,raisedGold);
+// neck, head, long earlobes, closed eyes and a quiet smile
+part(new THREE.CylinderGeometry(.5,.58,.55,10),goldMat,[0,3.95,0],null,null,fig);
+const headG=new THREE.Group();headG.position.set(0,5.05,0);fig.add(headG);
+part(S14,goldMat,[0,0,0],[1.0,1.18,.95],null,headG);
+part(S10,goldMat,[0,-.42,.1],[.88,.62,.82],null,headG);
+for(const s of[-1,1]){
+  part(S10,goldMat,[s*1.0,-.12,0],[.2,.75,.33],null,headG);part(S10,goldMat,[s*1.03,-.82,.02],[.17,.26,.22],null,headG);
+  part(new THREE.TorusGeometry(.2,.024,6,18,Math.PI),lineMat,[s*.36,.06,.9],null,[0,0,Math.PI],headG);
+  part(new THREE.TorusGeometry(.3,.02,6,18,Math.PI*.8),goldDeep,[s*.36,.2,.88],null,[0,0,Math.PI*.1],headG);
 }
-// Original sculpted head. Facial volume includes the bridge, nose and cheeks in its surface.
-const faceY=6.38;
-function faceDepth(x,y){const dy=(y-faceY)/1.02;const base=.71*Math.sqrt(Math.max(.001,1-(x/.79)**2-dy*dy));
- return base+.14*Math.exp(-((x/.11)**2)-((y-6.42)/.35)**2)+.18*Math.exp(-((x/.14)**2)-((y-6.18)/.1)**2)+.04*Math.exp(-(((Math.abs(x)-.33)/.16)**2)-((y-6.12)/.25)**2);}
-const headGeo=new THREE.SphereGeometry(1,64,48),positions=headGeo.attributes.position;
-for(let i=0;i<positions.count;i++){
- const nx=positions.getX(i),ny=positions.getY(i),nz=positions.getZ(i),jaw=ny<-.25?1+(ny+.25)*.13:1;
- const x=nx*.79*jaw,y=faceY+ny*1.02;
- let z=nz*.71;if(nz>0)z=faceDepth(x,y);positions.setXYZ(i,x,y,z);
+part(new THREE.ConeGeometry(.13,.42,4),goldMat,[0,-.16,.98],null,[-.32,Math.PI/4,0],headG);
+part(new THREE.TorusGeometry(.15,.02,6,16,Math.PI),lineMat,[0,-.5,.9],null,[0,0,Math.PI],headG);
+part(S10,goldDeep,[0,.42,.95],[.065,.065,.04],null,headG);
+// snail-shell curls over the head and the raised crown
+{
+  const curls=[];const add=(cx,cy,cz,rx,ry,rz,n,maxT,front)=>{for(let i=0;i<n;i++){const k=(i+.5)/n,th=Math.acos(1-k*(1-Math.cos(maxT))),ph=i*2.39996;
+      const x=Math.sin(th)*Math.cos(ph),y=Math.cos(th),z=Math.sin(th)*Math.sin(ph);if(front&&z>.2&&th>front)continue;
+      curls.push({x:cx+x*rx,y:cy+y*ry,z:cz+z*rz,sx:.17})}};
+  add(0,5.05+.05,0,1.03,1.2,.98,320,1.75,.95);add(0,5.05+1.18,-.05,.58,.55,.56,90,1.9,0);
+  const m=new THREE.InstancedMesh(new THREE.SphereGeometry(1,6,4),goldDeep,curls.length);
+  curls.forEach((c,i)=>{dummy.position.set(c.x,c.y,c.z);dummy.rotation.set(0,0,0);dummy.scale.setScalar(c.sx);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});
+  m.castShadow=true;fig.add(m);
 }
-headGeo.computeVertexNormals();shape(headGeo,gold,0,0,0);
-// Long earlobes and inset auricles attached close to the temples.
-for(const side of [-1,1]){
- oval(gold,side*.79,6.22,.005,.16,.5,.19);
- sculptLine([[side*.85,6.53,.14],[side*.9,6.4,.18],[side*.87,6.09,.18],[side*.83,5.91,.13]],.032,robe);
- const xs=[.16,.28,.43,.55];
- sculptLine(xs.map((x,i)=>[side*x,6.48+[.015,-.025,-.023,.025][i],faceDepth(x,6.48)+.018]),.014,recess);
- sculptLine(xs.map((x,i)=>[side*x,6.5+[.005,-.025,-.023,.01][i],faceDepth(x,6.5)+.022]),.019,gold);
- sculptLine([[side*.12,6.75,faceDepth(.12,6.75)+.022],[side*.3,6.8,faceDepth(.3,6.8)+.02],[side*.51,6.75,faceDepth(.51,6.75)+.016]],.023,robe);
-}
-// A restrained mouth, modelled lips and brow urna, without a cartoon smile.
-sculptLine([[-.19,5.99,faceDepth(-.19,5.99)+.01],[-.07,5.98,faceDepth(-.07,5.98)+.026],[0,5.985,faceDepth(0,5.985)+.028],[.08,5.98,faceDepth(.08,5.98)+.026],[.19,5.99,faceDepth(.19,5.99)+.01]],.011,recess);
-sculptLine([[-.17,6.015,faceDepth(-.17,6.015)+.012],[0,6.028,faceDepth(0,6.028)+.035],[.17,6.015,faceDepth(.17,6.015)+.012]],.025,gold);
-sculptLine([[-.15,5.955,faceDepth(-.15,5.955)+.014],[0,5.935,faceDepth(0,5.935)+.027],[.15,5.955,faceDepth(.15,5.955)+.014]],.029,gold);
-oval(raisedGold,0,6.84,faceDepth(0,6.84)+.012,.043,.046,.028);
-// Three subtle neck folds.
-for(let i=0;i<3;i++)sculptLine([[-.29,5.54-i*.08,.31],[0,5.5-i*.08,.4],[.29,5.54-i*.08,.31]],.013,robe);
-// Tightly spaced spiral curls over a fitted cap, and a low ushnisha.
-oval(robe,0,7.06,-.055,.78,.53,.7);
-oval(robe,0,7.51,-.065,.31,.27,.3);
-const curlGeo=new THREE.SphereGeometry(.065,10,8);
-for(let row=0;row<8;row++){
- const theta=.2+row*.16,rr=Math.sin(theta),count=Math.max(9,Math.round(44*rr));
- for(let i=0;i<count;i++){const a=(i+(row%2)*.5)/count*Math.PI*2;shape(curlGeo,robe,Math.sin(a)*rr*.79,7.01+Math.cos(theta)*.57,Math.cos(a)*rr*.71-.055)}
-}
-// Elliptical double aureole, a discreet lotus finial rather than a toy-like wire ring.
-for(const [r,width] of [[1.57,.037],[1.69,.024]]){const halo=shape(new THREE.TorusGeometry(r,width,10,120),raisedGold,0,6.42,-.83,1,1.14,1);halo.castShadow=false}
-for(let i=0;i<36;i++){const a=i/36*Math.PI*2;const bead=oval(raisedGold,Math.sin(a)*1.63,6.42+Math.cos(a)*1.63*1.14,-.83,.025,.025,.025);bead.castShadow=false}
+const halo=new THREE.Mesh(new THREE.TorusGeometry(2.05,.05,8,120),new THREE.MeshBasicMaterial({color:0xffe9b0,transparent:true,opacity:.8,toneMapped:false}));
+halo.position.set(0,2.33+5.2,-.95);memorial.add(halo);
+obstacles.push({x:0,z:0,r:5.75});
 
-// Wider paving and three cushions remain outside the statue collision radius.
-const court=new THREE.Mesh(new THREE.CircleGeometry(6.8,64),M(0x9e9c8e));court.rotation.x=-Math.PI/2;court.position.set(0,.035,7);scene.add(court);
-// Paving stones and round olive cushions echo the concept's warm quiet courtyard.
-for(let x=-6;x<=6;x++)for(let z=2;z<=13;z++){if(Math.hypot(x,z-7)>6.5||Math.hypot(x,z)<4.8)continue;const tile=box(.96,.035,.96,[0xbeb49d,0xc8bda6,0xb4ad99][Math.abs(x+z)%3],x,.061,z,scene);tile.castShadow=false;tile.receiveShadow=true}
-for(const x of [-2.5,0,2.5])shape(new THREE.CylinderGeometry(.72,.8,.17,12),M(0x77784a),x,.17,7,1,1,1,scene);
-const stoneGeo=new THREE.DodecahedronGeometry(1,0);
-for(let i=0;i<32;i++){const a=rnd()*Math.PI*2,r=22+rnd()*27;shape(stoneGeo,M(i%2?0x9a9d8d:0xb1ad99),Math.cos(a)*r,.3,Math.sin(a)*r,.6+rnd(),.5+rnd()*.7,.6+rnd(),scene)}
-// Distant low-poly hills and scattered flower beds frame the walk.
-for(let i=0;i<9;i++)shape(new THREE.ConeGeometry(13+rnd()*8,12+rnd()*14,7),M(0x82918a),-65+i*16,3,-65-rnd()*15,1,1,1,scene);
-for(let i=0;i<140;i++){const a=rnd()*Math.PI*2,r=11+rnd()*24,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(x)<7&&z>0&&z<15)continue;box(.04,.24,.04,0x6f8749,x,.12,z,scene);const flower=box(.14,.07,.14,i%4?0xe8e0bb:0xd8ba67,x,.28,z,scene);flower.castShadow=false}
-const glow=new THREE.PointLight(0xffce88,1,18);glow.position.set(0,4,5);scene.add(glow);
+/* ---------- courtyard: stone lanterns and prayer cushions ---------- */
+const lanternStone=F(0x8f8c80,{roughness:1});
+const lanternGlow=new THREE.MeshStandardMaterial({color:C(0xf3d9a4),emissive:C(0xffb45c),emissiveIntensity:.6,roughness:.6});
+const LG={base:new THREE.CylinderGeometry(.45,.56,.24,8),post:new THREE.CylinderGeometry(.15,.17,1,8),deck:new THREE.CylinderGeometry(.46,.42,.14,8),
+  roof:new THREE.ConeGeometry(.72,.42,4),cap:new THREE.ConeGeometry(.24,.3,4),ball:new THREE.SphereGeometry(.09,6,4)};
+const glow=new THREE.PointLight(0xffce88,1,20);glow.position.set(0,4,7);scene.add(glow);
 const lanterns=[];
-for(const x of [-5.3,5.3])for(const z of [2.5,9.5]){
-  box(.65,.2,.65,0x777869,x,.1,z,scene);box(.19,1.3,.19,0x777869,x,.8,z,scene);
-  box(.66,.75,.66,0xffd496,x,1.5,z,scene);box(.9,.16,.9,0x62695c,x,1.95,z,scene);
-  const light=new THREE.PointLight(0xffc278,.65,8);light.position.set(x,1.7,z);scene.add(light);lanterns.push(light);
+for(let k=0;k<8;k++){
+  const a=(k+.5)/8*Math.PI*2,x=Math.sin(a)*10.2,z=Math.cos(a)*10.2,g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=a;scene.add(g);
+  part(LG.base,lanternStone,[0,.12,0],null,null,g);part(LG.post,lanternStone,[0,.74,0],null,null,g);part(LG.deck,lanternStone,[0,1.31,0],null,null,g);
+  part(BOX,lanternGlow,[0,1.66,0],[.5,.48,.5],null,g);
+  for(const sx of[-1,1])for(const sz of[-1,1])part(BOX,lanternStone,[sx*.27,1.66,sz*.27],[.1,.56,.1],null,g);
+  part(LG.roof,lanternStone,[0,2.13,0],null,[0,Math.PI/4,0],g);part(LG.cap,lanternStone,[0,2.42,0],null,[0,Math.PI/4,0],g);part(LG.ball,lanternStone,[0,2.6,0],null,null,g);
+  obstacles.push({x,z,r:.6});
+  if(Math.cos(a)>0){const l=new THREE.PointLight(0xffc278,.6,9);l.position.set(x,1.7,z);scene.add(l);lanterns.push(l)}
 }
-obstacles.push({x:0,z:0,r:4.75});
-for(const x of [-5.3,5.3])for(const z of [2.5,9.5])obstacles.push({x,z,r:.5});
+for(const x of[-2.6,0,2.6]){part(new THREE.CylinderGeometry(.74,.82,.18,12),F(0x6c7140),[x,.12,8.2]);part(S10,F(0x767b47),[x,.2,8.2],[.7,.1,.7])}
 
 /* ---------- flowers ---------- */
 const petalCols=[0xf2c1c9,0xffffff,0xf7d77a,0xc9b6e8,0xf0a07a];
 const flowerGroup=new THREE.Group();scene.add(flowerGroup);
 function addFlower(i,col){
-  const g=new THREE.Group(),a=i*2.399,r=4.65+(i%4)*.16;
+  const g=new THREE.Group(),a=((i*.618034)%1-.5)*2.3,r=5.95+(i%3)*.24;
   box(.03,.35,.03,0x4f7a3a,0,.17,0,g);
   const pc=petalCols[Math.abs(col)%petalCols.length];
   box(.16,.06,.06,pc,0,.36,0,g);box(.06,.06,.16,pc,0,.36,0,g);box(.06,.07,.06,0xe0a43a,0,.37,0,g);
-  g.position.set(Math.cos(a)*r,0,Math.sin(a)*r);flowerGroup.add(g);
+  g.position.set(Math.sin(a)*r,0,Math.cos(a)*r);flowerGroup.add(g);
 }
 function renderFlowers(list){while(flowerGroup.children.length)flowerGroup.remove(flowerGroup.children[0]);list.slice(-300).forEach((c,i)=>addFlower(i,c))}
 
@@ -329,7 +388,7 @@ const PAL={skin:[0xf3d2b5,0xe8b994,0xd9a07a,0xb57a52,0x8a5a3b],hair:[0x2a211d,0x
   shirt:[0xd96c5f,0x5b8fb9,0x7fae6a,0xe2b04a,0x9b79c6,0xef9bb4,0x4fa3a0,0xf2efe8],pants:[0x3d3a44,0x4b6a8f,0x6e5a46,0x2e4a3a,0x8a8478],
   shoe:[0x2a2622,0xf2efe8,0x8b4a2b]};
 function randLook(){return{skin:pick(PAL.skin),hair:pick(PAL.hair),shirt:pick(PAL.shirt),pants:pick(PAL.pants),shoe:pick(PAL.shoe),hs:Math.random()<.45?1:0,hat:Math.random()<.25}}
-const pixTex=(fn)=>{const c=document.createElement('canvas');c.width=c.height=8;const x=c.getContext('2d');fn(x);const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;return new THREE.MeshLambertMaterial({map:t})};
+const pixTex=(fn)=>{const c=document.createElement('canvas');c.width=c.height=8;const x=c.getContext('2d');fn(x);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;return new THREE.MeshLambertMaterial({map:t})};
 function headMats(L){
   const sk=hex(L.skin),hr=hex(L.hair),long=L.hs===1;
   const front=pixTex(x=>{x.fillStyle=sk;x.fillRect(0,0,8,8);x.fillStyle=hr;x.fillRect(0,0,8,2);x.fillRect(0,2,1,long?5:1);x.fillRect(7,2,1,long?5:1);
@@ -341,7 +400,7 @@ function headMats(L){
 }
 function makeTag(text){
   const c=document.createElement('canvas');c.width=512;c.height=96;
-  const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));
+  const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true,toneMapped:false}));
   s.scale.set(2.4,.45,1);s.renderOrder=10;s.userData.c=c;setTag(s,text);return s;
 }
 function setTag(s,text){
@@ -431,7 +490,7 @@ const angLerp=(a,b,k)=>{let d=b-a;d=Math.atan2(Math.sin(d),Math.cos(d));return a
 function collide(x,z,r){
   const d=Math.hypot(x,z);if(d>60){x*=60/d;z*=60/d}
   for(const o of obstacles){const dx=x-o.x,dz=z-o.z,dd=Math.hypot(dx,dz),min=o.r+r;if(dd<min&&dd>1e-4){x=o.x+dx/dd*min;z=o.z+dz/dd*min}}
-  const px=x+28,pz=z+10,pd=Math.hypot(px,pz);if(pd<6.2){x=-28+px/pd*6.2;z=-10+pz/pd*6.2}
+  const px=x-POND.x,pz=z-POND.z,pd=Math.hypot(px,pz),pr=POND.r+.4;if(pd<pr&&pd>1e-4){x=POND.x+px/pd*pr;z=POND.z+pz/pd*pr}
   return[x,z];
 }
 function updateDog(D,ox,oz,oh,ownerPose,ownerMoving,dt,t){
@@ -780,8 +839,8 @@ function startPractice(mode){
   if(mode==='pray'&&practice.mode==='pray'){endPractice();return}
   if(mode!=='pray'&&practice.count>=108)return;
   target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
-  me.g.position.set(0,0,7);me.g.rotation.y=Math.PI;me.speed=0;
-  cam.yaw=0;cam.pitch=.13;cam.dist=10.5;
+  me.g.position.set(0,0,8.2);me.g.rotation.y=Math.PI;me.speed=0;
+  cam.yaw=0;cam.pitch=.12;cam.dist=9.5;
   practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;
 }
 $('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
@@ -822,12 +881,12 @@ function updateEnvironment(dt,t){
   const now=new Date(),hours=(now.getUTCHours()+9)%24+now.getUTCMinutes()/60;
   const daylight=THREE.MathUtils.smoothstep(hours,5.5,8)*(1-THREE.MathUtils.smoothstep(hours,17,19.5));
   const dusk=daylight*(1-daylight)*4,cloud=weather==='clear'?0:.4;
-  sky.material.uniforms.top.value.set(0x14223c).lerp(new THREE.Color(0x9dbbd0),daylight*(1-cloud));
-  sky.material.uniforms.bot.value.set(0x293449).lerp(new THREE.Color(0xe9dec7),daylight).lerp(new THREE.Color(0xe3ab79),dusk*.7);
-  scene.fog.color.copy(sky.material.uniforms.bot.value);scene.fog.near=weather==='clear'?35:22;scene.fog.far=weather==='clear'?110:75;
-  ambient.intensity=.34+daylight*.32;sun.intensity=(.08+daylight*.65)*(1-cloud);sun.color.set(dusk>.4?0xffc28e:0xffedce);
+  sky.material.uniforms.top.value.set(0x14223c).lerp(new THREE.Color(0x5f9fd8),daylight*(1-cloud)).lerp(new THREE.Color(0x9aa7b2),daylight*cloud);
+  sky.material.uniforms.bot.value.set(0x293449).lerp(new THREE.Color(0xd9e7ee),daylight).lerp(new THREE.Color(0xe7ad7c),dusk*.7);
+  scene.fog.color.copy(sky.material.uniforms.bot.value).convertSRGBToLinear();scene.fog.near=weather==='clear'?60:26;scene.fog.far=weather==='clear'?320:110;
+  ambient.intensity=.18+daylight*.5;sun.intensity=(.1+daylight*1.25)*(1-cloud*.7);sun.color.set(dusk>.4?0xffc28e:0xffedce);
   sun.position.set(Math.sin((hours-6)/12*Math.PI)*35,Math.max(4,Math.sin((hours-6)/12*Math.PI)*40),20);
-  glow.intensity=.5-daylight*.32;lanterns.forEach(l=>l.intensity=1.1-daylight*.8);
+  glow.intensity=1.2-daylight*.7;lanterns.forEach(l=>l.intensity=1.1-daylight*.9);lanternGlow.emissiveIntensity=.45+(1-daylight)*1.6;halo.material.opacity=.6+(1-daylight)*.35;clouds.forEach(c=>c.material.opacity=(.2+daylight*.75)*(1-cloud*.25));
   $('seoulClock').textContent='한국 '+seoulTime.format(now);$('skyLabel').textContent=(daylight<.15?'밤':dusk>.6?'노을 · 새벽':'낮')+' · '+weatherNames[weather]+(weatherMode==='auto'?' (자동)':'');
 }
 
@@ -871,7 +930,7 @@ $('fireMotionBtn').onclick=()=>{if(!fireState.loaded)return;firePlaying=!firePla
 function updateCampfire(dt){if(!fireState.loaded)return;if(firePlaying)fireTime+=dt;if(fireMixer)fireMixer.update(dt);fireLight.intensity=.52+(firePlaying?Math.sin(fireTime*8)*.06+Math.sin(fireTime*13)*.025:0)}
 
 /* ---------- loop ---------- */
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.8?72:55;camera.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PN=160,pg=new THREE.BufferGeometry(),pp=new Float32Array(PN*3);
@@ -916,7 +975,7 @@ function tick(){
 
   const ax=me.g.position.x,az=me.g.position.z,cp=Math.cos(cam.pitch);
   camera.position.set(ax+sy*cam.dist*cp,1.3+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
-  camera.lookAt(ax,pose==='lie'?.6:practice.mode!=='idle'?2.7:2.5,az);
+  camera.lookAt(ax,pose==='lie'?.6:practice.mode!=='idle'?3.4:2.5,az);
 
   sendAcc+=dt;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
   if(marker.visible)marker.material.opacity=.5+Math.sin(t*5)*.3;
