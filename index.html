@@ -154,6 +154,8 @@ button:disabled{opacity:.5;cursor:default}
 .rps-open #rightMenu,.rps-open #gardenPanel{visibility:hidden}
 @media(max-height:520px){.rps-panel{bottom:8px;padding:10px}.rps-count{font-size:32px;margin:5px 0}}
 
+.sky-return{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;background:#faf6ee;min-height:42px;box-shadow:0 4px 20px #0005}
+.sky-view #gardenPanel,.sky-view .visitors,.sky-view #rightMenu,.sky-view #joy,.sky-view #bowCounter{display:none}
 </style>
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
@@ -165,7 +167,7 @@ button:disabled{opacity:.5;cursor:default}
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
   <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="leaveBtn" type="button" hidden>나가기</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
-  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
+  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status" style="font-size:11px;color:var(--soft);margin-top:6px">모닥불을 불러오는 중…</div>
   </div>
 </header>
@@ -175,6 +177,7 @@ button:disabled{opacity:.5;cursor:default}
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
 <div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="toast" id="toast"></div>
 <section class="order-panel" id="orderPanel" hidden aria-label="포장마차 주문"><div class="order-head"><strong>기억 포차 차림표</strong><button id="orderClose" type="button">닫기</button></div><div class="order-sec">안주</div><div class="order-grid" id="orderFood"></div><div class="order-sec">술·음료</div><div class="order-grid" id="orderDrink"></div></section>
@@ -786,7 +789,20 @@ function doStoke(){
 $('pWave').onclick=()=>setPose('wave');$('pBeer').onclick=()=>setPose('beer');$('pFuel').onclick=stokeFire;$('pCoffee').onclick=()=>setPose('coffee');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');$('pProne').onclick=()=>setPose('prone');
 
 /* ---------- input ---------- */
-const cam={yaw:0,pitch:.25,dist:11.5};
+const cam={yaw:0,pitch:.25,dist:11.5,sky:false,skyPitch:.74,skyFov:75};
+function setSkyView(open){
+  if(open===cam.sky)return;
+  if(open){cam.gardenYaw=cam.yaw;cam.yaw=Math.atan2(120,200);cam.skyPitch=.74}
+  else if(Number.isFinite(cam.gardenYaw))cam.yaw=cam.gardenYaw;
+  cam.sky=open;document.body.classList.toggle('sky-view',open);
+  me.g.visible=!open;myDogObj.g.visible=!open;
+  $('skyReturn').hidden=!open;$('skyViewBtn').setAttribute('aria-pressed',String(open));
+  target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(key=>delete keys[key]);
+  if(open){closeOtherMenus('sky');$('skyReturn').focus()}else $('gardenToggle').focus();
+  resize();
+}
+$('skyViewBtn').onclick=()=>setSkyView(true);
+$('skyReturn').onclick=()=>setSkyView(false);
 const keys={};
 addEventListener('keydown',e=>{if(!$('welcome').hidden||e.target.tagName==='INPUT')return;keys[e.code]=true});
 addEventListener('keyup',e=>keys[e.code]=false);
@@ -803,17 +819,17 @@ canvas.addEventListener('pointerdown',e=>{try{canvas.setPointerCapture(e.pointer
   looks.set(e.pointerId,{sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,t:performance.now(),moved:false})});
 canvas.addEventListener('pointermove',e=>{const p=looks.get(e.pointerId);if(!p)return;
   if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>8)p.moved=true;
-  if(p.moved){cam.yaw-=(e.clientX-p.lx)*.006;cam.pitch=Math.max(.05,Math.min(1.2,cam.pitch+(e.clientY-p.ly)*.004))}
+  if(p.moved){cam.yaw-=(e.clientX-p.lx)*.006;if(cam.sky)cam.skyPitch=Math.max(.08,Math.min(1.53,cam.skyPitch+(e.clientY-p.ly)*.004));else cam.pitch=Math.max(.05,Math.min(1.2,cam.pitch+(e.clientY-p.ly)*.004))}
   p.lx=e.clientX;p.ly=e.clientY});
 const ray=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hit=new THREE.Vector3();
 const marker=new THREE.Mesh(new THREE.RingGeometry(.25,.36,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8}));
 marker.rotation.x=-Math.PI/2;marker.visible=false;scene.add(marker);
-function lookEnd(e){const p=looks.get(e.pointerId);looks.delete(e.pointerId);if(!p||e.type==='pointercancel')return;
+function lookEnd(e){const p=looks.get(e.pointerId);looks.delete(e.pointerId);if(!p||e.type==='pointercancel'||cam.sky)return;
   if(!p.moved&&performance.now()-p.t<400){
     ray.setFromCamera({x:e.clientX/innerWidth*2-1,y:-(e.clientY/innerHeight)*2+1},camera);
     if(ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.position.set(x,.04,z);marker.visible=true}}}
 canvas.addEventListener('pointerup',lookEnd);canvas.addEventListener('pointercancel',lookEnd);
-canvas.addEventListener('wheel',e=>{e.preventDefault();cam.dist=Math.max(2.5,Math.min(12,cam.dist+e.deltaY*.005))},{passive:false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();if(cam.sky){cam.skyFov=Math.max(45,Math.min(95,cam.skyFov+e.deltaY*.025));resize()}else cam.dist=Math.max(2.5,Math.min(12,cam.dist+e.deltaY*.005))},{passive:false});
 
 /* ---------- friends (room presence) ---------- */
 let room=null,userNS=null,db=null,assets=null,myId=null;
@@ -1207,19 +1223,53 @@ function updateBonfire(dt,t){
 /* ---------- night sky: shared stars and random crescent / half / gibbous / full moons ---------- */
 const MOON_PHASES=[.1,.25,.4,.5,.6,.75,.9];
 const nightSky={group:new THREE.Group(),moonLight:1,moonMaps:[],moonSlots:[]};scene.add(nightSky.group);nightSky.group.visible=NIGHT_ALWAYS;
+
+function fantasyGalaxyTexture(){
+  const width=1024,height=512,canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+  const context=canvas.getContext('2d'),image=context.createImageData(width,height),pixels=image.data;
+  const random=environmentRandom(0x68a7b4d1),grids=[16,32,64,128].map(size=>{
+    const values=Float32Array.from({length:size*(size/2)},()=>random());return{size,rows:size/2,values};
+  });
+  function noise(u,v,grid){
+    const {size,rows,values}=grid,x=((u%1+1)%1)*size,y=Math.max(0,Math.min(rows-1,v*(rows-1)));
+    const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,wx=fx*fx*(3-2*fx),wy=fy*fy*(3-2*fy);
+    const a=values[iy*size+ix%size],b=values[iy*size+(ix+1)%size],row=Math.min(rows-1,iy+1)*size;
+    return(a+(b-a)*wx)*(1-wy)+(values[row+ix%size]+(values[row+(ix+1)%size]-values[row+ix%size])*wx)*wy;
+  }
+  const band=new THREE.Vector3(.35,.55,.76).normalize();
+  for(let y=0;y<height;y++){
+    const v=y/(height-1),theta=v*Math.PI,st=Math.sin(theta),ct=Math.cos(theta);
+    for(let x=0;x<width;x++){
+      const u=x/(width-1),phi=u*Math.PI*2;
+      const n=grids.reduce((sum,g,i)=>sum+noise(u,v,g)*[.52,.27,.14,.07][i],0);
+      const distance=Math.abs(-Math.cos(phi)*st*band.x+ct*band.y+Math.sin(phi)*st*band.z);
+      const core=Math.exp(-((distance/(.035+n*.055))**2)),halo=Math.exp(-((distance/.21)**2));
+      const dust=noise(u+.21,v,grids[2]),lane=Math.exp(-((distance/.018)**2))*(.3+dust*.5);
+      const glow=Math.max(0,core*(.45+n*1.35)*(1-lane)+halo*(.16+n*.28));
+      const color=.5+.5*Math.sin(phi*2+.8),upper=1-THREE.MathUtils.smoothstep(v,.52,.72),index=(y*width+x)*4;
+      pixels[index]=Math.min(255,(65+color*125)*glow+core*n*95);
+      pixels[index+1]=Math.min(255,(100+(1-color)*65)*glow+core*n*105);
+      pixels[index+2]=Math.min(255,235*glow+core*n*50);
+      pixels[index+3]=255*Math.min(.94,glow)*upper;
+    }
+  }
+  context.putImageData(image,0,0);
+  const texture=new THREE.CanvasTexture(canvas);texture.encoding=THREE.sRGBEncoding;return texture;
+}
+
 function moonTexture(phase){
-  const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
-  const x=canvas.getContext('2d'),image=x.createImageData(256,256),pixels=image.data;
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=512;
+  const x=canvas.getContext('2d'),image=x.createImageData(512,512),pixels=image.data;
   const angle=phase*Math.PI*2,lx=Math.sin(angle),lz=-Math.cos(angle),lit=(1-Math.cos(angle))*.5;
-  for(let y=0;y<256;y++)for(let xx=0;xx<256;xx++){
-    const nx=(xx-127.5)/54,ny=(127.5-y)/54,r2=nx*nx+ny*ny,index=(y*256+xx)*4;
+  for(let y=0;y<512;y++)for(let xx=0;xx<512;xx++){
+    const nx=(xx-255.5)/118,ny=(255.5-y)/118,r2=nx*nx+ny*ny,index=(y*512+xx)*4;
     if(r2<=1){
       const light=nx*lx+Math.sqrt(1-r2)*lz,edge=THREE.MathUtils.smoothstep(light,-.025,.025);
       const shade=(.72+.28*Math.sqrt(Math.max(0,light)))*(1+Math.sin(nx*43+ny*19)*Math.sin(ny*37-nx*11)*.045);
       pixels[index]=20+(255*shade-20)*edge;pixels[index+1]=27+(249*shade-27)*edge;pixels[index+2]=45+(224*shade-45)*edge;
       pixels[index+3]=255*THREE.MathUtils.smoothstep(1-Math.sqrt(r2),0,.025);
     }else{
-      const glow=Math.exp(-(Math.sqrt(r2)-1)*3)*.14*lit;
+      const glow=Math.exp(-(Math.sqrt(r2)-1)*2.2)*.32*lit;
       pixels[index]=179;pixels[index+1]=196;pixels[index+2]=244;pixels[index+3]=255*glow;
     }
   }
@@ -1231,7 +1281,8 @@ function updateNightSky(now,weather,daylight){
   const darkness=1-THREE.MathUtils.smoothstep(daylight,.05,.85),cloud=weather.cloud;
   nightSky.group.visible=darkness>.001;
   nightSky.mat.uniforms.uTime.value=(now%3600000)/1000;
-  nightSky.mat.uniforms.uOpacity.value=darkness*weather.brightness*(1-cloud*.98);
+  nightSky.mat.uniforms.uOpacity.value=darkness*weather.brightness*(1-cloud*.8)*1.35;
+  nightSky.galaxy.material.opacity=darkness*(1-cloud*.8);
   nightSky.mat.uniforms.uDensity.value=weather.density;
   const slot=Math.floor(now/MOON_INTERVAL),blend=THREE.MathUtils.smoothstep(now-slot*MOON_INTERVAL,0,WEATHER_FADE);
   const phases=[moonPhaseAt(slot-1),moonPhaseAt(slot)],weights=[1-blend,blend];
@@ -1245,24 +1296,26 @@ function updateNightSky(now,weather,daylight){
 }
 {
   const random=environmentRandom(0x3d27e4a1);
-  const n=4200,pos=new Float32Array(n*3),size=new Float32Array(n),phase=new Float32Array(n),rank=new Float32Array(n),R=270;
+  const n=7200,pos=new Float32Array(n*3),size=new Float32Array(n),phase=new Float32Array(n),rank=new Float32Array(n),R=270;
   const band=new THREE.Vector3(.35,.55,.76).normalize(),u=new THREE.Vector3(1,0,0).cross(band).normalize(),v=band.clone().cross(u).normalize(),d=new THREE.Vector3();
   for(let i=0;i<n;i++){
-    if(i<2600){const y=random(),r=Math.sqrt(1-y*y),ph=random()*Math.PI*2;d.set(r*Math.cos(ph),y,r*Math.sin(ph))}
+    if(i<4200){const y=random(),r=Math.sqrt(1-y*y),ph=random()*Math.PI*2;d.set(r*Math.cos(ph),y,r*Math.sin(ph))}
     else{const ph=random()*Math.PI*2,sp=(random()+random()+random()-1.5)*.18;d.copy(u).multiplyScalar(Math.cos(ph)).addScaledVector(v,Math.sin(ph)).addScaledVector(band,sp).normalize();if(d.y<.03)d.y=Math.abs(d.y)+.03;d.normalize()}
-    pos[i*3]=d.x*R;pos[i*3+1]=d.y*R;pos[i*3+2]=d.z*R;size[i]=i<2600?1.5+Math.pow(random(),6)*3.5:1+random()*1.1;phase[i]=random();rank[i]=random();
+    pos[i*3]=d.x*R;pos[i*3+1]=d.y*R;pos[i*3+2]=d.z*R;size[i]=i<4200?2+Math.pow(random(),5)*6.5:1.5+random()*2.2;phase[i]=random();rank[i]=random();
   }
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('size',new THREE.BufferAttribute(size,1));geo.setAttribute('phase',new THREE.BufferAttribute(phase,1));geo.setAttribute('rank',new THREE.BufferAttribute(rank,1));
   nightSky.mat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uPR:{value:renderer.getPixelRatio()},uOpacity:{value:1},uDensity:{value:1}},transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending,
     vertexShader:`attribute float size,phase,rank;uniform float uTime,uPR,uDensity;varying float vA;varying vec3 vC;
-      void main(){float visible=1.-smoothstep(uDensity-.08,uDensity,rank);vA=(.55+.45*sin(uTime*(.8+phase*2.6)+phase*40.))*visible;vC=mix(vec3(.75,.85,1.),vec3(1.,.92,.78),phase);
+      void main(){float visible=1.-smoothstep(uDensity-.08,uDensity,rank);vA=(.7+.3*sin(uTime*(.8+phase*2.6)+phase*40.))*visible;vC=mix(vec3(.5,.74,1.),vec3(1.,.8,.63),phase);
       vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=size*uPR;gl_Position=projectionMatrix*mv;}`,
-    fragmentShader:`uniform float uOpacity;varying float vA;varying vec3 vC;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;float a=(1.-d*d)*vA*uOpacity;gl_FragColor=vec4(vC*a,a);}`});
+    fragmentShader:`uniform float uOpacity;varying float vA;varying vec3 vC;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;vec2 q=abs(gl_PointCoord-.5);float flare=(exp(-q.x*55.-q.y*7.)+exp(-q.y*55.-q.x*7.))*.3;float a=(exp(-d*d*9.)+pow(1.-d,2.)*.5+flare)*vA*uOpacity;gl_FragColor=vec4(vC*a,min(1.,a));}`});
   const stars=new THREE.Points(geo,nightSky.mat);stars.frustumCulled=false;stars.renderOrder=1;nightSky.group.add(stars);
+  nightSky.galaxy=new THREE.Mesh(new THREE.SphereGeometry(284,48,24),new THREE.MeshBasicMaterial({map:fantasyGalaxyTexture(),side:THREE.BackSide,transparent:true,depthWrite:false,fog:false,toneMapped:false,blending:THREE.AdditiveBlending}));
+  nightSky.galaxy.renderOrder=-5;nightSky.group.add(nightSky.galaxy);
   nightSky.moonMaps=MOON_PHASES.map(moonTexture);
   nightSky.moons=[0,1].map(()=>{
     const moon=new THREE.Sprite(new THREE.SpriteMaterial({map:nightSky.moonMaps[3],transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false}));
-    moon.position.set(-120,95,-200);moon.scale.set(32,32,1);moon.renderOrder=2;nightSky.group.add(moon);return moon;
+    moon.position.set(-120,95,-200);moon.scale.set(145,145,1);moon.renderOrder=2;nightSky.group.add(moon);return moon;
   });
 }
 
@@ -1485,6 +1538,18 @@ function restoreLastBubble(key,name){
   const message=lastMessages.get(key);
   if(message)showBubble(key,name||message.name,message.text);
 }
+function wrapBubbleText(text,context,maxWidth){
+  const parts=typeof Intl.Segmenter==='function'
+    ?Array.from(new Intl.Segmenter('ko',{granularity:'grapheme'}).segment(text),item=>item.segment):Array.from(text);
+  const lines=[];let line='';
+  for(const part of parts){
+    if(part==='\n'||part==='\r\n'){lines.push(line);line='';continue}
+    if(line&&context.measureText(line+part).width>maxWidth){lines.push(line);line=''}
+    line+=part;
+  }
+  if(line||!lines.length)lines.push(line);
+  return lines;
+}
 function showBubble(key,name,text){
   const P=bubbleFor(key);if(!P)return;
   let b=bubbles.get(key);
@@ -1495,26 +1560,17 @@ function showBubble(key,name,text){
     b.renderOrder=11;b.userData.c=c;bubbles.set(key,b);
   }
   if(b.parent!==P.g){if(b.parent)b.parent.remove(b);P.g.add(b)}
-  P.bubble=b;P.tag.visible=false;
+  P.bubble=b;P.tag.visible=false;b.userData.tag=P.tag;
   const signature=name+'\n'+text;
   if(b.userData.signature!==signature){
     b.userData.signature=signature;
     const c=b.userData.c,x=c.getContext('2d');
     const nameFont='bold 49.5px "Gowun Dodum", sans-serif',textFont='58.5px "Gowun Dodum", sans-serif';
-    const maxTextWidth=340,padding=16,lineHeight=72,tailHeight=10,unitsPerPixel=.0043;
+    const padding=16,lineHeight=72,tailHeight=10,unitsPerPixel=.0043;
     x.font=textFont;
-    const wrapped=[];let line='';
-    for(const ch of [...text]){
-      if(line&&x.measureText(line+ch).width>maxTextWidth){wrapped.push(line);line=''}
-      line+=ch;
-    }
-    if(line)wrapped.push(line);
-    const lines=wrapped.slice(0,3);
-    if(wrapped.length>3){
-      const last=[...lines[2]];
-      while(last.length&&x.measureText(last.join('')+'…').width>maxTextWidth)last.pop();
-      lines[2]=last.join('')+'…';
-    }
+    // Longer messages use a wider card, and every wrapped line gets its own space.
+    const maxTextWidth=Math.min(1100,Math.max(340,Math.sqrt(x.measureText(text).width*lineHeight)));
+    const lines=wrapBubbleText(text,x,maxTextWidth);
     const textWidth=Math.max(0,...lines.map(ln=>x.measureText(ln).width));
     x.font=nameFont;
     const contentWidth=Math.max(40,textWidth,x.measureText(name).width);
@@ -1533,7 +1589,7 @@ function showBubble(key,name,text){
     // 글자 크기는 유지하고, 실제 내용이 차지하는 가로·세로만 줄이거나 늘린다.
     b.userData.bw=width*unitsPerPixel;b.userData.bh=height*unitsPerPixel;b.scale.set(b.userData.bw,b.userData.bh,1);
   }
-  b.userData.baseY=P.tag.position.y+.15+b.scale.y/2;b.position.y=b.userData.baseY+(b.userData.lift||0);
+  b.userData.baseY=P.tag.position.y+.15+b.scale.y/2;b.position.set(0,b.userData.baseY,0);
 }
 function appendChatHistory(message){
   const text=stripInvisible(message.text).slice(0,200);if(!text)return;
@@ -1753,7 +1809,7 @@ function saveVisit(){
   if(!hasEntered||!visitToken)return;
   const p=me.g.position,message=lastMessages.get('me');
   const snapshot={v:1,token:visitToken,name:myNick,look:myLook,dog:myDog,
-    x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist},pose,
+    x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose,
     practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
   try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot))}catch(e){}
@@ -1772,6 +1828,14 @@ function restoreVisit(){
     if(Number.isFinite(saved.cam.yaw))cam.yaw=saved.cam.yaw;
     if(Number.isFinite(saved.cam.pitch))cam.pitch=Math.max(.05,Math.min(1.2,saved.cam.pitch));
     if(Number.isFinite(saved.cam.dist))cam.dist=Math.max(2.5,Math.min(12,saved.cam.dist));
+    if(saved.cam.sky){
+      setSkyView(true);
+      if(Number.isFinite(saved.cam.yaw))cam.yaw=saved.cam.yaw;
+      if(Number.isFinite(saved.cam.gardenYaw))cam.gardenYaw=saved.cam.gardenYaw;
+      if(Number.isFinite(saved.cam.skyPitch))cam.skyPitch=Math.max(.08,Math.min(1.53,saved.cam.skyPitch));
+      if(Number.isFinite(saved.cam.skyFov))cam.skyFov=Math.max(45,Math.min(95,saved.cam.skyFov));
+      resize();
+    }
   }
   pose=['stand','sit','lie','prone','wave','coffee','beer','soda','soju','pray','bow'].includes(saved.pose)?saved.pose:'stand';
   const pr=saved.practice||{};
@@ -1791,6 +1855,7 @@ function restoreVisit(){
   startGardenConnection();saveVisit();return true;
 }
 function leaveGarden(){
+  if(cam.sky)setSkyView(false);
   if(room&&room.kind==='ws'){room.send({t:'leave'});room.close()}
   rpsGame=null;rpsPending=null;rpsDismissed=null;renderRps();
   room=null;hasEntered=false;visitToken='';clearVisit();
@@ -1975,37 +2040,64 @@ $('shareDialog').addEventListener('keydown',e=>{if(e.key==='Escape')closeShareDi
 if(!restoreVisit()){openNameDialog();updateWho()}
 
 
-/* ---------- speech bubbles never cover each other: farther ones rise above nearer ones on screen ---------- */
+/* ---------- keep complete speech bubbles inside the viewport and separate nearby cards ---------- */
 const _bv=new THREE.Vector3();
 function layoutBubbles(dt){
-  const list=[];
+  if(cam.sky){for(const b of bubbles.values())b.visible=false;return}
+  camera.updateMatrixWorld();
+  const list=[],placed=[],tanH=Math.tan(THREE.MathUtils.degToRad(camera.fov)/2);
+  const gapX=16/Math.max(1,innerWidth),gapY=16/Math.max(1,innerHeight);
   for(const b of bubbles.values()){
-    if(!b.parent||!b.parent.parent||b.userData.baseY===undefined)continue;
-    const g=b.parent;_bv.set(g.position.x,g.position.y+b.userData.baseY,g.position.z);
-    const dist=_bv.distanceTo(camera.position);
-    if(b.userData.bw){const f=Math.min(1,Math.max(.4,dist/9));b.scale.set(b.userData.bw*f,b.userData.bh*f,1)}
-    list.push({b,g,dist,base:b.userData.baseY});
+    if(!b.parent||!b.parent.parent||!b.userData.tag)continue;
+    const g=b.parent,headY=b.userData.tag.position.y+.15;
+    _bv.set(g.position.x,g.position.y+headY,g.position.z).applyMatrix4(camera.matrixWorldInverse);
+    const depth=-_bv.z,dist=_bv.length();
+    if(depth<=.1){b.visible=false;continue}
+    _bv.set(g.position.x,g.position.y+headY,g.position.z).project(camera);
+    if(Math.abs(_bv.x)>1.1||Math.abs(_bv.y)>1.2){b.visible=false;continue}
+    b.visible=true;
+    const f=Math.min(1,Math.max(.4,dist/9)),bw=b.userData.bw*f,bh=b.userData.bh*f;
+    const fit=Math.min(1,depth*tanH*camera.aspect*1.8/bw,depth*tanH*1.4/bh);
+    b.scale.set(bw*fit,bh*fit,1);
+    const hh=b.scale.y/(2*depth*tanH),hw=b.scale.x/(2*depth*tanH*camera.aspect);
+    const anchor={x:_bv.x,y:_bv.y+hh,z:_bv.z};
+    list.push({b,g,dist,hw,hh,anchor});
   }
   list.sort((a,b)=>a.dist-b.dist);
-  const placed=[],tanH=Math.tan(THREE.MathUtils.degToRad(camera.fov)/2);
   for(const it of list){
-    const hh=(it.b.scale.y/2)/(Math.max(.5,it.dist)*tanH),hw=hh*(it.b.scale.x/it.b.scale.y)/camera.aspect;
-    let lift=0,rect=null;
-    for(let step=0;step<18;step++){
-      _bv.set(it.g.position.x,it.g.position.y+it.base+lift,it.g.position.z).project(camera);
-      rect={x0:_bv.x-hw,x1:_bv.x+hw,y0:_bv.y-hh,y1:_bv.y+hh,front:_bv.z<1};
-      const hit=placed.find(r=>r.front&&rect.front&&rect.x0<r.x1+.01&&rect.x1>r.x0-.01&&rect.y0<r.y1+.01&&rect.y1>r.y0-.01);
-      if(!hit)break;
-      lift+=it.b.scale.y*.6;
+    const {b,g,hw,hh,anchor}=it;
+    const clamp=(x,y)=>({
+      x:THREE.MathUtils.clamp(x,-1+hw+gapX,1-hw-gapX),
+      y:THREE.MathUtils.clamp(y,-1+hh+gapY,1-hh-gapY)
+    });
+    const origin=clamp(anchor.x,anchor.y),candidates=[origin];
+    for(const r of placed)candidates.push(
+      clamp(origin.x,r.y1+hh+gapY),clamp(origin.x,r.y0-hh-gapY),
+      clamp(r.x1+hw+gapX,origin.y),clamp(r.x0-hw-gapX,origin.y));
+    let best=origin,bestScore=Infinity;
+    for(const candidate of candidates){
+      let overlap=0;
+      for(const r of placed){
+        const width=Math.max(0,Math.min(candidate.x+hw+gapX,r.x1)-Math.max(candidate.x-hw-gapX,r.x0));
+        const height=Math.max(0,Math.min(candidate.y+hh+gapY,r.y1)-Math.max(candidate.y-hh-gapY,r.y0));
+        overlap+=width*height;
+      }
+      const score=overlap*10000+(candidate.x-origin.x)**2+(candidate.y-origin.y)**2;
+      if(score<bestScore){bestScore=score;best=candidate}
     }
-    placed.push(rect);
-    const cur=it.b.userData.lift||0;it.b.userData.lift=cur+(lift-cur)*Math.min(1,dt*8);
-    it.b.position.y=it.base+it.b.userData.lift;
+    const ease=Math.min(1,dt*8),data=b.userData;
+    data.shiftX=(data.shiftX||0)+(best.x-anchor.x-(data.shiftX||0))*ease;
+    data.shiftY=(data.shiftY||0)+(best.y-anchor.y-(data.shiftY||0))*ease;
+    // Clamp after easing too: a newly enlarged card must never animate through a screen edge.
+    const center=clamp(anchor.x+data.shiftX,anchor.y+data.shiftY);
+    placed.push({x0:center.x-hw,x1:center.x+hw,y0:center.y-hh,y1:center.y+hh});
+    _bv.set(center.x,center.y,anchor.z).unproject(camera);
+    g.updateMatrixWorld(true);g.worldToLocal(_bv);b.position.copy(_bv);
   }
 }
 
 /* ---------- loop ---------- */
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.8?72:55;camera.updateProjectionMatrix()}
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=cam.sky?cam.skyFov:w/h<.8?72:55;camera.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PN=160,pg=new THREE.BufferGeometry(),pp=new Float32Array(PN*3);
@@ -2020,13 +2112,19 @@ function tick(){
   if(keys.KeyW||keys.ArrowUp)f=1;if(keys.KeyS||keys.ArrowDown)f=-1;
   if(keys.KeyA||keys.ArrowLeft)s=-1;if(keys.KeyD||keys.ArrowRight)s=1;
   if(keys.KeyQ)cam.yaw+=dt*1.8;if(keys.KeyE)cam.yaw-=dt*1.8;
+  if(cam.sky){
+    if(keys.KeyW||keys.ArrowUp)cam.skyPitch=Math.min(1.53,cam.skyPitch+dt*.8);
+    if(keys.KeyS||keys.ArrowDown)cam.skyPitch=Math.max(.08,cam.skyPitch-dt*.8);
+    if(keys.KeyA||keys.ArrowLeft)cam.yaw+=dt*1.2;
+    if(keys.KeyD||keys.ArrowRight)cam.yaw-=dt*1.2;
+  }
   const sy=Math.sin(cam.yaw),cy=Math.cos(cam.yaw);
   let vx=-sy*f+cy*s,vz=-cy*f-sy*s,mag=Math.min(1,Math.hypot(vx,vz));
   if(mag>.08){target=null;marker.visible=false;pendingStoke=false;const l=Math.hypot(vx,vz);vx/=l;vz/=l}
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
-  if(rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
+  if(cam.sky||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
   if(mag>0&&pose!=='stand'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
@@ -2053,8 +2151,14 @@ function tick(){
   }
 
   const ax=me.g.position.x,az=me.g.position.z,cp=Math.cos(cam.pitch);
-  camera.position.set(ax+sy*cam.dist*cp,1.3+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
-  camera.lookAt(ax,(pose==='lie'||pose==='prone')?.6:practice.mode!=='idle'?3.4:inPocha()?1.5:2.5,az);
+  if(cam.sky){
+    const elevation=cam.skyPitch;
+    camera.position.set(ax,2.1,az);
+    camera.lookAt(ax-sy*Math.cos(elevation)*100,2.1+Math.sin(elevation)*100,az-cy*Math.cos(elevation)*100);
+  }else{
+    camera.position.set(ax+sy*cam.dist*cp,1.3+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
+    camera.lookAt(ax,(pose==='lie'||pose==='prone')?.6:practice.mode!=='idle'?3.4:inPocha()?1.5:2.5,az);
+  }
 
   sendAcc+=dt;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
   if(marker.visible)marker.material.opacity=.5+Math.sin(t*5)*.3;
