@@ -4,6 +4,8 @@
 import { DurableObject } from 'cloudflare:workers';
 
 const MAX_PEERS = 16;
+// index.html의 PRAYER_SPOTS와 동일하게 유지한다.
+const PRAYER_SPOTS=Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
 const TRACKS = ['dawn', 'wind', 'bowl', 'melody', 'banya'];
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
 const POSES = ['stand', 'sit', 'lie', 'wave', 'pray', 'bow', 'coffee'];
@@ -57,8 +59,20 @@ export class GardenRoom extends DurableObject {
   readyPeers() {
     return this.ctx.getWebSockets().map((ws) => ({ ws, a: ws.deserializeAttachment() })).filter((p) => p.ws.readyState === 1 && p.a && p.a.ready);
   }
+  assignPrayerSlot(a) {
+    const used = new Set(this.readyPeers().filter(p => p.a.id !== a.id).map(p => p.a.prayerSlot).filter(Number.isInteger));
+    if (!Number.isInteger(a.prayerSlot) || !PRAYER_SPOTS[a.prayerSlot] || used.has(a.prayerSlot)) {
+      a.prayerSlot = PRAYER_SPOTS.findIndex((_, i) => !used.has(i));
+    }
+  }
+  alignPrayerState(a) {
+    if (!['pray', 'bow'].includes(a.s.p)) return;
+    this.assignPrayerSlot(a);
+    const spot = PRAYER_SPOTS[a.prayerSlot];
+    if (spot) a.s = { ...a.s, x: spot.x, z: Math.round(spot.z * 100) / 100, h: Math.atan2(-spot.x, -spot.z) };
+  }
   peerInfo(a) {
-    return { id: a.id, name: a.name, look: a.look, dog: a.dog, s: a.s };
+    return { id: a.id, name: a.name, look: a.look, dog: a.dog, prayerSlot: a.prayerSlot, s: a.s };
   }
   broadcast(msg, except) {
     const text = JSON.stringify(msg);
@@ -97,10 +111,12 @@ export class GardenRoom extends DurableObject {
       a.look = cleanLook(m.look);
       a.dog = cleanDog(m.dog);
       a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0 };
+      this.assignPrayerSlot(a);
+      this.alignPrayerState(a);
       a.ready = true;
       ws.serializeAttachment(a);
       const peers = this.readyPeers().filter((p) => p.a.id !== a.id).map((p) => this.peerInfo(p.a));
-      ws.send(JSON.stringify({ t: 'welcome', you: a.id, now: Date.now(), max: MAX_PEERS, peers, shared: this.shared }));
+      ws.send(JSON.stringify({ t: 'welcome', you: a.id, prayerSlot: a.prayerSlot, now: Date.now(), max: MAX_PEERS, peers, shared: this.shared }));
       this.broadcast({ t: 'join', peer: this.peerInfo(a) }, ws);
       return;
     }
@@ -112,8 +128,9 @@ export class GardenRoom extends DurableObject {
         const s = cleanState(m.s);
         if (!s) return;
         a.s = s;
+        this.alignPrayerState(a);
         ws.serializeAttachment(a);
-        this.broadcast({ t: 'state', id: a.id, s }, ws);
+        this.broadcast({ t: 'state', id: a.id, s: a.s }, ws);
         return;
       }
       case 'profile': {

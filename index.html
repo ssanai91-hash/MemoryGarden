@@ -84,8 +84,12 @@ button:disabled{opacity:.5;cursor:default}
 .tracks button[aria-pressed="true"] small{color:#e8e2d8}
 .vol{font-size:11.5px;color:var(--soft);display:grid;gap:4px}
 .vol input{width:100%;accent-color:var(--accent)}
-.sound{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 4px 14px rgba(40,30,20,.18);z-index:4}
-.sound.on{background:var(--paper);color:var(--ink);border-color:var(--line)}.hint{bottom:220px}.poses{bottom:26px}
+.music-sound{background:var(--accent);color:#fff;border-color:var(--accent)}
+.music-sound.on{background:var(--paper);color:var(--ink);border-color:var(--line)}
+.visitors{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:4;box-sizing:border-box;width:116px;max-width:30vw;padding:8px 9px;background:var(--paper);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(6px)}
+.visitors-title{font-size:12px;color:var(--ink);margin-bottom:5px}
+.visitor-names{display:grid;gap:3px;max-height:120px;overflow-y:auto;font-size:11px;line-height:1.35;color:var(--soft);overflow-wrap:anywhere}
+.hint{bottom:220px}.poses{bottom:26px}
 @media(max-width:650px){.plaque{top:12px;left:12px;padding:10px 12px;max-width:215px}.plaque h1{font-size:20px}.plaque .row button{font-size:11px;padding:5px 8px}.plaque .sub,.mine{display:none}.practice{bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:10px 12px;width:calc(100vw - 48px);max-width:370px}.practice-title strong{font-size:16px}.poses{bottom:calc(194px + env(safe-area-inset-bottom,0px));right:12px;gap:5px}.poses button{font-size:11px;min-width:70px;padding:6px 9px}#joy{width:84px;height:84px;left:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}.practice{left:106px;right:12px;width:auto;max-width:none;transform:none}.practice .row button{font-size:11.5px;padding:6px 9px}#knob{width:34px;height:34px;margin:-17px 0 0 -17px}.hint{bottom:330px;font-size:11px}.toast{top:210px}.environment{font-size:10px}.eyebrow{font-size:9px}}
 .plaque{max-height:calc(100dvh - 36px);overflow-y:auto}
 .youtube-card{position:fixed;top:65px;right:16px;width:min(360px,calc(100vw - 32px));z-index:4;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px;box-sizing:border-box;box-shadow:0 6px 24px #281e2030}
@@ -132,6 +136,7 @@ button:disabled{opacity:.5;cursor:default}
   <div class="panel" id="musicPanel" hidden>
     <div class="mhead" id="musicNote">고른 곡은 지금 정원에 있는 모두에게 같은 박자로 들려요</div>
     <div class="tracks" id="tracks"></div>
+    <button class="music-sound" id="soundBtn" type="button" hidden>소리 켜기</button>
     <div class="youtube-source">
       <label for="youtubeUrl">반야심경 유튜브 링크<input id="youtubeUrl" type="text" inputmode="url" placeholder="https://youtu.be/…" autocomplete="off"></label>
       <div class="row"><button id="youtubeLoadBtn" type="button">이 영상 듣기</button><a href="https://www.youtube.com/results?search_query=반야심경+독송" target="_blank" rel="noopener noreferrer">반야심경 찾기 ↗</a></div>
@@ -144,7 +149,7 @@ button:disabled{opacity:.5;cursor:default}
   <div class="row"><a id="youtubeOriginal" target="_blank" rel="noopener noreferrer">YouTube에서 열기 ↗</a><button id="youtubeCloseBtn" type="button">닫기 · 정지</button></div>
   <div id="youtubeMount"></div><p>영상의 ▶를 눌러 들어보세요. 볼륨과 일시정지는 영상에서 조절합니다.</p>
 </aside>
-<button class="sound" id="soundBtn" type="button" hidden>소리 켜기</button>
+<aside class="visitors" aria-label="들어온 친구"><div class="visitors-title">들어온 친구</div><div id="visitorNames" class="visitor-names" aria-live="polite"></div></aside>
 <section class="practice" aria-label="기도와 108배">
   <div class="eyebrow">마음을 모으는 시간</div>
   <div class="practice-title"><strong>부처님 앞에서</strong><span id="practiceStatus" role="status">편안히 머물러 보세요</span></div>
@@ -434,7 +439,23 @@ for(let k=0;k<8;k++){
   obstacles.push({x,z,r:.6});
   if(Math.cos(a)>0){const l=new THREE.PointLight(0xffc278,.6,9);l.position.set(x,1.7,z);scene.add(l);lanterns.push(l)}
 }
-for(const x of[-2.6,0,2.6]){part(new THREE.CylinderGeometry(.74,.82,.18,12),F(0x6c7140),[x,.12,8.2]);part(S10,F(0x767b47),[x,.2,8.2],[.7,.1,.7])}
+// worker/src/index.js의 동일한 자리 배치를 유지한다. 각 접속자에게 서로 다른 자리를 배정한다.
+const PRAYER_SPOTS=Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
+const PRAYER_MAT_TOP=.10;
+const prayerMatMaterial=F(0x6c7140);
+for(const spot of PRAYER_SPOTS){
+  const mat=new THREE.Group();mat.position.set(spot.x,.07,spot.z);
+  mat.rotation.y=Math.atan2(-spot.x,-spot.z);scene.add(mat);
+  part(BOX,prayerMatMaterial,[0,0,.25],[1.45,.06,2.45],null,mat);
+}
+function prayerSurfaceAt(x,z){
+  for(const spot of PRAYER_SPOTS){
+    const h=Math.atan2(-spot.x,-spot.z),dx=x-spot.x,dz=z-spot.z;
+    const lx=Math.cos(h)*dx-Math.sin(h)*dz,lz=Math.sin(h)*dx+Math.cos(h)*dz;
+    if(Math.abs(lx)<=.76&&Math.abs(lz-.25)<=1.25)return PRAYER_MAT_TOP;
+  }
+  return .035;
+}
 
 /* ---------- flowers ---------- */
 const petalCols=[0xf2c1c9,0xffffff,0xf7d77a,0xc9b6e8,0xf0a07a];
@@ -493,8 +514,11 @@ function makePerson(L){
   cup.position.set(0,-.7,.06);arms[1].add(cup);cup.visible=false;
   const tag=makeTag('');tag.position.y=2.25;g.add(tag);
   scene.add(g);
-  return{g,rig,torso,legs,arms,head,cup,tag,walkT:0,speed:0};
+  const contactMeshes=[];
+  rig.traverse(node=>{if(node.isMesh&&node.parent!==cup)contactMeshes.push(node)});
+  return{g,rig,torso,legs,arms,head,cup,tag,contactMeshes,walkT:0,speed:0};
 }
+const prayerContactBounds=new THREE.Box3();
 function posePerson(P,pose,dt,t){
   const w=Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
   const sw=Math.sin(P.walkT)*.7*w,k=Math.min(1,dt*10);
@@ -507,7 +531,7 @@ function posePerson(P,pose,dt,t){
   else if(pose==='lie'&&still){rx=-Math.PI/2;ry=.13;rz=.85;leg=[0,0];arm=[0,0];armZ=[-.5,.5];tagY=.9}
   else if((pose==='pray'||pose==='bow')&&still){
     const q=pose==='bow'?bowFrame(P.bowPhase||0):{lean:0,drop:-.52,reach:0,knee:-1.5};
-    torsoLean=q.lean;ry=q.drop;rz=0;leg=[q.knee,q.knee];arm=[-1.45,-1.45];armZ=[.56,-.56];tagY=1.6;
+    torsoLean=q.lean;ry=q.drop;rz=0;leg=[q.knee,q.knee];arm=[-1.45-q.lean*.9,-1.45-q.lean*.9];armZ=[.56,-.56];tagY=1.6;
   }
   else if(pose==='wave'&&still){arm=[0,0];armZ=[-.06,2.6+Math.sin(t*8)*.3]}
   else if(pose==='coffee'&&still){const c=Math.max(0,Math.sin(t*.7));arm=[0,-.9-c*1.3];armZ=[-.06,-.25-c*.15]}
@@ -515,6 +539,17 @@ function posePerson(P,pose,dt,t){
   P.torso.rotation.x=L(P.torso.rotation.x,torsoLean);
   P.rig.rotation.x=L(P.rig.rotation.x,rx);P.rig.position.y=L(P.rig.position.y,ry);P.rig.position.z=L(P.rig.position.z,rz);
   for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
+  // 절하는 중에도 바지·신발·손의 실제 경계가 방석 윗면 아래로 내려가지 않게 한다.
+  const surface=prayerSurfaceAt(P.g.position.x,P.g.position.z);
+  if(pose==='pray'||pose==='bow'||surface>.035){
+    P.g.updateMatrixWorld(true);let lowest=Infinity;
+    for(const mesh of P.contactMeshes){
+      if(!mesh.geometry.boundingBox)mesh.geometry.computeBoundingBox();
+      prayerContactBounds.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+      lowest=Math.min(lowest,prayerContactBounds.min.y);
+    }
+    if(Number.isFinite(lowest)&&lowest<surface+.012)P.rig.position.y+=surface+.012-lowest;
+  }
   P.tag.position.y=L(P.tag.position.y,tagY);
 }
 
@@ -670,7 +705,7 @@ function onPeerList(change){
     e.pose=['stand','sit','lie','wave','pray','bow','coffee'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
   }
   for(const k of[...peers.keys()])if(!seen.has(k))removePeer(k);
-  if(!userMoved&&!autoJoined&&peers.size){autoJoined=true;goToFriend(true)}
+  if(practice.mode==='idle'&&!userMoved&&!autoJoined&&peers.size){autoJoined=true;goToFriend(true)}
   updateWho();resolveNames();
 }
 function updateWho(){
@@ -678,13 +713,20 @@ function updateWho(){
   $('goBtn').hidden=!connected||n===0;
   $('chatBtn').hidden=!room;
   $('whoText').textContent=!room?'지금은 혼자 산책 중이에요':!connected?room.status():n===0?'지금은 나 혼자예요 · 친구를 불러 보세요':'지금 '+(n+1)+'명이 함께 있어요';
-  $('dot').classList.toggle('off',!connected);
+  $('dot').classList.toggle('off',!connected);renderVisitors();
+}
+function renderVisitors(){
+  const names=[shownName()==='나'?'나':shownName()+' (나)',...[...peers.values()].map(p=>p.nick||p.nm||'친구')];
+  const key=JSON.stringify(names);if(renderVisitors.key===key)return;renderVisitors.key=key;
+  const list=$('visitorNames');list.textContent='';
+  for(const name of names){const item=document.createElement('span');item.textContent=name;list.appendChild(item)}
 }
 async function resolveNames(){
   const ids=[...peers.values()].map(e=>e.by).filter(Boolean);
   let ps={};if(userNS&&ids.length){try{ps=await userNS.profiles(ids)}catch(e){}}
   for(const e of peers.values()){const nm=e.nick||(e.by&&ps[e.by]&&ps[e.by].name)||'친구';e.nm=nm;
     setTag(e.P.tag,e.dog?`${nm} · ${dogLabel(e.dog)}`:nm)}
+  renderVisitors();
   const hello=pendingHello.filter(k=>peers.has(k));pendingHello=[];
   if(hello.length)toast(hello.length===1?`${peers.get(hello[0]).nm}님이 정원에 들어왔어요`:`친구 ${hello.length}명이 정원에 있어요`);
 }
@@ -898,12 +940,24 @@ function practiceUI(){
   $('practiceStatus').textContent=practice.paused?'잠시 쉬어가세요':practice.mode==='pray'?'고요히 마음을 모읍니다':practice.mode==='auto'?'한 배, 한 배 천천히':practice.mode==='single'?'마음을 담아 한 배':practice.count>=108?'108배를 마쳤습니다':'편안히 머물러 보세요';
 }
 function endPractice(notify=true){practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
+function placeAtPrayerSpot(slot){
+  const spot=PRAYER_SPOTS[slot];if(!spot)return;
+  target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
+  Object.keys(keys).forEach(key=>delete keys[key]);
+  me.g.position.set(spot.x,0,spot.z);me.g.rotation.y=Math.atan2(-spot.x,-spot.z);me.speed=0;
+  myDogObj.g.position.set(spot.x-Math.cos(me.g.rotation.y),0,spot.z+Math.sin(me.g.rotation.y));
+  userMoved=true;sendDirty=true;
+  cam.yaw=me.g.rotation.y+Math.PI;cam.pitch=.12;cam.dist=9.5;
+}
+function localPrayerSlot(){
+  if(room&&Number.isInteger(room.prayerSlot)&&PRAYER_SPOTS[room.prayerSlot])return room.prayerSlot;
+  const free=PRAYER_SPOTS.findIndex(spot=>![...peers.values()].some(p=>Math.hypot(p.x-spot.x,p.z-spot.z)<1.4));
+  return free>=0?free:0;
+}
 function startPractice(mode){
   if(mode==='pray'&&practice.mode==='pray'){endPractice();return}
   if(mode!=='pray'&&practice.count>=108)return;
-  target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
-  me.g.position.set(0,0,8.2);me.g.rotation.y=Math.PI;me.speed=0;
-  cam.yaw=0;cam.pitch=.12;cam.dist=9.5;
+  placeAtPrayerSpot(localPrayerSlot());
   practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;
 }
 $('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
@@ -1000,7 +1054,7 @@ function serverNow(){return Date.now()+(room&&room.clockOffset||0)}
 function openNameDialog(focus){$('nameInput').value=myNick;$('welcome').hidden=false;if(focus)setTimeout(()=>{try{$('nameInput').focus({preventScroll:true})}catch(e){}},50)}
 function closeNameDialog(){$('welcome').hidden=true}
 $('nameForm').onsubmit=e=>{e.preventDefault();const v=stripInvisible($('nameInput').value).slice(0,12);if(!v){$('nameInput').focus();return}
-  myNick=v;store.set('garden.name',v);refreshMine();sendDirty=true;if(room&&room.kind==='ws')room.profile();closeNameDialog();toast(`${v}님, 어서 오세요`)};
+  myNick=v;store.set('garden.name',v);refreshMine();renderVisitors();sendDirty=true;if(room&&room.kind==='ws')room.profile();closeNameDialog();toast(`${v}님, 어서 오세요`)};
 $('nameSkip').onclick=()=>{store.set('garden.nameAsked','1');closeNameDialog()};
 $('nameBtn').onclick=()=>openNameDialog(true);
 if(!myNick&&store.get('garden.nameAsked')!=='1')openNameDialog();
@@ -1080,7 +1134,7 @@ function connectRoomServer(base,code){
   const peersById=new Map(),connL=[],peerL=[];
   let ws=null,connected=false,you=null,retry=0,stop=false,emitQueued=false,local={},sentState='';
   let pingTimer=null,retryTimer=null,handshakeTimer=null,lastReceived=0,connectionStatus='정원에 연결하는 중…';
-  const api={kind:'ws',code,clockOffset:0,
+  const api={kind:'ws',code,clockOffset:0,prayerSlot:null,
     connected:()=>connected,status:()=>connectionStatus,
     send(o){if(!stop&&ws&&ws.readyState===1){try{ws.send(JSON.stringify(o));return true}catch(e){}}return false},
     onPeers(fn){peerL.push(fn)},onConnection(fn){connL.push(fn);fn(connected)},
@@ -1127,7 +1181,9 @@ function connectRoomServer(base,code){
       },20000)};
     socket.onmessage=ev=>{if(stop||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
-        case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
+        case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;api.prayerSlot=Number.isInteger(m.prayerSlot)?m.prayerSlot:null;
+          if(practice.mode!=='idle'&&api.prayerSlot!==null)placeAtPrayerSpot(api.prayerSlot);
+          api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
           applyShared(m.shared);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
         case 'join':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,m.peer);emit()}break;
         case 'state':{const p=peersById.get(m.id);if(p){p.s=m.s;emit()}break}
