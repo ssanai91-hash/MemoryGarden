@@ -265,6 +265,8 @@ body.listening-room #skyViewBtn,body.listening-room #firePlayList,body.listening
 .dock-actions button{box-sizing:border-box;width:100%;height:34px;min-width:0;margin:0;padding:6px 9px;font-size:12px;line-height:1.2;white-space:nowrap;color:var(--ink);background:#faf6ee;border-radius:999px;box-shadow:0 2px 7px #281e201f}
 .chat-docked #joy{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 14px)}
 .chat-docked .poses{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 52px)}
+/* 정원 패널은 아래 대화창과 '대화 목록·동작' 버튼 줄 위에서 끝나야 볼륨 슬라이더까지 스크롤로 닿는다. */
+.chat-docked #gardenPanel{max-height:calc(100dvh - var(--keyboard-lift,0px) - var(--chat-height,63px) - 66px - env(safe-area-inset-top,0px))}
 .chat-docked .bow-counter{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 110px)}
 .chat-docked .chat-history{left:max(12px,env(safe-area-inset-left,0px));width:min(420px,calc(100vw - 24px));bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 50px)}
 .sky-view #chatBar,.sky-view #dockActions,.rps-open #chatBar,.rps-open #dockActions,.visit-ended #chatBar,.visit-ended #dockActions,body.board-open #chatBar,body.board-open #dockActions{display:none}
