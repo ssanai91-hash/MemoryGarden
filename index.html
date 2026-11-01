@@ -234,7 +234,7 @@ button:disabled{opacity:.5;cursor:default}
 }
 
 #gardenPanel #homeInstallBtn,#gardenPanel #qualityBtn{grid-column:1/-1}
-body.listening-room #boardBtn,body.listening-room #flowerBtn,body.listening-room #skyViewBtn,body.listening-room #firePlayList,body.listening-room #firePlayBtn,body.listening-room #pFuel,body.listening-room #auroraBtn,body.listening-room #fireworksBtn,body.listening-room #jarBtn,body.listening-room #campfireStatus{display:none!important}
+body.listening-room #skyViewBtn,body.listening-room #firePlayList,body.listening-room #firePlayBtn,body.listening-room #pFuel,body.listening-room #auroraBtn,body.listening-room #fireworksBtn,body.listening-room #jarBtn,body.listening-room #campfireStatus{display:none!important}
 #listeningControls{display:flex;flex-direction:column;gap:4px;pointer-events:auto}
 #listeningRecords{display:grid;gap:8px;margin:14px 0}
 #listeningRecords button{text-align:left;border-radius:12px;padding:12px 14px;min-height:58px}
@@ -367,7 +367,6 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button><button id="homeInstallBtn" type="button">바탕화면에 추가</button><button id="qualityBtn" type="button">화면 품질</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
   <div class="garden-actions">
-    <div class="garden-action-row"><button id="boardBtn" type="button">게시판 보기</button><button id="flowerBtn" type="button">꽃 놓기</button></div>
     <div class="garden-action-row"><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="thunderSoundBtn" type="button" aria-pressed="true">천둥 소리 끄기</button></div>
     <div class="garden-action-row"><button id="rerollBtn" type="button">반려동물 변경</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   </div>
@@ -2695,7 +2694,7 @@ function setSkyMusic(on){
   if(on&&!skyInit()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
   skyMusic.on=on;skyMusic.want=on;store.set('garden.music',on?'1':'0');$('soundToggle').setAttribute('aria-pressed',String(on));$('soundToggle').textContent='♪';$('soundToggle').setAttribute('aria-label',on?'배경음 끄기':'배경음 켜기');$('soundToggle').title=on?'배경음 끄기':'배경음 켜기';
   if(!skyMusic.ac)return;const ac=skyMusic.ac;
-  if(on){ac.resume().catch(()=>{});skyMusic.master.gain.cancelScheduledValues(ac.currentTime);skyMusic.master.gain.setTargetAtTime(worldSpace==='listening'||music.track?0:.9,ac.currentTime,.8);clearInterval(skyMusic.timer);skyMusic.timer=setInterval(skySchedule,400);skySchedule()}
+  if(on){ac.resume().catch(()=>{});skyMusic.master.gain.cancelScheduledValues(ac.currentTime);skyMusic.master.gain.setTargetAtTime(worldSpace==='listening'||music.track?0:skyLevel(),ac.currentTime,.8);clearInterval(skyMusic.timer);skyMusic.timer=setInterval(skySchedule,400);skySchedule()}
   else{skyMusic.master.gain.setTargetAtTime(0,ac.currentTime,.3);clearInterval(skyMusic.timer);bgTrackPause()}
   try{renderMusicUI()}catch(e){}
 }
@@ -2709,7 +2708,7 @@ document.addEventListener('visibilitychange',()=>{
   else if(skyMusic.on&&!visitEnded&&hasEntered){skyMusic.ac.resume().catch(()=>{});skyMusic.seen.clear()}
 });
 function syncSkyMusicOutput(){
-  if(skyMusic.ac){skyMusic.master.gain.setTargetAtTime(worldSpace==='garden'&&skyMusic.on&&!music.track&&!visitEnded&&hasEntered?.9:0,skyMusic.ac.currentTime,.3);skyMusic.seen.clear()}
+  if(skyMusic.ac){skyMusic.master.gain.setTargetAtTime(worldSpace==='garden'&&skyMusic.on&&!music.track&&!visitEnded&&hasEntered?skyLevel():0,skyMusic.ac.currentTime,.3);skyMusic.seen.clear()}
 }
 function silenceSkyMusic(){
   skyMusic.on=false;clearInterval(skyMusic.timer);skyMusic.timer=0;skyMusic.seen.clear();
@@ -2725,7 +2724,9 @@ const TRACKS=[
   {id:'wind',name:'산사의 바람',desc:'처마 끝 풍경과 바람 소리'},
   {id:'bowl',name:'싱잉볼 명상',desc:'길게 퍼지는 그릇 소리'},
   {id:'melody',name:'고요한 선율',desc:'느린 오음계 피리 가락'}];
-let AC=null,master=null,bus=null,noiseBuf=null,bed=[],audioOn=false,vol=.7;
+let AC=null,master=null,bus=null,noiseBuf=null,bed=[],audioOn=false,vol=(()=>{const v=parseInt(store.get('garden.vol')||'70',10);return Number.isFinite(v)?Math.max(0,Math.min(100,v))/100:.7})();
+// '내 볼륨'은 배경 음악·자연의 소리·고른 곡 모두에 적용한다(기본 70%).
+function skyLevel(){return .9*Math.min(1.4,vol/.7)}
 let music={track:null,startedAt:0};
 const sched=new Map();
 function h3(){let h=2166136261;for(const x of arguments){h^=x|0;h=Math.imul(h,16777619);h^=h>>>13}return(h>>>0)/4294967296}
@@ -2835,7 +2836,9 @@ function setMusicExpanded(open){
   $('musicPanel').hidden=!open;$('musicBtn').setAttribute('aria-expanded',String(open));syncMenuSections();
 }
 $('musicBtn').onclick=()=>worldSpace==='listening'?openListeningAudio():setMusicExpanded($('musicPanel').hidden);
-$('vol').oninput=e=>{vol=e.target.value/100;if(AC&&audioOn)master.gain.setTargetAtTime(vol,AC.currentTime,.1)};
+$('vol').value=Math.round(vol*100);
+$('vol').oninput=e=>{vol=e.target.value/100;store.set('garden.vol',String(e.target.value));if(AC&&audioOn)master.gain.setTargetAtTime(vol,AC.currentTime,.1);
+  if(skyMusic.ac&&skyMusic.master&&skyMusic.on&&worldSpace==='garden'&&!music.track&&!visitEnded&&hasEntered)skyMusic.master.gain.setTargetAtTime(skyLevel(),skyMusic.ac.currentTime,.1)};
 renderMusicUI();
 
 
@@ -2909,12 +2912,6 @@ $('gardenToggle').onclick=()=>setGardenExpanded($('gardenDetails').hidden);
 
 $('goBtn').onclick=()=>goToFriend(false);
 $('rerollBtn').onclick=()=>{closeOtherMenus('pet');openNameDialog(false);$('nameForm').querySelector('input[name="entryPet"]:checked')?.focus({preventScroll:true})};
-$('flowerBtn').onclick=async()=>{
-  const c=Math.floor(Math.random()*petalCols.length);
-  if(room&&room.kind==='ws'&&room.connected()){room.send({t:'flower',c});toast('꽃을 놓았어요');return}
-  if(db&&sharedFlowers){try{await db.collection('flowers').add({at:Date.now(),c});toast('꽃을 놓았어요');return}catch(e){}}
-  localFlowers.push(c);localFlowers=localFlowers.slice(-300);store.set('mem.flowerList',JSON.stringify(localFlowers));renderFlowers(localFlowers);toast(`꽃 ${localFlowers.length}송이`);
-};
 
 /* ---------- prayer practice, local progress ---------- */
 const practice={mode:'idle',paused:false,elapsed:0,count:Math.max(0,Math.min(108,parseInt(store.get('garden.bows')||'0',10)||0))};
@@ -4401,9 +4398,8 @@ gardenBoard.bind({
   send:message=>!!(room&&room.send(message)),reconnect:()=>!!(room&&room.reconnect()),
   stop(){closeOtherMenus('board');if(cam.sky)setSkyView(false,true);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(key=>delete keys[key]);},
   opened(fromHistory){if(!fromHistory&&historyReady&&history.state?.gardenView!=='board')history.pushState({gardenView:'board'},'',location.href)},
-  closed(fromHistory){if(!fromHistory&&historyReady&&history.state?.gardenView==='board')history.back();$('boardBtn').focus({preventScroll:true})}
+  closed(fromHistory){if(!fromHistory&&historyReady&&history.state?.gardenView==='board')history.back();if(!$('ctxBtn').hidden)$('ctxBtn').focus({preventScroll:true})}
 });
-$('boardBtn').onclick=()=>gardenBoard.open();
 
 if(visitEnded){showExitScreen();updateWho()}else if(!restoreVisit()){openNameDialog();updateWho()}
 installGardenHistory();
