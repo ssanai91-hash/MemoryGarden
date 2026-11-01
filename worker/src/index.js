@@ -3,6 +3,8 @@
 // 꽃·날씨·최근 대화는 방 저장소에 남겨 늦게 온 사람도 같은 상태를 본다.
 import { DurableObject } from 'cloudflare:workers';
 
+// 걸을 수 있는 반경(m). index.html의 WORLD_R와 같게 둔다.
+const WORLD_R = 90;
 const MAX_PEERS = 16;
 const VISIT_AWAY_MS=5*60*1000,VISIT_MEMORY_MS=24*60*60*1000;
 // index.html의 PRAYER_SPOTS와 동일하게 유지한다.
@@ -67,7 +69,7 @@ function cleanDog(d) {
 }
 function cleanState(s) {
   if (!s || typeof s !== 'object') return null;
-  const x = num(s.x, -60, 60), z = num(s.z, -60, 60);
+  const x = num(s.x, -WORLD_R, WORLD_R), z = num(s.z, -WORLD_R, WORLD_R);
   if (x === null || z === null) return null;
   return { x, z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0 };
 }
