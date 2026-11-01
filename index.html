@@ -191,6 +191,28 @@ button:disabled{opacity:.5;cursor:default}
 .poses #firePlayList{display:flex;flex-direction:column;gap:var(--action-gap,4px);width:100%;flex:none}
 .poses.poses-open #firePlayList>button{height:var(--action-height,28px);min-height:0;padding:var(--action-padding,2px) 4px;font-size:var(--action-font,11px);line-height:1.15}
 
+/* Keep the garden card on a consistent two-column rhythm. */
+#gardenPanel{padding:10px}
+#gardenPanel .plaque-heading{display:grid;grid-template-columns:minmax(0,1fr) 28px 54px;align-items:center;gap:5px}
+#gardenPanel .plaque-heading h1{min-width:0;font-size:16px;line-height:28px;white-space:nowrap;text-wrap:nowrap}
+#gardenPanel .plaque-heading button{box-sizing:border-box;width:100%;height:28px;min-width:0;margin:0;padding:0 5px;font-size:10px;line-height:1;white-space:nowrap}
+#gardenPanel #soundToggle{padding:0;font-size:17px;display:grid;place-items:center}
+#gardenDetails{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+#gardenDetails>.eyebrow{margin:0 0 8px;font-size:9px;line-height:1.4;letter-spacing:.08em}
+#gardenPanel .room-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0}
+#gardenPanel #inviteBtn{grid-column:1/-1}
+.garden-actions{display:grid;gap:6px;margin-top:10px}
+.garden-action-row{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px}
+#gardenPanel .room-actions>button,#gardenPanel .garden-action-row>button{box-sizing:border-box;min-width:0;width:100%;height:36px;margin:0;padding:4px 6px;border-radius:10px;font-size:11px;line-height:1.25;word-break:keep-all;overflow-wrap:normal}
+#gardenPanel .who{gap:7px;margin:10px 0 0;padding:9px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;line-height:1.5;word-break:keep-all}
+#gardenPanel #campfireStatus,#gardenPanel #nowPlaying{margin-top:9px;font-size:11px;line-height:1.5;word-break:keep-all}
+#gardenPanel #campfireStatus{color:var(--soft)}
+#gardenPanel #nowPlaying{padding-top:8px;border-top:1px solid var(--line)}
+@media(max-width:380px){
+  #gardenPanel .plaque-heading{grid-template-columns:minmax(0,1fr) 26px 50px;gap:4px}
+  #gardenPanel .plaque-heading h1{font-size:14px}
+}
+
 /* Selected welcome design: exact artwork from the approved first concept. */
 #welcome{place-items:start center;padding:clamp(64px,11.5dvh,96px) 0 20px!important;background:rgba(25,24,31,.38);overscroll-behavior:contain}
 #nameForm{--entry-ink:#332d2a;--entry-muted:#8d8478;--entry-orange:#b87539;width:min(420px,84vw);padding:22px 22px 7px;border:1px solid #ded8cb;border-radius:21px;background:#f8f4e9;color:var(--entry-ink);gap:0;box-shadow:0 14px 44px #18151033;align-self:start}
@@ -274,14 +296,18 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
 <header class="plaque collapsed" id="gardenPanel">
-  <div class="plaque-heading"><h1>기억의 정원</h1><button id="soundToggle" class="sound-toggle" type="button" aria-pressed="false" title="배경음">♪</button><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button></div>
+  <div class="plaque-heading"><h1>기억의 정원</h1><button id="soundToggle" class="sound-toggle" type="button" aria-pressed="false" aria-label="배경음 켜기" title="배경음 켜기">♪</button><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button></div>
   <div id="gardenDetails" hidden>
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
   <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
-  <div class="row"><button id="boardBtn" type="button">게시판 보기</button><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="thunderSoundBtn" type="button" aria-pressed="true">천둥 소리 끄기</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
-  <div class="mine" id="mine"></div><div id="campfireStatus" role="status" style="font-size:11px;color:var(--soft);margin-top:6px">모닥불을 불러오는 중…</div>
+  <div class="garden-actions">
+    <div class="garden-action-row"><button id="boardBtn" type="button">게시판 보기</button><button id="flowerBtn" type="button">꽃 놓기</button></div>
+    <div class="garden-action-row"><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="thunderSoundBtn" type="button" aria-pressed="true">천둥 소리 끄기</button></div>
+    <div class="garden-action-row"><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
+  </div>
+  <div class="mine" id="mine"></div><div id="campfireStatus" role="status">모닥불을 불러오는 중…</div>
   <div class="now" id="nowPlaying" hidden></div>
   <div class="panel" id="musicPanel" hidden>
     <div class="mhead" id="musicNote">고른 곡은 지금 정원에 있는 모두에게 같은 박자로 들려요</div>
@@ -1529,7 +1555,7 @@ function skySchedule(){
 function setSkyMusic(on){
   if(on&&(visitEnded||!hasEntered||document.hidden))return;
   if(on&&!skyInit()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
-  skyMusic.on=on;skyMusic.want=on;store.set('garden.music',on?'1':'0');$('soundToggle').setAttribute('aria-pressed',String(on));$('soundToggle').textContent=on?'♪ 켜짐':'♪';
+  skyMusic.on=on;skyMusic.want=on;store.set('garden.music',on?'1':'0');$('soundToggle').setAttribute('aria-pressed',String(on));$('soundToggle').textContent='♪';$('soundToggle').setAttribute('aria-label',on?'배경음 끄기':'배경음 켜기');$('soundToggle').title=on?'배경음 끄기':'배경음 켜기';
   if(!skyMusic.ac)return;const ac=skyMusic.ac;
   if(on){ac.resume().catch(()=>{});skyMusic.master.gain.cancelScheduledValues(ac.currentTime);skyMusic.master.gain.setTargetAtTime(music.track?0:.9,ac.currentTime,.8);clearInterval(skyMusic.timer);skyMusic.timer=setInterval(skySchedule,400);skySchedule()}
   else{skyMusic.master.gain.setTargetAtTime(0,ac.currentTime,.3);clearInterval(skyMusic.timer)}
@@ -1550,7 +1576,7 @@ function silenceSkyMusic(){
   skyMusic.on=false;clearInterval(skyMusic.timer);skyMusic.timer=0;skyMusic.seen.clear();
   const previous=skyMusic.ac;skyMusic.ac=null;skyMusic.master=null;skyMusic.bus=null;skyMusic.noise=null;
   if(previous)previous.close().catch(()=>{});
-  $('soundToggle').setAttribute('aria-pressed','false');$('soundToggle').textContent='♪';
+  $('soundToggle').setAttribute('aria-pressed','false');$('soundToggle').textContent='♪';$('soundToggle').setAttribute('aria-label','배경음 켜기');$('soundToggle').title='배경음 켜기';
 }
 
 
