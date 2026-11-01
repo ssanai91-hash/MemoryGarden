@@ -558,7 +558,7 @@ const BOX=new THREE.BoxGeometry(1,1,1);
 function box(w,h,d,color,x,y,z,parent){const m=new THREE.Mesh(BOX,typeof color==='number'?M(color):color);m.scale.set(w,h,d);m.position.set(x||0,y||0,z||0);m.castShadow=true;if(parent)parent.add(m);return m}
 
 /* ---------- centrepiece: 'campfire' (night bonfire) or 'buddha' (temple garden) ---------- */
-// 불상 정원으로 되돌리려면 'buddha'로 바꾸고 worker/src/index.js의 CENTERPIECE도 같은 값으로 바꾼다.
+// 불상 정원으로 되돌리려면 여기의 CENTERPIECE를 'buddha'로 바꾼다. 서버는 수행 위치를 강제하지 않는다.
 const CENTERPIECE='campfire';
 const NIGHT_ALWAYS=CENTERPIECE==='campfire';
 // 큰 파라솔 테이블 2개(의자 4개씩, 말풍선이 겹치지 않게 넓게). 나무·덤불·바위는 이 자리를 비운다.
@@ -1296,14 +1296,7 @@ function doStoke(){
 $('pWave').onclick=()=>setPose('wave');$('pray2Btn').onclick=()=>setPose('pray2');$('pBeer').onclick=()=>setPose('beer');$('pFuel').onclick=()=>{pendingFireAction='stoke';stokeFire()};$('pCoffee').onclick=()=>setPose('coffee');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');$('pProne').onclick=()=>setPose('prone');
 
 
-function startStandingPrayer(){
-  const begin=pose!=='standing_pray';setPose('standing_pray');
-  if(begin){
-    const nearest=[...ALTAR_SPOTS].sort((a,b)=>Math.hypot(a.x-me.g.position.x,a.z-me.g.position.z)-Math.hypot(b.x-me.g.position.x,b.z-me.g.position.z))[0];
-    if(Math.hypot(nearest.x-me.g.position.x,nearest.z-me.g.position.z)<10)me.g.rotation.y=Math.atan2(nearest.x-me.g.position.x,nearest.z-me.g.position.z);
-    sendDirty=true;
-  }
-}
+function startStandingPrayer(){preparePracticeInPlace();setPose('standing_pray')}
 $('standingPrayBtn').onclick=startStandingPrayer;
 function syncStandingPrayerBubble(key,P,state,name){
   const praying=state==='standing_pray'&&P.speed<.3;P.standingPrayer=praying;
@@ -1758,31 +1751,16 @@ function practiceUI(){
   $('autoBowBtn').disabled=practice.count>=108;$('bowBtn').disabled=practice.count>=108;
 }
 function endPractice(notify=true){practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
-function placeAtPrayerSpot(slot){
-  const spot=PRAYER_SPOTS[slot];if(!spot)return;
+function preparePracticeInPlace(){
+  // Stop walking and pending fire actions without moving the person, dog or camera.
   target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
   Object.keys(keys).forEach(key=>delete keys[key]);
-  me.g.position.set(spot.x,0,spot.z);me.g.rotation.y=Math.atan2(-spot.x,-spot.z);me.speed=0;
-  myDogObj.g.position.set(spot.x-Math.cos(me.g.rotation.y),0,spot.z+Math.sin(me.g.rotation.y));
-  userMoved=true;sendDirty=true;
-  cam.yaw=me.g.rotation.y+Math.PI;cam.pitch=.12;cam.dist=9.5;
-}
-function localPrayerSlot(){
-  const free=slot=>![...peers.values()].some(p=>
-    ['pray','bow'].includes(p.pose)&&prayerSpotAt(p.x,p.z)===slot);
-  const underfoot=prayerSpotAt(me.g.position.x,me.g.position.z);
-  if(underfoot>=0&&free(underfoot))return underfoot;
-  let nearest=-1,distance=Infinity;
-  PRAYER_SPOTS.forEach((spot,slot)=>{
-    const d=Math.hypot(spot.x-me.g.position.x,spot.z-me.g.position.z);
-    if(free(slot)&&d<distance){nearest=slot;distance=d}
-  });
-  return nearest>=0?nearest:0;
+  pendingStoke=false;clearTimeout(fuelTimer);me.speed=0;userMoved=true;sendDirty=true;
 }
 function startPractice(mode){
   if(mode==='pray'&&practice.mode==='pray'){endPractice();closePoseMenu();return}
   if(mode!=='pray'&&practice.count>=108)return;
-  placeAtPrayerSpot(localPrayerSlot());
+  preparePracticeInPlace();
   practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();
 }
 $('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
@@ -3020,7 +2998,7 @@ function connectRoomServer(base,code){
   const peersById=new Map(),connL=[],peerL=[];
   let ws=null,connected=false,you=null,retry=0,stop=false,emitQueued=false,local={},sentState='';
   let pingTimer=null,retryTimer=null,handshakeTimer=null,lastReceived=0,connectionStartedAt=0,connectionStatus='정원에 연결하는 중…';
-  const api={kind:'ws',code,clockOffset:0,prayerSlot:null,
+  const api={kind:'ws',code,clockOffset:0,
     connected:()=>connected,status:()=>connectionStatus,
     send(o){if(!stop&&ws&&ws.readyState===1){try{ws.send(JSON.stringify(o));return true}catch(e){}}return false},
     onPeers(fn){peerL.push(fn)},onConnection(fn){connL.push(fn);fn(connected)},
@@ -3078,11 +3056,7 @@ function connectRoomServer(base,code){
       },20000)};
     socket.onmessage=ev=>{if(stop||visitEnded||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
-        case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;api.prayerSlot=Number.isInteger(m.prayerSlot)?m.prayerSlot:null;
-          if(practice.mode!=='idle'&&PRAYER_SPOTS[api.prayerSlot]){
-            const spot=PRAYER_SPOTS[api.prayerSlot];
-            if(Math.hypot(me.g.position.x-spot.x,me.g.position.z-spot.z)>.05)placeAtPrayerSpot(api.prayerSlot);
-          }
+        case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;
           api.selfId=you;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
         case 'rps_state':applyRps(m.game);break;
@@ -3093,15 +3067,7 @@ function connectRoomServer(base,code){
           if(m.code==='ended'||m.code==='locked')api.send({t:'rps_sync'});break;
         }
         case 'replaced':api.close();setConn(false,'다른 창에서 정원을 이어서 열었어요');break;
-        case 'prayer_place':{
-          if(Number.isInteger(m.slot)&&PRAYER_SPOTS[m.slot]){
-            api.prayerSlot=m.slot;
-            const spot=PRAYER_SPOTS[m.slot];
-            if(practice.mode!=='idle'&&Math.hypot(me.g.position.x-spot.x,me.g.position.z-spot.z)>.05){
-              placeAtPrayerSpot(m.slot);toast('친구와 겹치지 않는 빈 방석으로 왔어요');
-            }
-          }break
-        }
+        case 'prayer_place':break; // Ignore legacy seat-allocation messages: prayer stays in place.
         case 'visit_ended':leaveGarden(false,false);break;
         case 'join':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,{...m.peer,quiet:false});emit()}break;
         case 'resume':case 'away':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,{...m.peer,quiet:true});emit()}break;
