@@ -46,35 +46,39 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid
 #knob{pointer-events:none;position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.88)}
 @media (prefers-reduced-motion: reduce){.hint,.toast{transition:none}}
 @media (max-width:420px){.plaque{padding:9px 11px;max-width:min(250px,calc(100vw - 32px))}.plaque h1{font-size:16px}.plaque .sub,.mine{display:none}.row{margin-top:7px}.row button{padding:6px 10px;font-size:12.5px}}
+
+.eyebrow{font-size:10px;letter-spacing:.16em;color:#87765b;margin-bottom:5px}
+.plaque{max-width:260px;border-radius:16px;background:rgba(247,243,233,.94)}
+.plaque h1{font-size:23px}.environment{display:flex;gap:9px;font-size:11px;color:#676a5e;margin:9px 0}
+.weather-label{font-size:12px;display:flex;gap:8px;align-items:center}select{font:inherit;color:var(--ink);border:1px solid var(--line);background:#fffdf7;padding:5px;border-radius:7px}
+.practice{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:345px;max-width:calc(100vw - 36px);padding:15px 18px;border:1px solid var(--line);border-radius:18px;background:var(--paper);box-shadow:0 6px 30px #302c2020;backdrop-filter:blur(8px)}
+.practice-title{display:flex;justify-content:space-between;align-items:center;gap:8px}.practice-title strong{font-family:var(--display);font-size:18px}.practice-title span{font-size:11px;color:var(--soft)}
+.count-line{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:12px}.count-line span{margin-right:auto}.count-line b{font-size:22px;font-weight:400}.count-line button{font-size:11px;padding:5px 8px}
+progress{width:100%;height:4px;accent-color:#9c7d43;display:block;margin-top:9px}.practice-note{font-size:10px;color:#78796e;margin-top:7px}
+button:disabled{opacity:.5;cursor:default}.hint{bottom:220px}.poses{bottom:26px}
+@media(max-width:650px){.plaque{top:12px;left:12px;padding:10px 12px;max-width:215px}.plaque h1{font-size:20px}.plaque .row button{font-size:11px;padding:5px 8px}.plaque .sub,.mine{display:none}.practice{bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:10px 12px;width:calc(100vw - 48px);max-width:370px}.practice-title strong{font-size:16px}.poses{bottom:225px;right:12px;gap:5px}.poses button{font-size:11px;min-width:70px;padding:6px 9px}#joy{width:92px;height:92px;left:15px;bottom:215px}#knob{width:36px;height:36px;margin:-18px 0 0 -18px}.hint{bottom:330px;font-size:11px}.toast{top:210px}.environment{font-size:10px}.eyebrow{font-size:9px}}
 </style>
 
-<canvas id="c" aria-label="친구들과 함께 걷는 추모 정원"></canvas>
+<canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
-<div class="plaque">
-  <h1 id="titleName">기억의 정원</h1>
-  <div class="sub" id="titleSub">우리 아이를 기억하는 산책길</div>
+<header class="plaque">
+  <div class="eyebrow">A QUIET PLACE FOR YOU</div>
+  <h1>기억의 정원</h1><div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText">혼자 산책 중</span></div>
-  <div class="row">
-    <button class="primary" id="flowerBtn" type="button">꽃 놓기</button>
-    <button id="rerollBtn" type="button">새 강아지 뽑기</button>
-    <button id="goBtn" type="button" hidden>친구에게 가기</button>
-    <button id="editBtn" type="button" aria-expanded="false" hidden>꾸미기</button>
-  </div>
+  <div class="environment"><span id="seoulClock">한국 시각</span><span id="skyLabel"></span></div>
+  <label class="weather-label">날씨 <select id="weatherSelect" aria-label="정원 날씨"><option value="auto">자동 순환</option><option value="clear">맑음</option><option value="rain">비</option><option value="snow">눈</option></select></label>
+  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   <div class="mine" id="mine"></div>
-  <div class="panel" id="panel" hidden>
-    <label class="filebtn" for="photo">추모 사진 올리기<input id="photo" type="file" accept="image/*"></label>
-    <label for="petName">이름<input id="petName" type="text" maxlength="16" placeholder="예: 보리"></label>
-    <label for="petDates">함께한 날<input id="petDates" type="text" maxlength="30" placeholder="예: 2012.04 – 2026.09"></label>
-    <button id="saveBtn" type="button">저장</button>
-  </div>
-</div>
-
-<div class="poses">
-  <button id="pWave" type="button" aria-pressed="false">손 흔들기</button>
-  <button id="pSit" type="button" aria-pressed="false">앉기</button>
-  <button id="pLie" type="button" aria-pressed="false">눕기</button>
-</div>
-
+</header>
+<section class="practice" aria-label="기도와 108배">
+  <div class="eyebrow">마음을 모으는 시간</div>
+  <div class="practice-title"><strong>부처님 앞에서</strong><span id="practiceStatus" role="status">편안히 머물러 보세요</span></div>
+  <div class="row"><button class="primary" id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 시작</button></div>
+  <div class="count-line"><span><b id="bowCount">0</b> / 108 배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button><button id="resetBtn" type="button">횟수 초기화</button></div>
+  <progress id="bowProgress" max="108" value="0" aria-label="108배 진행"></progress>
+  <div class="practice-note">화면 속 인물이 절합니다 · 이동하면 멈춥니다</div>
+</section>
+<div class="poses"><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="hint" id="hint">조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기</div>
 <div class="toast" id="toast"></div>
@@ -93,7 +97,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 
 /* ---------- renderer & scene ---------- */
 const canvas=$('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true})}catch(error){$('toast').textContent='3D 화면을 열 수 없어요. WebGL을 지원하는 브라우저에서 다시 열어 주세요.';$('toast').classList.add('on');document.querySelectorAll('button,select').forEach(el=>el.disabled=true);return}
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();
@@ -104,7 +108,7 @@ const sky=new THREE.Mesh(new THREE.SphereGeometry(200,32,16),new THREE.ShaderMat
   vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
   fragmentShader:'uniform vec3 top;uniform vec3 bot;varying vec3 p;void main(){float h=clamp(normalize(p).y*1.6+.15,0.,1.);gl_FragColor=vec4(mix(bot,top,h),1.);}'}));
 scene.add(sky);
-scene.add(new THREE.HemisphereLight(0xfff1dc,0x6b7a4a,.78));
+const ambient=new THREE.HemisphereLight(0xfff1dc,0x6b7a4a,.78);scene.add(ambient);
 const sun=new THREE.DirectionalLight(0xffe2bd,.85);
 sun.position.set(-30,40,20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
 Object.assign(sun.shadow.camera,{left:-40,right:40,top:40,bottom:-40,far:120});
@@ -131,8 +135,7 @@ function tree(x,z,s){
   const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
   box(.45*s,2.2*s,.45*s,0x7a5a3f,0,1.1*s,0,g);
   const c=leafCols[Math.floor(rnd()*leafCols.length)];
-  box(2.2*s,1.1*s,2.2*s,c,0,2.6*s,0,g);box(1.5*s,.8*s,1.5*s,c,0,3.5*s,0,g);
-  if(rnd()<.5)box(1*s,.7*s,1*s,c,(rnd()-.5)*.8*s,3.2*s,1.1*s,g);
+  for(let j=0;j<5;j++){const leaf=new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),new THREE.MeshPhongMaterial({color:c,flatShading:true,shininess:0}));leaf.position.set((rnd()-.5)*1.7*s,(2.4+rnd()*1.6)*s,(rnd()-.5)*1.7*s);leaf.scale.set(1.2*s,1.1*s,1.15*s);leaf.castShadow=true;g.add(leaf)}
   obstacles.push({x,z,r:.5*s});
 }
 for(let i=0;i<110;i++){
@@ -141,7 +144,7 @@ for(let i=0;i<110;i++){
   const x=Math.cos(a)*r,z=Math.sin(a)*r;
   if(Math.abs(x)<3.2&&z>0&&z<20)continue;
   if(Math.hypot(x+28,z+10)<8)continue;
-  if(r<10&&rnd()<.5)continue;
+  if(r<10||Math.abs(x)<7&&z>0&&z<15)continue;
   tree(x,z,.8+rnd()*.6);
 }
 function bench(a){
@@ -153,53 +156,58 @@ function bench(a){
 }
 [.6,2.2,3.6,5.0].forEach(bench);
 
-/* ---------- memorial ---------- */
+/* ---------- Buddha, lotus pedestal and prayer courtyard ---------- */
 const memorial=new THREE.Group();scene.add(memorial);
-const stone=0xe4ddd0;
-const base=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.9,.35,40),M(stone));base.position.y=.175;base.castShadow=base.receiveShadow=true;memorial.add(base);
-box(1.5,1,.5,stone,0,.85,0,memorial);
-box(1.5,1.8,.12,0x6d4b30,0,2.25,0,memorial);
-const photoMat=new THREE.MeshBasicMaterial({color:0xffffff});
-const photoPlane=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.6),photoMat);photoPlane.position.set(0,2.25,.065);memorial.add(photoPlane);
-const plaqueMat=new THREE.MeshBasicMaterial({color:0xffffff});
-const plaqueMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.4,.6),plaqueMat);plaqueMesh.position.set(0,.88,.26);memorial.add(plaqueMesh);
-const posts=[[-2.6,-2.6],[2.6,-2.6],[-2.6,2.6],[2.6,2.6]];
-posts.forEach(([x,z])=>box(.26,3.6,.26,0xf1ebe0,x,1.8,z,memorial));
-for(let i=-5;i<=5;i++)box(.1,.16,6,0xf1ebe0,i*.52,3.65,0,memorial);
-const glow=new THREE.PointLight(0xffc98a,.8,9);glow.position.set(0,1.6,1.6);memorial.add(glow);
-obstacles.push({x:0,z:0,r:2.1});posts.forEach(([x,z])=>obstacles.push({x,z,r:.35}));
-
-function placeholderTex(){
-  const c=document.createElement('canvas');c.width=416;c.height=512;const x=c.getContext('2d');
-  const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#f4ead9');g.addColorStop(1,'#e2d2b8');x.fillStyle=g;x.fillRect(0,0,416,512);
-  x.fillStyle='#b8743c';const paw=(cx,cy,r)=>{x.beginPath();x.ellipse(cx,cy,r,r*1.15,0,0,7);x.fill()};
-  paw(208,250,48);paw(150,180,20);paw(186,150,20);paw(230,150,20);paw(266,180,20);
-  x.fillStyle='#6e6a62';x.textAlign='center';x.font='26px "Gowun Dodum", sans-serif';x.fillText('추모 사진이 걸릴 자리',208,380);
-  return new THREE.CanvasTexture(c);
+const gold=new THREE.MeshStandardMaterial({color:0xb69758,roughness:.63,metalness:.25,flatShading:true});
+const robe=new THREE.MeshStandardMaterial({color:0x9b793f,roughness:.84,metalness:.16,flatShading:true});
+const stone=M(0xada58e),lotus=M(0xc2b69b);
+function shape(geo,mat,x,y,z,sx=1,sy=1,sz=1,parent=memorial){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=m.receiveShadow=true;parent.add(m);return m}
+const sphere=new THREE.SphereGeometry(1,18,14);
+function oval(mat,x,y,z,sx,sy,sz){return shape(sphere,mat,x,y,z,sx,sy,sz)}
+shape(new THREE.CylinderGeometry(4.3,4.7,.4,64),stone,0,.2,0);
+shape(new THREE.CylinderGeometry(3.6,4.1,.35,64),M(0xc7bda6),0,.57,0);
+shape(new THREE.CylinderGeometry(3.2,3.6,.55,64),lotus,0,1,0);
+for(let i=0;i<18;i++){const a=i/18*Math.PI*2;const petal=oval(lotus,Math.sin(a)*3,1.15,Math.cos(a)*3,.52,.65,.3);petal.rotation.y=a;petal.rotation.z=Math.sin(a)*.3}
+// Crossed legs, draped torso, neck and a peaceful face, facing the south path (+Z).
+oval(robe,-1.25,1.9,.4,1.9,.85,1.3).rotation.z=-.16;
+oval(robe,1.25,1.9,.4,1.9,.85,1.3).rotation.z=.16;
+oval(gold,-.8,1.8,1.35,1.2,.35,.48);oval(gold,.8,1.75,1.55,1.2,.35,.48);
+oval(robe,0,3.65,-.2,1.85,2.05,1.06);
+for(let i=0;i<7;i++){const fold=oval(M(0x8d6e3b),-.95+i*.29,3.25,.79,.045,1.35,.045);fold.rotation.z=-.25}
+oval(gold,0,5.35,0,.58,.7,.59);
+oval(gold,0,6.45,0,1.02,1.28,.9);
+oval(robe,0,7.15,-.1,1.05,.73,.91);oval(robe,0,7.9,-.15,.42,.45,.42);
+for(let j=0;j<5;j++)for(let i=0;i<16;i++){const a=i/16*Math.PI*2;oval(robe,Math.sin(a)*(.98-j*.075),7.03+j*.17,Math.cos(a)*(.84-j*.065)-.1,.12,.13,.12)}
+for(const side of [-1,1]){
+  oval(gold,side*1.05,6.26,0,.22,.64,.22);
+  const arm=oval(robe,side*1.68,3.8,.15,.49,1.35,.54);arm.rotation.z=side*.24;
+  const fore=oval(gold,side*.98,2.9,1,.85,.31,.35);fore.rotation.z=-side*.2;
+  oval(gold,side*.29,2.7,1.3,.47,.17,.4);
+  const eye=new THREE.Mesh(new THREE.TorusGeometry(.21,.025,8,24,Math.PI),M(0x574b35));eye.position.set(side*.37,6.54,.82);eye.rotation.z=Math.PI;memorial.add(eye);
 }
-let photoShown=false;
-function setPhotoFromURL(url){
-  const img=new Image();img.onload=()=>{
-    const W=520,H=640,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
-    const s=Math.max(W/img.width,H/img.height);x.drawImage(img,(W-img.width*s)/2,(H-img.height*s)/2,img.width*s,img.height*s);
-    const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
-    if(photoMat.map)photoMat.map.dispose();photoMat.map=t;photoMat.needsUpdate=true;photoShown=true;
-  };img.src=url;
+oval(gold,0,6.3,.85,.12,.27,.15);
+const smile=new THREE.Mesh(new THREE.TorusGeometry(.2,.022,8,24,Math.PI),M(0x765b35));smile.rotation.z=Math.PI;smile.position.set(0,5.99,.83);memorial.add(smile);
+oval(M(0xe1c987),0,6.86,.87,.065,.065,.035);
+const halo=new THREE.Mesh(new THREE.TorusGeometry(1.7,.055,12,80),M(0xc4a66a));halo.position.set(0,6.6,-.55);memorial.add(halo);
+// Wider paving and three cushions remain outside the statue collision radius.
+const court=new THREE.Mesh(new THREE.CircleGeometry(6.8,64),M(0xbcb39e));court.rotation.x=-Math.PI/2;court.position.set(0,.035,7);scene.add(court);
+// Paving stones and round olive cushions echo the concept's warm quiet courtyard.
+for(let x=-6;x<=6;x++)for(let z=2;z<=13;z++){if(Math.hypot(x,z-7)>6.5||Math.hypot(x,z)<4.8)continue;const tile=box(.96,.035,.96,[0xbeb49d,0xc8bda6,0xb4ad99][Math.abs(x+z)%3],x,.061,z,scene);tile.receiveShadow=true}
+for(const x of [-2.5,0,2.5])shape(new THREE.CylinderGeometry(.72,.8,.17,12),M(0x77784a),x,.17,7,1,1,1,scene);
+const stoneGeo=new THREE.DodecahedronGeometry(1,0);
+for(let i=0;i<32;i++){const a=rnd()*Math.PI*2,r=22+rnd()*27;shape(stoneGeo,M(i%2?0x9a9d8d:0xb1ad99),Math.cos(a)*r,.3,Math.sin(a)*r,.6+rnd(),.5+rnd()*.7,.6+rnd(),scene)}
+// Distant low-poly hills and scattered flower beds frame the walk.
+for(let i=0;i<9;i++)shape(new THREE.ConeGeometry(13+rnd()*8,12+rnd()*14,7),M(0x82918a),-65+i*16,3,-65-rnd()*15,1,1,1,scene);
+for(let i=0;i<140;i++){const a=rnd()*Math.PI*2,r=11+rnd()*24,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(x)<7&&z>0&&z<15)continue;box(.04,.24,.04,0x6f8749,x,.12,z,scene);const flower=box(.14,.07,.14,i%4?0xe8e0bb:0xd8ba67,x,.28,z,scene);flower.castShadow=false}
+const glow=new THREE.PointLight(0xffce88,1,18);glow.position.set(0,4,5);scene.add(glow);
+const lanterns=[];
+for(const x of [-5.3,5.3])for(const z of [2.5,9.5]){
+  box(.65,.2,.65,0x777869,x,.1,z,scene);box(.19,1.3,.19,0x777869,x,.8,z,scene);
+  box(.66,.75,.66,0xffd496,x,1.5,z,scene);box(.9,.16,.9,0x62695c,x,1.95,z,scene);
+  const light=new THREE.PointLight(0xffc278,.65,8);light.position.set(x,1.7,z);scene.add(light);lanterns.push(light);
 }
-function drawPlaque(name,dates){
-  const c=document.createElement('canvas');c.width=560;c.height=240;const x=c.getContext('2d');
-  x.fillStyle='#e9e2d5';x.fillRect(0,0,560,240);x.strokeStyle='#b49d78';x.lineWidth=4;x.strokeRect(14,14,532,212);
-  x.fillStyle='#3a3530';x.textAlign='center';x.font='bold 64px "Gowun Batang", serif';x.fillText(name||'사랑하는 친구',280,118);
-  x.font='30px "Gowun Dodum", sans-serif';x.fillStyle='#6e6a62';x.fillText(dates||'언제나 함께',280,176);
-  if(plaqueMat.map)plaqueMat.map.dispose();plaqueMat.map=new THREE.CanvasTexture(c);plaqueMat.needsUpdate=true;
-}
-let info={name:'',dates:'',photoId:null};
-function applyInfo(){
-  $('titleName').textContent=info.name?info.name+'의 정원':'기억의 정원';
-  $('titleSub').textContent=info.dates||'우리 아이를 기억하는 산책길';
-  $('petName').value=info.name;$('petDates').value=info.dates;drawPlaque(info.name,info.dates);
-}
-photoMat.map=placeholderTex();
+obstacles.push({x:0,z:0,r:4.75});
+for(const x of [-5.3,5.3])for(const z of [2.5,9.5])obstacles.push({x,z,r:.5});
 
 /* ---------- flowers ---------- */
 const petalCols=[0xf2c1c9,0xffffff,0xf7d77a,0xc9b6e8,0xf0a07a];
@@ -244,29 +252,36 @@ function setTag(s,text){
 function makePerson(L){
   const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);rig.scale.setScalar(.9);
   const legs=[],arms=[];
+  const torso=new THREE.Group();torso.position.y=.7;rig.add(torso);
   for(const s of[-1,1]){
     const hip=new THREE.Group();hip.position.set(.125*s,.7,0);rig.add(hip);
     box(.24,.55,.24,L.pants,0,-.275,0,hip);box(.25,.15,.27,L.shoe,0,-.625,.01,hip);legs.push(hip);
-    const sh=new THREE.Group();sh.position.set(.37*s,1.38,0);rig.add(sh);
+    const sh=new THREE.Group();sh.position.set(.37*s,.68,0);torso.add(sh);
     box(.22,.44,.24,L.shirt,0,-.2,0,sh);box(.2,.26,.22,L.skin,0,-.55,0,sh);arms.push(sh);
   }
-  box(.5,.7,.26,L.shirt,0,1.05,0,rig);box(.51,.06,.27,L.pants,0,.73,0,rig);
-  const head=new THREE.Mesh(BOX,headMats(L));head.scale.setScalar(.5);head.position.y=1.65;head.castShadow=true;rig.add(head);
-  if(L.hat){box(.54,.14,.54,L.shirt,0,1.93,0,rig);box(.54,.05,.22,L.shirt,0,1.88,.35,rig)}
+  box(.5,.7,.26,L.shirt,0,.35,0,torso);box(.51,.06,.27,L.pants,0,.73,0,rig);
+  const head=new THREE.Mesh(BOX,headMats(L));head.scale.setScalar(.5);head.position.y=.95;head.castShadow=true;torso.add(head);
+  if(L.hat){box(.54,.14,.54,L.shirt,0,1.23,0,torso);box(.54,.05,.22,L.shirt,0,1.18,.35,torso)}
   const tag=makeTag('');tag.position.y=2.25;g.add(tag);
   scene.add(g);
-  return{g,rig,legs,arms,head,tag,walkT:0,speed:0};
+  return{g,rig,torso,legs,arms,head,tag,walkT:0,speed:0};
 }
 function posePerson(P,pose,dt,t){
   const w=Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
   const sw=Math.sin(P.walkT)*.7*w,k=Math.min(1,dt*10);
   const L=(o,v)=>o+(v-o)*k;
+  let torsoLean=0;
   let rx=0,ry=Math.abs(Math.cos(P.walkT))*.04*w,rz=0,tagY=2.25;
   let leg=[sw,-sw],arm=[-sw*.8,sw*.8],armZ=[-.06,.06];
   const still=w<.1;
   if(pose==='sit'&&still){ry=-.5;leg=[-1.5,-1.5];arm=[-.7,-.7];tagY=1.8}
   else if(pose==='lie'&&still){rx=-Math.PI/2;ry=.13;rz=.85;leg=[0,0];arm=[0,0];armZ=[-.5,.5];tagY=.9}
+  else if((pose==='pray'||pose==='bow')&&still){
+    const q=pose==='bow'?bowFrame(P.bowPhase||0):{lean:0,drop:-.52,reach:0,knee:-1.5};
+    torsoLean=q.lean;ry=q.drop;rz=0;leg=[q.knee,q.knee];arm=[-1.45,-1.45];armZ=[.56,-.56];tagY=1.6;
+  }
   else if(pose==='wave'&&still){arm=[0,0];armZ=[-.06,2.6+Math.sin(t*8)*.3]}
+  P.torso.rotation.x=L(P.torso.rotation.x,torsoLean);
   P.rig.rotation.x=L(P.rig.rotation.x,rx);P.rig.position.y=L(P.rig.position.y,ry);P.rig.position.z=L(P.rig.position.z,rz);
   for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
   P.tag.position.y=L(P.tag.position.y,tagY);
@@ -313,7 +328,7 @@ function collide(x,z,r){
   return[x,z];
 }
 function updateDog(D,ox,oz,oh,ownerPose,ownerMoving,dt,t){
-  const resting=(ownerPose==='sit'||ownerPose==='lie')&&!ownerMoving;
+  const resting=(['sit','lie','pray','bow'].includes(ownerPose))&&!ownerMoving;
   const back=resting?-.2:.3;
   const tx=ox-Math.cos(oh)*1.0-Math.sin(oh)*back,tz=oz+Math.sin(oh)*1.0-Math.cos(oh)*back;
   const dx=tx-D.g.position.x,dz=tz-D.g.position.z,dd=Math.hypot(dx,dz);
@@ -337,7 +352,7 @@ let myLook=loadJSON('mem.look'),myDog=loadJSON('mem.dog');
 if(!validLook(myLook))myLook=randLook();if(!validDog(myDog))myDog=randDog();
 store.set('mem.look',JSON.stringify(myLook));store.set('mem.dog',JSON.stringify(myDog));
 let me=makePerson(myLook),myDogObj=makeDog(myDog);
-me.g.position.set((Math.random()-.5)*1.6,0,24+Math.random()*2);me.g.rotation.y=Math.PI;
+me.g.position.set(0,0,13.5);me.g.rotation.y=Math.PI;
 myDogObj.g.position.set(me.g.position.x+1,0,me.g.position.z);
 let myName='나';
 function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${BREEDS[d.b].k})`}
@@ -345,11 +360,11 @@ function refreshMine(){setTag(me.tag,`${myName} · ${dogLabel(myDog)}`);$('mine'
 refreshMine();
 let pose='stand',sendDirty=true;
 function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
-function setPose(p){pose=pose===p?'stand':p;target=null;marker.visible=false;syncPoseButtons();sendDirty=true}
+function setPose(p){const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;syncPoseButtons();sendDirty=true}
 $('pWave').onclick=()=>setPose('wave');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');
 
 /* ---------- input ---------- */
-const cam={yaw:0,pitch:.32,dist:5.6};
+const cam={yaw:0,pitch:.25,dist:11.5};
 const keys={};
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;keys[e.code]=true});
 addEventListener('keyup',e=>keys[e.code]=false);
@@ -394,7 +409,7 @@ function goToFriend(auto){
 const lastSent={};
 function sendPresence(){
   if(!room)return;const p=me.g.position;
-  const patch={x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,look:myLook,dog:myDog,uid:myId};
+  const patch={x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,look:myLook,dog:myDog,uid:myId};
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
@@ -416,7 +431,7 @@ function onPeerList(change){
       peers.set(pr.peer,e);pendingHello.push(pr.peer);
     }
     e.x=Math.max(-60,Math.min(60,s.x));e.z=Math.max(-60,Math.min(60,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
-    e.pose=['stand','sit','lie','wave'].includes(s.p)?s.p:'stand';
+    e.pose=['stand','sit','lie','wave','pray','bow'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
   }
   for(const k of[...peers.keys()])if(!seen.has(k))removePeer(k);
   if(!userMoved&&!autoJoined&&peers.size){autoJoined=true;goToFriend(true)}
@@ -440,12 +455,9 @@ async function resolveNames(){
 let localFlowers=[];try{localFlowers=JSON.parse(store.get('mem.flowerList')||'[]')}catch(e){}
 if(!Array.isArray(localFlowers))localFlowers=[];
 const legacy=parseInt(store.get('mem.flowers')||'0',10);if(!localFlowers.length&&legacy>0)localFlowers=Array.from({length:Math.min(legacy,300)},(_,i)=>i);
-let sharedFlowers=null,canEditMemorial=true;
-info={name:store.get('mem.name')||'',dates:store.get('mem.dates')||'',photoId:null};
-applyInfo();const localPhoto=store.get('mem.photo');if(localPhoto)setPhotoFromURL(localPhoto);
+let sharedFlowers=null;
 renderFlowers(localFlowers);
-$('editBtn').hidden=false;
-if(document.fonts)document.fonts.ready.then(()=>{applyInfo();refreshMine();resolveNames();if(!photoShown){photoMat.map=placeholderTex();photoMat.needsUpdate=true}});
+if(document.fonts)document.fonts.ready.then(()=>{refreshMine();resolveNames()});
 
 function applyMyLook(look,dog,save){
   const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
@@ -463,15 +475,8 @@ function applyMyLook(look,dog,save){
   room=r;userNS=u;db=d;assets=a;
   if(userNS){
     const m=await userNS.me();myId=m.id;if(m.name)myName=m.name;refreshMine();
-    if(db){canEditMemorial=!!(await userNS.canEdit());$('editBtn').hidden=!canEditMemorial;if(!canEditMemorial)$('panel').hidden=true}
   }
   if(db){
-    db.doc('memorial/info').onSnapshot(s=>{
-      if(!s.exists)return;const v=s.data()||{};
-      info={name:typeof v.name==='string'?v.name.slice(0,16):'',dates:typeof v.dates==='string'?v.dates.slice(0,30):'',
-        photoId:typeof v.photoId==='string'&&/^[0-9a-f]{32}$/i.test(v.photoId)?v.photoId:null};
-      applyInfo();if(info.photoId)setPhotoFromURL('/_blob/'+info.photoId);
-    },()=>{});
     db.collection('flowers').orderBy('at').limit(300).onSnapshot(s=>{
       sharedFlowers=s.docs.map(x=>{const c=(x.data()||{}).c;return Number.isInteger(c)?c:0});renderFlowers(sharedFlowers);
     },()=>{});
@@ -493,32 +498,80 @@ function applyMyLook(look,dog,save){
 
 $('goBtn').onclick=()=>goToFriend(false);
 $('rerollBtn').onclick=()=>{let d=randDog();while(d.b===myDog.b)d=randDog();applyMyLook(randLook(),d,true);toast(`${dogLabel(myDog)}와 함께 걸어요`)};
-$('editBtn').onclick=()=>{const p=$('panel');p.hidden=!p.hidden;$('editBtn').setAttribute('aria-expanded',String(!p.hidden))};
-$('saveBtn').onclick=async()=>{
-  const name=$('petName').value.trim().slice(0,16),dates=$('petDates').value.trim().slice(0,30);
-  if(db&&canEditMemorial){try{await db.doc('memorial/info').set({name,dates,photoId:info.photoId||null});toast('모두에게 보이도록 저장했어요')}catch(e){toast('저장하지 못했어요. 잠시 뒤 다시 눌러 주세요')}}
-  else{store.set('mem.name',name);store.set('mem.dates',dates);info.name=name;info.dates=dates;applyInfo();toast('이 기기에 저장했어요')}
-  $('panel').hidden=true;$('editBtn').setAttribute('aria-expanded','false');
-};
-$('photo').onchange=e=>{
-  const f=e.target.files&&e.target.files[0];if(!f)return;
-  const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{
-    const c=document.createElement('canvas'),s=Math.min(1,1200/Math.max(img.width,img.height));
-    c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-    const url=c.toDataURL('image/jpeg',.88);setPhotoFromURL(url);
-    if(assets&&db&&canEditMemorial){
-      c.toBlob(async b=>{try{const up=await assets.upload(b,{type:'image/jpeg'});info.photoId=up.id;
-        await db.doc('memorial/info').set({name:info.name,dates:info.dates,photoId:up.id});toast('사진을 모두의 액자에 걸었어요')}
-        catch(err){toast('사진을 올리지 못했어요. 더 작은 사진으로 다시 해 주세요')}},'image/jpeg',.88);
-    }else toast(store.set('mem.photo',url)?'이 기기의 액자에 걸었어요':'사진을 걸었어요 (새로고침하면 사라져요)');
-  };img.src=r.result};r.readAsDataURL(f);
-  e.target.value='';
-};
 $('flowerBtn').onclick=async()=>{
   const c=Math.floor(Math.random()*petalCols.length);
   if(db&&sharedFlowers){try{await db.collection('flowers').add({at:Date.now(),c});toast('꽃을 놓았어요');return}catch(e){}}
   localFlowers.push(c);localFlowers=localFlowers.slice(-300);store.set('mem.flowerList',JSON.stringify(localFlowers));renderFlowers(localFlowers);toast(`꽃 ${localFlowers.length}송이`);
 };
+
+/* ---------- prayer practice, local progress ---------- */
+const practice={mode:'idle',paused:false,elapsed:0,count:Math.max(0,Math.min(108,parseInt(store.get('garden.bows')||'0',10)||0))};
+function bowFrame(p){
+  const frames=[[0,0,0,0,0],[.18,0,-.52,0,-1.5],[.42,1.45,-.45,0,-1.5],[.58,1.45,-.45,0,-1.5],[.78,0,-.52,0,-1.5],[1,0,0,0,0]];
+  for(let i=1;i<frames.length;i++)if(p<=frames[i][0]){const a=frames[i-1],b=frames[i],u=Math.max(0,(p-a[0])/(b[0]-a[0])),k=u*u*(3-2*u);return{lean:a[1]+(b[1]-a[1])*k,drop:a[2]+(b[2]-a[2])*k,reach:a[3]+(b[3]-a[3])*k,knee:a[4]+(b[4]-a[4])*k}}
+  return{lean:0,drop:0,reach:0,knee:0};
+}
+function practiceUI(){
+  $('bowCount').textContent=practice.count;$('bowProgress').value=practice.count;
+  $('pauseBtn').hidden=!['auto','single'].includes(practice.mode);$('pauseBtn').textContent=practice.paused?'이어 하기':'잠시 멈춤';
+  $('finishBtn').hidden=practice.mode==='idle';$('prayBtn').setAttribute('aria-pressed',String(practice.mode==='pray'));
+  $('prayBtn').textContent=practice.mode==='pray'?'기도 마치기':'합장 기도';
+  $('autoBowBtn').textContent=practice.count>=108?'108배 완료':practice.count?'108배 이어 하기':'108배 시작';
+  $('autoBowBtn').disabled=practice.count>=108;$('bowBtn').disabled=practice.count>=108;
+  $('practiceStatus').textContent=practice.paused?'잠시 쉬어가세요':practice.mode==='pray'?'고요히 마음을 모읍니다':practice.mode==='auto'?'한 배, 한 배 천천히':practice.mode==='single'?'마음을 담아 한 배':practice.count>=108?'108배를 마쳤습니다':'편안히 머물러 보세요';
+}
+function endPractice(notify=true){practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
+function startPractice(mode){
+  if(mode==='pray'&&practice.mode==='pray'){endPractice();return}
+  if(mode!=='pray'&&practice.count>=108)return;
+  target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
+  me.g.position.set(0,0,7);me.g.rotation.y=Math.PI;me.speed=0;
+  cam.yaw=0;cam.pitch=.13;cam.dist=10.5;
+  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;
+}
+$('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
+$('pauseBtn').onclick=()=>{practice.paused=!practice.paused;practiceUI()};$('finishBtn').onclick=()=>endPractice();
+$('resetBtn').onclick=()=>{if(!confirm('이 기기의 108배 횟수를 0으로 초기화할까요?'))return;endPractice(false);practice.count=0;store.set('garden.bows','0');practiceUI()};
+function updatePractice(dt){
+  if(!['auto','single'].includes(practice.mode)||practice.paused)return;
+  practice.elapsed+=dt;
+  if(practice.elapsed>=8){practice.elapsed-=8;practice.count=Math.min(108,practice.count+1);store.set('garden.bows',String(practice.count));
+    if(practice.count>=108||practice.mode==='single'){const complete=practice.count===108;endPractice(false);if(complete)toast('108배를 마쳤습니다. 평안한 하루 보내세요')}practiceUI();
+  }
+  me.bowPhase=practice.elapsed/8;
+}
+practiceUI();
+// Background time never counts as completed bows. Explicit pause remains paused on return.
+let appHidden=document.hidden;document.addEventListener('visibilitychange',()=>{appHidden=document.hidden;clock.getDelta();if(appHidden){Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''}});
+addEventListener('blur',()=>{Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''});
+
+/* ---------- Seoul clock, day/night and simulated weather ---------- */
+let weatherMode='auto',weatherIndex=0,weatherTime=0,weatherStrength=0,environmentTick=99;
+const weatherNames={clear:'맑음',rain:'비',snow:'눈'},weatherCycle=['clear','rain','snow'];
+const weatherMat=new THREE.PointsMaterial({color:0xc6d7e6,size:.07,transparent:true,opacity:0,depthWrite:false});
+const weatherPositions=new Float32Array(720*3);for(let i=0;i<720;i++){weatherPositions[i*3]=(Math.random()-.5)*42;weatherPositions[i*3+1]=Math.random()*20;weatherPositions[i*3+2]=(Math.random()-.5)*42}
+const weatherGeo=new THREE.BufferGeometry();weatherGeo.setAttribute('position',new THREE.BufferAttribute(weatherPositions,3));const precipitation=new THREE.Points(weatherGeo,weatherMat);scene.add(precipitation);
+$('weatherSelect').onchange=()=>{weatherMode=$('weatherSelect').value;weatherTime=0;environmentTick=99};
+const seoulTime=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function updateEnvironment(dt,t){
+  weatherTime+=dt;if(weatherMode==='auto'&&weatherTime>=90){weatherTime=0;weatherIndex=(weatherIndex+1)%3;environmentTick=99}
+  const weather=weatherMode==='auto'?weatherCycle[weatherIndex]:weatherMode;
+  weatherStrength+=((weather==='clear'?0:1)-weatherStrength)*Math.min(1,dt*.7);
+  weatherMat.opacity=weatherStrength*.65;weatherMat.size=weather==='snow'?.115:.045;precipitation.visible=weatherStrength>.01;
+  precipitation.position.set(me.g.position.x,0,me.g.position.z);
+  if(!appHidden){for(let i=0;i<720;i++){weatherPositions[i*3+1]-=dt*(weather==='snow'?1.1:12);weatherPositions[i*3]+=dt*(weather==='snow'?Math.sin(t+i)*.35:.7);if(weatherPositions[i*3+1]<0){weatherPositions[i*3+1]=20;weatherPositions[i*3]=(Math.random()-.5)*42}}weatherGeo.attributes.position.needsUpdate=true}
+  environmentTick+=dt;if(environmentTick<1)return;environmentTick=0;
+  const now=new Date(),hours=(now.getUTCHours()+9)%24+now.getUTCMinutes()/60;
+  const daylight=THREE.MathUtils.smoothstep(hours,5.5,8)*(1-THREE.MathUtils.smoothstep(hours,17,19.5));
+  const dusk=daylight*(1-daylight)*4,cloud=weather==='clear'?0:.4;
+  sky.material.uniforms.top.value.set(0x14223c).lerp(new THREE.Color(0x9dbbd0),daylight*(1-cloud));
+  sky.material.uniforms.bot.value.set(0x293449).lerp(new THREE.Color(0xe9dec7),daylight).lerp(new THREE.Color(0xe3ab79),dusk*.7);
+  scene.fog.color.copy(sky.material.uniforms.bot.value);scene.fog.near=weather==='clear'?35:22;scene.fog.far=weather==='clear'?110:75;
+  ambient.intensity=.25+daylight*.58;sun.intensity=(.12+daylight*.9)*(1-cloud);sun.color.set(dusk>.4?0xffc28e:0xffedce);
+  sun.position.set(Math.sin((hours-6)/12*Math.PI)*35,Math.max(4,Math.sin((hours-6)/12*Math.PI)*40),20);
+  glow.intensity=1.2-daylight*.6;lanterns.forEach(l=>l.intensity=1.1-daylight*.8);
+  $('seoulClock').textContent='한국 '+seoulTime.format(now);$('skyLabel').textContent=(daylight<.15?'밤':dusk>.6?'노을 · 새벽':'낮')+' · '+weatherNames[weather]+(weatherMode==='auto'?' (자동)':'');
+}
 
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
@@ -530,7 +583,7 @@ pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
 scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0xfff2e0,size:.09,transparent:true,opacity:.85})));
 const clock=new THREE.Clock();let sendAcc=0;
 function tick(){
-  const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
+  const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;if(appHidden){requestAnimationFrame(tick);return}
   let f=move.y,s=move.x;
   if(keys.KeyW||keys.ArrowUp)f=1;if(keys.KeyS||keys.ArrowDown)f=-1;
   if(keys.KeyA||keys.ArrowLeft)s=-1;if(keys.KeyD||keys.ArrowRight)s=1;
@@ -541,13 +594,15 @@ function tick(){
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
-  if(mag>0&&pose!=='stand'){pose='stand';syncPoseButtons();sendDirty=true}
+  if(mag>0&&pose!=='stand'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
     me.g.rotation.y=angLerp(me.g.rotation.y,Math.atan2(vx,vz),Math.min(1,dt*10))}
   const moved=Math.hypot(me.g.position.x-ox,me.g.position.z-oz)/Math.max(dt,1e-4);
   me.speed+=(moved-me.speed)*Math.min(1,dt*10);
+  updatePractice(dt);
   posePerson(me,pose,dt,t);
+  updateEnvironment(dt,t);
   updateDog(myDogObj,me.g.position.x,me.g.position.z,me.g.rotation.y,pose,me.speed>.3,dt,t);
 
   for(const e of peers.values()){
@@ -563,13 +618,13 @@ function tick(){
 
   const ax=me.g.position.x,az=me.g.position.z,cp=Math.cos(cam.pitch);
   camera.position.set(ax+sy*cam.dist*cp,1.3+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
-  camera.lookAt(ax,pose==='lie'?.6:1.35,az);
+  camera.lookAt(ax,pose==='lie'?.6:practice.mode!=='idle'?2.7:2.5,az);
 
   sendAcc+=dt;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
   if(marker.visible)marker.material.opacity=.5+Math.sin(t*5)*.3;
   if(!reduce){const a=pg.attributes.position.array;
     for(let i=0;i<PN;i++){a[i*3+1]-=dt*.25;a[i*3]+=Math.sin(t+i)*dt*.2;if(a[i*3+1]<0)a[i*3+1]=8}
-    pg.attributes.position.needsUpdate=true;glow.intensity=.75+Math.sin(t*3)*.05+Math.sin(t*7.3)*.03}
+    pg.attributes.position.needsUpdate=true}
   renderer.render(scene,camera);requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
