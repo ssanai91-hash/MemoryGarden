@@ -233,7 +233,14 @@ button:disabled{opacity:.5;cursor:default}
   #gardenPanel .plaque-heading h1{font-size:14px}
 }
 
-#gardenPanel #homeInstallBtn{grid-column:1/-1}
+#gardenPanel #homeInstallBtn,#gardenPanel #qualityBtn{grid-column:1/-1}
+#qualityDialog label{display:block;font-size:13px;margin:12px 0}
+#qualityMode{box-sizing:border-box;width:100%;min-height:42px;margin-top:7px;border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff;color:var(--ink);font:inherit}
+#qualityDialog summary{cursor:pointer;font-size:13px;padding:10px 0}
+#qualityStats{font-size:12px;line-height:1.7;font-variant-numeric:tabular-nums}
+#qualityRecords{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+#qualityRecords th,#qualityRecords td{text-align:left;padding:7px 3px;border-bottom:1px solid var(--line)}
+#qualityDialog .home-install-actions{grid-template-columns:1fr}
 .home-install-help{box-sizing:border-box;width:min(340px,calc(100vw - 32px));max-height:calc(100dvh - 40px);overflow:auto;border:1px solid var(--line);border-radius:18px;padding:20px;background:#faf6ee;color:var(--ink);box-shadow:0 12px 40px #20180e40}
 .home-install-help::backdrop{background:rgba(30,28,36,.45)}
 .home-install-help h2{margin:0 0 12px;font:700 20px/1.3 var(--display)}
@@ -350,7 +357,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   <div id="gardenDetails" hidden>
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
-  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button><button id="homeInstallBtn" type="button">바탕화면에 추가</button></div>
+  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button><button id="homeInstallBtn" type="button">바탕화면에 추가</button><button id="qualityBtn" type="button">화면 품질</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
   <div class="garden-actions">
     <div class="garden-action-row"><button id="boardBtn" type="button">게시판 보기</button><button id="flowerBtn" type="button">꽃 놓기</button></div>
@@ -372,6 +379,20 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   </div>
 </header>
 
+<dialog class="home-install-help" id="qualityDialog" aria-labelledby="qualityTitle">
+  <h2 id="qualityTitle">화면 품질</h2>
+  <label for="qualityMode">풍경 표현<select id="qualityMode">
+    <option value="auto">자동 조절 (추천)</option><option value="high">선명하게</option>
+    <option value="balanced">균형</option><option value="light">가볍게</option>
+  </select></label>
+  <p id="qualityDescription">자동으로 기기에 맞춰 화면을 조절해요.</p>
+  <details id="qualityDiagnostics"><summary>성능 기록 보기</summary>
+    <p id="qualityStats">입장 후 풍경을 보며 잠시 기다려 주세요.</p>
+    <table id="qualityRecords"><caption>장소별 최근 측정 · 이 접속 동안</caption><thead><tr><th scope="col">장소</th><th scope="col">품질</th><th scope="col">FPS</th></tr></thead><tbody></tbody></table>
+    <p>같은 장소·시점·날씨에서 비교해 주세요. 게시판과 앱 전환 시간은 측정에서 제외해요.</p>
+  </details>
+  <div class="home-install-actions"><button id="qualityClose" type="button">닫기</button></div>
+</dialog>
 <dialog class="home-install-help" id="homeInstallHelp" aria-labelledby="homeInstallTitle" aria-describedby="homeInstallSteps homeInstallOnce">
   <h2 id="homeInstallTitle">바탕화면에 정원 추가</h2>
   <p id="homeInstallSteps"></p>
@@ -729,6 +750,8 @@ function swayMaterial(mat,amp,rooted){
 let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true})}catch(error){$('toast').textContent='3D 화면을 열 수 없어요. WebGL을 지원하는 브라우저에서 다시 열어 주세요.';$('toast').classList.add('on');document.querySelectorAll('button,select').forEach(el=>el.disabled=true);return}
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+// Count both shadow and colour passes, resetting once per rendered frame.
+renderer.info.autoReset=false;
 renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0xe9dccb,30,95);
@@ -776,6 +799,137 @@ function instanced(geo,mat,items,shadow){
   m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true;
   m.castShadow=shadow!==false;m.receiveShadow=true;scene.add(m);return m;
 }
+/* ---------- local rendering quality; world state and movement are unchanged ---------- */
+const QUALITY_LEVELS=[
+  {name:'가볍게',pixel:.85,shadow:512,shadowReach:28,detail:18,middle:42,grass:24,flowers:46,density:.5,mist:22},
+  {name:'균형',pixel:1.25,shadow:1024,shadowReach:38,detail:28,middle:60,grass:36,flowers:64,density:.75,mist:42},
+  {name:'선명하게',pixel:2,shadow:2048,shadowReach:48,detail:38,middle:78,grass:48,flowers:82,density:1,mist:70}
+];
+const qualityModes={light:0,balanced:1,high:2};
+const sceneryChunks=[],sceneryFrustum=new THREE.Frustum(),sceneryProjection=new THREE.Matrix4();
+let sceneryVisible=0;
+const quality={mode:store.get('garden.quality.v1')||'auto',level:isTouch?1:2,previous:0,warmUntil:0,
+  frames:[],elapsed:0,work:0,calls:0,triangles:0,bad:0,good:0,recordKey:'',records:new Map(),latest:null};
+if(quality.mode!=='auto'&&!Object.prototype.hasOwnProperty.call(qualityModes,quality.mode))quality.mode='auto';
+if(quality.mode!=='auto')quality.level=qualityModes[quality.mode];
+function resetQualitySampling(warm=2500){
+  quality.previous=0;quality.frames.length=0;quality.elapsed=quality.work=quality.calls=quality.triangles=0;
+  quality.bad=quality.good=0;quality.recordKey='';quality.warmUntil=performance.now()+warm;
+}
+function applyQuality(){
+  const q=QUALITY_LEVELS[quality.level];
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,q.pixel));
+  renderer.setSize(innerWidth,innerHeight,false);
+  if(sun.shadow.mapSize.x!==q.shadow){
+    if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}
+    if(sun.shadow.mapPass){sun.shadow.mapPass.dispose();sun.shadow.mapPass=null}
+    sun.shadow.mapSize.set(q.shadow,q.shadow);renderer.shadowMap.needsUpdate=true;
+  }
+  quality.latest=null;
+  $('qualityMode').value=quality.mode;
+  $('qualityDescription').textContent=quality.mode==='auto'?'자동 조절 중 · 현재 '+q.name+' · 느려지면 풍경의 세밀함을 줄여요.':q.name+' · 이 기기에만 적용해요.';
+  resetQualitySampling(4500);renderQualityStats();
+}
+// r128 does not cull individual instances. Partition only large static collections.
+// Keep original transforms/colours and RNG order; LOD swaps geometry, never obstacles.
+function sceneryInstanced(geo,mat,items,shadow,options={}){
+  const size=options.size||32,buckets=new Map();
+  geo.computeBoundingSphere();
+  for(const it of items){const key=Math.floor(it.x/size)+','+Math.floor(it.z/size);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(it)}
+  const levels=[geo,options.medium||geo,options.low||options.medium||geo];
+  for(const batch of buckets.values()){
+    const mesh=instanced(geo,mat,batch,shadow);mesh.frustumCulled=false;
+    const bounds=new THREE.Box3(),sphere=new THREE.Sphere(),lo=new THREE.Vector3(),hi=new THREE.Vector3();
+    for(const it of batch){
+      dummy.position.set(it.x,it.y,it.z);dummy.rotation.set(it.rx||0,it.ry||0,it.rz||0);
+      dummy.scale.set(it.sx,it.sy===undefined?it.sx:it.sy,it.sz===undefined?it.sx:it.sz);dummy.updateMatrix();
+      sphere.copy(geo.boundingSphere).applyMatrix4(dummy.matrix);
+      lo.copy(sphere.center).addScalar(-sphere.radius);hi.copy(sphere.center).addScalar(sphere.radius);
+      bounds.expandByPoint(lo);bounds.expandByPoint(hi);
+    }
+    bounds.expandByScalar(2); // wind and a little camera movement at chunk edges
+    const viewSphere=bounds.getBoundingSphere(new THREE.Sphere());
+    viewSphere.radius+=CURVE_CAP*CURVE_CAP*CURVE_K+1; // curved-world shader moves vertices in view space
+    sceneryChunks.push({mesh,bounds,sphere:viewSphere,levels,total:batch.length,kind:options.kind||'solid',shadow:shadow!==false,lod:0});
+  }
+}
+function chunkDistance(bounds,x,z){return Math.hypot(Math.max(bounds.min.x-x,0,x-bounds.max.x),Math.max(bounds.min.z-z,0,z-bounds.max.z))}
+function updateScenery(){
+  camera.updateMatrixWorld();sceneryProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);sceneryFrustum.setFromProjectionMatrix(sceneryProjection);
+  const q=QUALITY_LEVELS[quality.level];sceneryVisible=0;
+  for(const c of sceneryChunks){
+    const distance=chunkDistance(c.bounds,camera.position.x,camera.position.z);
+    const max=c.kind==='grass'?q.grass:c.kind==='flower'?q.flowers:c.kind==='backdrop'?240:Math.min(220,scene.fog.far+12);
+    const cast=c.shadow&&chunkDistance(c.bounds,me.g.position.x,me.g.position.z)<q.shadowReach;
+    // Off-screen nearby casters still contribute shadows to the visible garden.
+    c.mesh.visible=distance<max&&(sceneryFrustum.intersectsSphere(c.sphere)||cast);
+    c.mesh.castShadow=cast;
+    if(!c.mesh.visible)continue;
+    let lod=c.lod;
+    if(lod===0&&distance>q.detail+3)lod=1;
+    if(lod===1&&distance<q.detail-3)lod=0;
+    if(lod===1&&distance>q.middle+4)lod=2;
+    if(lod===2&&distance<q.middle-4)lod=1;
+    c.lod=lod;c.mesh.geometry=c.levels[lod];
+    c.mesh.count=c.kind==='grass'||c.kind==='flower'?Math.max(1,Math.ceil(c.total*q.density)):c.total;
+    sceneryVisible++;
+  }
+}
+function performancePlace(){
+  const x=me.g.position.x,z=me.g.position.z;
+  if(cam.sky)return '밤하늘';
+  if(Math.hypot(x-FALLS.x,z-FALLS.z)<18)return '폭포';
+  if(Math.hypot(x-HUT.x,z-HUT.z)<10)return '농막';
+  if(lakeIn(x,z,6))return '호수';
+  if(Math.hypot(x-POCHA.x,z-POCHA.z)<11)return '포차';
+  if(Math.hypot(x,z)<16)return '모닥불';
+  return '산책로';
+}
+function renderQualityStats(){
+  if(!$('qualityDialog').open||!$('qualityDiagnostics').open)return;
+  const r=quality.latest;
+  $('qualityStats').textContent=r?`${r.place} · ${r.fps} FPS · 평균 ${r.frame}ms / 느린 프레임 ${r.p90}ms · CPU 작업 ${r.work}ms · 그리기 ${r.calls}회 / 삼각형 ${r.triangles.toLocaleString()}개 · 표시 구역 ${r.chunks}/${sceneryChunks.length} · ${r.width}×${r.height} · 친구 ${r.peers}명 · 날씨 ${r.weather}`:'입장 후 같은 풍경에서 잠시 기다려 주세요.';
+  const body=$('qualityRecords').tBodies[0];body.textContent='';
+  for(const row of quality.records.values()){
+    const tr=document.createElement('tr');for(const value of [row.place,QUALITY_LEVELS[row.level].name,row.fps]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td)}body.appendChild(tr);
+  }
+}
+function sampleGardenFrame(now,work){
+  if(!hasEntered||appHidden||gardenBoard.isOpen()||$('homeInstallHelp').open){resetQualitySampling(1000);return}
+  if(now<quality.warmUntil){quality.previous=0;return}
+  const key=performancePlace()+':'+quality.level+':'+cam.sky+':'+weatherMode+':'+peers.size+':'+innerWidth+':'+innerHeight;
+  if(key!==quality.recordKey){resetQualitySampling(700);quality.recordKey=key;return}
+  if(!quality.previous){quality.previous=now;return}
+  const elapsed=now-quality.previous;quality.previous=now;
+  // OS/app pauses and a resumed frame must never trigger a quality downgrade.
+  if(elapsed<=0||elapsed>1000){resetQualitySampling();return}
+  quality.frames.push(elapsed);quality.elapsed+=elapsed;quality.work+=work;quality.calls+=renderer.info.render.calls;quality.triangles+=renderer.info.render.triangles;
+  if(quality.frames.length<30||quality.elapsed<2000)return;
+  const n=quality.frames.length,sorted=quality.frames.slice().sort((a,b)=>a-b),sum=quality.elapsed,average=sum/n,p90=sorted[Math.floor((n-1)*.9)];
+  const size=renderer.getDrawingBufferSize(new THREE.Vector2());
+  const r={place:performancePlace(),level:quality.level,fps:Math.round(1000/average),frame:+average.toFixed(1),p90:+p90.toFixed(1),work:+(quality.work/n).toFixed(1),calls:Math.round(quality.calls/n),triangles:Math.round(quality.triangles/n),chunks:sceneryVisible,width:size.x,height:size.y,peers:peers.size,weather:weatherMode+' · 비 '+Math.round(weatherFrame(serverNow()).rain*100)+'% / 눈 '+Math.round(weatherFrame(serverNow()).snow*100)+'%'};
+  quality.latest=r;quality.records.set(r.place+':'+r.level,r);renderQualityStats();
+  quality.frames.length=0;quality.elapsed=quality.work=quality.calls=quality.triangles=0;
+  if(quality.mode!=='auto')return;
+  quality.bad=average>34||p90>55?quality.bad+sum:0;
+  quality.good=average<19.5&&p90<26?quality.good+sum:0;
+  if(quality.bad>=6000&&quality.level>0){quality.level--;applyQuality()}
+  else if(quality.good>=30000&&quality.level<2){quality.level++;applyQuality()}
+}
+$('qualityBtn').onclick=()=>{
+  if(typeof $('qualityDialog').showModal!=='function'){toast('이 브라우저에서는 화면 품질 메뉴를 열 수 없어요.');return}
+  $('chatInput').blur();target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
+  if(!$('qualityDialog').open)$('qualityDialog').showModal();renderQualityStats();
+};
+$('qualityClose').onclick=()=>$('qualityDialog').close();
+$('qualityDialog').addEventListener('close',()=>{Object.keys(keys).forEach(k=>delete keys[k]);resetQualitySampling();$('qualityBtn').focus()});
+$('qualityDiagnostics').addEventListener('toggle',renderQualityStats);
+$('qualityMode').onchange=()=>{quality.mode=$('qualityMode').value;store.set('garden.quality.v1',quality.mode);if(quality.mode!=='auto')quality.level=qualityModes[quality.mode];applyQuality()};
+addEventListener('resize',()=>resetQualitySampling());
+if(window.visualViewport)visualViewport.addEventListener('resize',()=>resetQualitySampling());
+document.addEventListener('visibilitychange',()=>resetQualitySampling());
+applyQuality();
+
 let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
 const obstacles=[];
 // 큰 호수(남동쪽 길이 가로지름), 길 끝 너머의 폭포, 호숫가 농막. 위치는 모두 남동쪽 길(각도 2.45) 기준.
@@ -848,7 +1002,7 @@ const entry=new THREE.Mesh(new THREE.PlaneGeometry(2.8,7),M(0xcdbfa2));entry.rot
   const pines=[];const pineCols=[0x3d6637,0x4a7640,0x56824a,0x46703b];
   for(let i=0;i<420;i++){const a=rnd()*Math.PI*2,r=94+rnd()*40,h=6+rnd()*7;
     pines.push({x:Math.cos(a)*r,y:h/2,z:Math.sin(a)*r,sx:1.5+rnd()*1.3,sy:h,sz:1.5+rnd()*1.3,ry:rnd()*3,c:C(pineCols[i%4])})}
-  instanced(new THREE.ConeGeometry(1,1,7),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),pines,false);
+  sceneryInstanced(new THREE.ConeGeometry(1,1,7),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),pines,false,{size:48,kind:'backdrop',medium:new THREE.ConeGeometry(1,1,5),low:new THREE.ConeGeometry(1,1,4)});
 }
 const clouds=[];
 {
@@ -882,19 +1036,19 @@ function grassClear(x,z){
       const c=new THREE.ConeGeometry(.035,hh,3,1,true).toNonIndexed();c.translate(0,hh/2,0);c.rotateZ(tilt*.6);c.translate(ox,0,oz);
       pos.push(...c.attributes.position.array);nor.push(...c.attributes.normal.array)});
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));return g})();
-  instanced(bladeGeo,swayMaterial(new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide}),.22,true),blades,false);
+  sceneryInstanced(bladeGeo,swayMaterial(new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide}),.22,true),blades,false,{size:24,kind:'grass'});
   const heads=[],stems=[],fCols=[0xffffff,0xfff1b8,0xf6d36b,0xf4b8c8,0xc9b6f0,0xff9e8a];
   const flower=(x,z)=>{const h=.3+rnd()*.25,c=C(fCols[Math.floor(rnd()*fCols.length)]);stems.push({x,y:0,z,sx:1,sy:h,sz:1,c:C(0x5f9a3c)});heads.push({x,y:h,z,sx:.075+rnd()*.035,sy:.05,sz:.075+rnd()*.035,c})};
   MEADOWS.forEach(m=>{for(let i=0;i<620;i++){const a=rnd()*Math.PI*2,r=Math.sqrt(rnd())*m.r,x=m.x+Math.cos(a)*r,z=m.z+Math.sin(a)*r;if(grassClear(x,z))flower(x,z)}});
   for(let i=0;i<900;i++){const a=rnd()*Math.PI*2,r=22+rnd()*(WORLD_R-20),x=Math.cos(a)*r,z=Math.sin(a)*r;if(grassClear(x,z))flower(x,z)}
   const stemGeo=new THREE.CylinderGeometry(.008,.008,1,3);stemGeo.translate(0,.5,0);
-  instanced(stemGeo,swayMaterial(new THREE.MeshLambertMaterial({color:0xffffff}),.12,true),stems,false);
+  sceneryInstanced(stemGeo,swayMaterial(new THREE.MeshLambertMaterial({color:0xffffff}),.12,true),stems,false,{kind:'flower'});
   const headGeo=new THREE.SphereGeometry(1,8,5);
   const headMat=new THREE.MeshLambertMaterial({color:0xffffff});headMat.onBeforeCompile=sh=>{sh.uniforms.uWind=windU;
     sh.vertexShader='uniform float uWind;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
       vec3 ip=vec3(instanceMatrix[3]);float sw=sin(uWind*1.6+ip.x*.31+ip.z*.23)*.6+sin(uWind*2.7+ip.z*.47-ip.x*.2)*.4;
       transformed.x+=sw*ip.y*.12/max(.05,length(instanceMatrix[0].xyz));transformed.z+=sw*ip.y*.066/max(.05,length(instanceMatrix[2].xyz));`)};
-  instanced(headGeo,headMat,heads,false);
+  sceneryInstanced(headGeo,headMat,heads,false,{kind:'flower',medium:new THREE.SphereGeometry(1,5,3),low:new THREE.SphereGeometry(1,4,2)});
 }
 /* ---------- soft light halos for lanterns and bulbs ---------- */
 let glowTex=null;
@@ -1024,9 +1178,12 @@ const waterworks={sheets:[],mist:null,foam:[],tex:null};
 function updateWaterworks(dt,t){
   if(!waterworks.tex)return;waterworks.tex.offset.y+=dt*1.6;if(waterworks.stream)waterworks.stream.offset.y+=dt*.55;
   for(const f of waterworks.foam){const s=.45+.12*Math.sin(t*3+f.ph);f.m.scale.set(s,.12,s*.8)}
-  const pa=waterworks.mist.geometry.attributes.position,a=pa.array;
-  for(let i=0;i<a.length;i+=3){a[i+1]+=dt*(.5+((i*7)%5)*.12);a[i]+=Math.sin(t+i)*dt*.15;if(a[i+1]>3.4){a[i+1]=0;a[i]=(Math.random()-.5)*3.2}}
-  pa.needsUpdate=true;
+  const mist=waterworks.mist,q=QUALITY_LEVELS[quality.level];
+  mist.visible=!cam.sky&&Math.hypot(me.g.position.x-FALLS.x,me.g.position.z-FALLS.z)<55;
+  mist.geometry.setDrawRange(0,q.mist);
+  const pa=mist.geometry.attributes.position,a=pa.array;
+  if(mist.visible){for(let i=0;i<q.mist*3;i+=3){a[i+1]+=dt*(.5+((i*7)%5)*.12);a[i]+=Math.sin(t+i)*dt*.15;if(a[i+1]>3.4){a[i+1]=0;a[i]=(Math.random()-.5)*3.2}}
+  pa.needsUpdate=true;}
   const sh=underHutRoof(me.g.position.x,me.g.position.z);
   if(sh&&!waterworks.toldHut&&hasEntered){waterworks.toldHut=true;toast('농막 처마 아래예요 · 평상에 앉아 빗소리와 새소리를 들어봐요')}
 }
@@ -1049,8 +1206,8 @@ function updateWaterworks(dt,t){
     tree(x,z,.85+rnd()*.65);
   }
   [[-12.5,-8],[12.5,-9],[-8,-13],[8,-13.5]].forEach(([x,z])=>tree(x,z,1.2));
-  instanced(new THREE.CylinderGeometry(.55,.95,1,12),new THREE.MeshStandardMaterial({color:C(0x8a5e3c),roughness:.9}),trunks);
-  instanced(new THREE.SphereGeometry(1,16,12),swayMaterial(new THREE.MeshStandardMaterial({color:0xffffff,roughness:.9}),.05,false),leaves);
+  sceneryInstanced(new THREE.CylinderGeometry(.55,.95,1,12),new THREE.MeshStandardMaterial({color:C(0x8a5e3c),roughness:.9}),trunks,true,{medium:new THREE.CylinderGeometry(.55,.95,1,7),low:new THREE.CylinderGeometry(.55,.95,1,5)});
+  sceneryInstanced(new THREE.SphereGeometry(1,16,12),swayMaterial(new THREE.MeshStandardMaterial({color:0xffffff,roughness:.9}),.05,false),leaves,true,{medium:new THREE.SphereGeometry(1,8,6),low:new THREE.SphereGeometry(1,5,4)});
 
   const bushes=[],blooms=[];
   function bush(x,z,s){const base=C(rnd()<.5?0x5f8f3e:0x72a04a);
@@ -1059,13 +1216,13 @@ function updateWaterworks(dt,t){
   const nearFire=(x,z)=>Math.hypot(x+6,z-13)<3;
   for(let i=0;i<40;i++){const a=rnd()*Math.PI*2;if(Math.cos(a)>.92)continue;const r=12+rnd()*2.4,bx=Math.sin(a)*r,bz=Math.cos(a)*r;if(nearFire(bx,bz)||nearTable(bx,bz,4.6)||nearPocha(bx,bz,5)||nearAltar(bx,bz,2.8))continue;bush(bx,bz,.9+rnd()*.6)}
   for(let i=0;i<120;i++){const a=rnd()*Math.PI*2,r=21.5+rnd()*65,x=Math.cos(a)*r,z=Math.sin(a)*r;if(nearWaterworks(x,z,1.5)||nearPocha(x,z,5)||Math.abs(r-OUTER_TRAIL)<2||meadowAt(x,z,0))continue;bush(x,z,.8+rnd()*.7)}
-  instanced(new THREE.SphereGeometry(1,14,10),swayMaterial(new THREE.MeshStandardMaterial({color:0xffffff,roughness:.95}),.03,false),bushes);
-  instanced(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),blooms,false);
+  sceneryInstanced(new THREE.SphereGeometry(1,14,10),swayMaterial(new THREE.MeshStandardMaterial({color:0xffffff,roughness:.95}),.03,false),bushes,true,{medium:new THREE.SphereGeometry(1,8,5),low:new THREE.SphereGeometry(1,5,4)});
+  sceneryInstanced(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),blooms,false,{kind:'flower'});
 
   const rocks=[];
   for(let i=0;i<90;i++){const a=rnd()*Math.PI*2,r=12.5+rnd()*74,x=Math.cos(a)*r,z=Math.sin(a)*r;if(r>15.6&&r<20.8)continue;if(Math.abs(r-OUTER_TRAIL)<2.2||meadowAt(x,z,0)||nearWaterworks(x,z,1))continue;if(Math.abs(x)<9&&z>8&&z<30)continue;if(nearFire(x,z)||nearTable(x,z,4.8)||nearPocha(x,z,5)||nearAltar(x,z,3))continue;
     const s=.5+rnd()*1.1;rocks.push({x,y:s*.35,z,sx:s*1.3,sy:s*.8,sz:s,ry:rnd()*3,c:C([0x9b988b,0xaaa697,0x8e8b7f][i%3])});if(s>.9)obstacles.push({x,z,r:s})}
-  instanced(new THREE.SphereGeometry(1,12,8),new THREE.MeshStandardMaterial({color:0xffffff,roughness:1}),rocks);
+  sceneryInstanced(new THREE.SphereGeometry(1,12,8),new THREE.MeshStandardMaterial({color:0xffffff,roughness:1}),rocks,true,{medium:new THREE.SphereGeometry(1,7,5),low:new THREE.SphereGeometry(1,5,3)});
 }
 function bench(a){
   const g=new THREE.Group();
@@ -1856,7 +2013,7 @@ function setSkyView(open,fromHistory=false){
 $('skyViewBtn').onclick=()=>setSkyView(true);
 $('skyReturn').onclick=()=>setSkyView(false);
 const keys={};
-addEventListener('keydown',e=>{if(!$('welcome').hidden||gardenBoard.isOpen()||$('homeInstallHelp').open||e.target.closest?.('input,textarea,[contenteditable=true]'))return;keys[e.code]=true});
+addEventListener('keydown',e=>{if(!$('welcome').hidden||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;keys[e.code]=true});
 addEventListener('keyup',e=>keys[e.code]=false);
 let move={x:0,y:0},target=null;
 const joy=$('joy'),knob=$('knob');let joyId=null;
@@ -3675,7 +3832,7 @@ function showExitScreen(){
   if(animationFrameId!==null){cancelAnimationFrame(animationFrameId);animationFrameId=null}
 }
 function leaveGarden(closeWindow=true,notifyServer=true){
-  gardenBoard.close(true);visitEnded=true;hasEntered=false;
+  gardenBoard.close(true);if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
   clearVisit();visitToken='';
   const old=room;room=null;
@@ -3727,6 +3884,7 @@ $('leaveConfirm').addEventListener('keydown',event=>{if(event.key==='Escape')can
 addEventListener('popstate',event=>{
   if(visitEnded||readExitFlag())return;
   const view=event.state&&event.state.gardenView;
+  if($('qualityDialog').open){$('qualityDialog').close();if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if(gardenBoard.isOpen()){gardenBoard.close(true);if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if(view==='board'){gardenBoard.open(true);return}
   if(view==='sky'){if(!cam.sky)setSkyView(true,true);return}
@@ -4020,6 +4178,7 @@ scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0xfff2e0,size:.09,
 const clock=new THREE.Clock();let sendAcc=0;
 function requestGardenFrame(){if(!visitEnded&&animationFrameId===null)animationFrameId=requestAnimationFrame(tick)}
 function tick(){
+  const frameStart=performance.now();
   animationFrameId=null;if(visitEnded)return;
   const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;if(appHidden){requestGardenFrame();return}
   if(hasEntered&&performance.now()-lastVisitSave>2000)saveVisit();
@@ -4039,7 +4198,7 @@ function tick(){
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
-  if(cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
+  if(cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
   if(mag>0&&pose!=='stand'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
@@ -4083,11 +4242,17 @@ function tick(){
   if(!reduce){const a=pg.attributes.position.array;
     for(let i=0;i<PN;i++){a[i*3+1]-=dt*.25;a[i*3]+=Math.sin(t+i)*dt*.2;if(a[i*3+1]<0)a[i*3+1]=8}
     pg.attributes.position.needsUpdate=true}
-  layoutBubbles(dt);windU.value=t;updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);if(!gardenBoard.isOpen())renderer.render(scene,camera);requestGardenFrame();
+  layoutBubbles(dt);windU.value=t;updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);
+  if(!gardenBoard.isOpen()){
+    updateScenery();renderer.info.reset();renderer.render(scene,camera);
+    sampleGardenFrame(frameStart,performance.now()-frameStart);
+  }else resetQualitySampling();
+  requestGardenFrame();
 }
 requestGardenFrame();
 })();
 </script>
 
 </body></html>
+
 
