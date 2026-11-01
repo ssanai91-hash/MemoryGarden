@@ -111,11 +111,25 @@ export class GardenRoom extends DurableObject {
     if (!a || !m || typeof m.t !== 'string') return;
 
     if (m.t === 'hello') {
-      if (a.ready) return;
-      if (this.readyPeers().length >= MAX_PEERS) {
+      if (a.ready || a.handshaking) return;
+      a.handshaking = true;
+      ws.serializeAttachment(a);
+      // 탭의 비공개 토큰에서 공개 접속 ID만 파생한다. 원문 토큰은 다른 사람에게 보내지 않는다.
+      if (typeof m.resumeToken === 'string' && /^[a-f0-9]{64}$/.test(m.resumeToken)) {
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.resumeToken));
+        a.id = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('').slice(0, 20);
+      }
+      const duplicates = this.readyPeers().filter(p => p.a.id === a.id);
+      if (this.readyPeers().length - duplicates.length >= MAX_PEERS) {
         ws.send(JSON.stringify({ t: 'full', max: MAX_PEERS }));
         ws.close(4001, 'room full');
         return;
+      }
+      if (duplicates.length) a.lastChat = duplicates[0].a.lastChat || null;
+      for (const prior of duplicates) {
+        prior.a.ready = false;
+        prior.ws.serializeAttachment(prior.a);
+        try { prior.ws.send(JSON.stringify({ t: 'replaced' })); prior.ws.close(4002, 'session resumed'); } catch (e) {}
       }
       a.name = clean(m.name, 12) || '친구';
       a.look = cleanLook(m.look);
@@ -124,6 +138,7 @@ export class GardenRoom extends DurableObject {
       this.assignPrayerSlot(a);
       this.alignPrayerState(a);
       a.ready = true;
+      a.handshaking = false;
       ws.serializeAttachment(a);
       const peers = this.readyPeers().filter((p) => p.a.id !== a.id).map((p) => this.peerInfo(p.a));
       ws.send(JSON.stringify({ t: 'welcome', you: a.id, prayerSlot: a.prayerSlot, now: Date.now(), max: MAX_PEERS, peers, shared: this.shared }));
@@ -133,6 +148,10 @@ export class GardenRoom extends DurableObject {
     if (!a.ready) return;
 
     switch (m.t) {
+      case 'leave': {
+        await this.webSocketClose(ws);
+        return;
+      }
       case 'state': {
         if (!this.allow(a, 's', 25)) return;
         const s = cleanState(m.s);
@@ -205,9 +224,11 @@ export class GardenRoom extends DurableObject {
     if (a && a.ready) {
       a.ready = false;
       ws.serializeAttachment(a);
-      this.broadcast({ t: 'leave', id: a.id }, ws);
+      if (!this.readyPeers().some(p => p.a.id === a.id)) this.broadcast({ t: 'leave', id: a.id }, ws);
     }
-    if (a) for (const key of this.rate.keys()) if (key.startsWith(a.id + ':')) this.rate.delete(key);
+    if (a && !this.readyPeers().some(p => p.a.id === a.id)) {
+      for (const key of this.rate.keys()) if (key.startsWith(a.id + ':')) this.rate.delete(key);
+    }
     try { ws.close(1000, 'bye'); } catch (e) { /* already closed */ }
   }
   async webSocketError(ws) {

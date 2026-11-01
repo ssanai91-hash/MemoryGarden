@@ -92,7 +92,7 @@ button:disabled{opacity:.5;cursor:default}
 .vol input{width:100%;accent-color:var(--accent)}
 .music-sound{background:var(--accent);color:#fff;border-color:var(--accent)}
 .music-sound.on{background:var(--paper);color:var(--ink);border-color:var(--line)}
-.visitors{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:4;box-sizing:border-box;width:116px;max-width:30vw;padding:8px 9px;background:var(--paper);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(6px)}
+.visitors{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:4;box-sizing:border-box;width:116px;max-width:30vw;padding:8px 9px;background:#faf6ee;border:1px solid var(--line);border-radius:12px;backdrop-filter:none}
 .visitors-title{font-size:12px;color:var(--ink);margin-bottom:5px}
 .visitor-names{display:grid;gap:3px;max-height:120px;overflow-y:auto;font-size:11px;line-height:1.35;color:var(--soft);overflow-wrap:anywhere}
 .hint{bottom:220px}.poses{bottom:26px}
@@ -130,6 +130,9 @@ button:disabled{opacity:.5;cursor:default}
 .bow-counter .count-line button{font-size:10px;padding:5px 7px}
 .chat-open .bow-counter{bottom:calc(var(--chat-height,60px) + 160px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
 @media(max-width:650px){.bow-counter{bottom:calc(118px + env(safe-area-inset-bottom,0px))}.chat-open .bow-counter{bottom:calc(var(--chat-height,60px) + 118px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}}
+.quick-phrases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:min(260px,calc(100vw - 24px));max-height:45dvh;overflow-y:auto;box-sizing:border-box;padding:6px;gap:6px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.quick-phrases button{min-width:0}
+.pose-row>.fold{min-width:0;white-space:nowrap;padding:6px 8px}
 </style>
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
@@ -139,7 +142,7 @@ button:disabled{opacity:.5;cursor:default}
   <div id="gardenDetails" hidden>
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
-  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button></div>
+  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="leaveBtn" type="button" hidden>나가기</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
   <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   <div class="now" id="nowPlaying" hidden></div>
@@ -164,7 +167,7 @@ button:disabled{opacity:.5;cursor:default}
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses"><div id="poseList" hidden><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="hint" id="hint">조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기</div>
 <div class="toast" id="toast"></div>
@@ -194,6 +197,12 @@ button:disabled{opacity:.5;cursor:default}
   </section>
 </div>
 
+<script>
+try{
+  const visit=JSON.parse(sessionStorage.getItem('garden.visit.v1')||'null');
+  if(visit&&visit.v===1&&/^[a-f0-9]{64}$/.test(visit.token||'')&&typeof visit.name==='string'&&visit.name.trim())document.getElementById('welcome').hidden=true;
+}catch(e){}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
@@ -633,7 +642,7 @@ myDogObj.g.position.set(me.g.position.x+1,0,me.g.position.z);
 let myName='나';
 const stripInvisible=v=>String(v||'').replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]/g,'').trim();
 let myNick=stripInvisible(store.get('garden.name')).slice(0,12);
-let hasEntered=false;
+let hasEntered=false,visitToken='',lastVisitSave=0;
 const shownName=()=>myNick||myName;
 function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${BREEDS[d.b].k})`}
 function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 걷는 강아지: '+BREEDS[myDog.b].k}
@@ -723,7 +732,7 @@ function onPeerList(change){
 function updateWho(){
   const n=peers.size,connected=room&&room.connected();
   $('goBtn').hidden=!connected||n===0;
-  $('chatBtn').hidden=!room;
+  $('chatBtn').hidden=!room;$('leaveBtn').hidden=!hasEntered;$('quickPhrasesBtn').hidden=!hasEntered;
   $('whoText').textContent=!hasEntered?'이름을 확인하고 들어와 주세요':!room?'지금은 혼자 산책 중이에요':!connected?room.status():n===0?'지금은 나 혼자예요 · 친구를 불러 보세요':'지금 '+(n+1)+'명이 함께 있어요';
   $('dot').classList.toggle('off',!connected);renderVisitors();
 }
@@ -913,6 +922,8 @@ function setupFold(btn,panel,key,openLabel,closedLabel,onClose){
   $(btn).onclick=()=>{const open=$(panel).hidden;apply(open);store.set(key,open?'1':'0')};
 }
 setupFold('poseToggle','poseList','garden.ui.poses','동작 접기 ▾','동작 ▴');
+const originalPoseToggle=$('poseToggle').onclick;
+$('poseToggle').onclick=()=>{if($('poseList').hidden)toggleQuickPhrases(false);originalPoseToggle()};
 function closePoseMenu(){$('poseList').hidden=true;$('poseToggle').setAttribute('aria-expanded','false');$('poseToggle').textContent='동작 ▴';store.set('garden.ui.poses','0')}
 function setGardenExpanded(open){
   $('gardenDetails').hidden=!open;
@@ -1073,8 +1084,9 @@ $('nameForm').onsubmit=e=>{
   e.preventDefault();const name=stripInvisible($('nameInput').value).slice(0,12);
   if(!name){$('nameInput').setCustomValidity('정원에서 사용할 이름을 입력해 주세요.');$('nameInput').reportValidity();$('nameInput').focus({preventScroll:true});return}
   myNick=name;store.set('garden.name',name);hasEntered=true;
+  if(!visitToken)visitToken=newVisitToken();
   refreshMine();restoreLastBubble('me',shownName());renderVisitors();sendDirty=true;
-  closeNameDialog();
+  closeNameDialog();saveVisit();
   if(room&&room.kind==='ws')room.profile();else startGardenConnection();
   toast(name+'님, 어서 오세요');
 };
@@ -1095,6 +1107,7 @@ function rememberLastMessage(key,name,text,at){
   if(previous&&Number.isFinite(at)&&previous.at>at)return;
   lastMessages.set(key,{name,text,at:Number.isFinite(at)?at:serverNow()});
   showBubble(key,name,text);
+  if(key==='me')saveVisit();
 }
 function restoreLastBubble(key,name){
   const message=lastMessages.get(key);
@@ -1188,6 +1201,7 @@ function toggleChat(open){
   $('chatBar').hidden=!open;document.body.classList.toggle('chat-open',open);
   $('chatBtn').setAttribute('aria-expanded',String(open));$('chatBtn').textContent=open?'대화 접기':'말하기';
   if(open){
+    toggleQuickPhrases(false);
     $('chatBtn').classList.remove('unread');
     $('poseList').hidden=true;$('poseToggle').setAttribute('aria-expanded','false');$('poseToggle').textContent='동작 ▴';store.set('garden.ui.poses','0');
     setTimeout(()=>{if($('chatBar').hidden)return;try{$('chatInput').focus()}catch(e){}syncChatDock()},30);
@@ -1205,10 +1219,102 @@ if(window.visualViewport){
   visualViewport.addEventListener('scroll',syncChatDock);
 }
 addEventListener('resize',syncChatDock);
-$('chatBar').onsubmit=e=>{e.preventDefault();const text=stripInvisible($('chatInput').value).slice(0,200);if(!text||!room)return;
-  if(room.kind==='ws'){if(!room.connected()){toast('정원에 다시 연결되면 보낼 수 있어요');return}room.send({t:'chat',text})}
-  else{room.presence({say:{text,at:serverNow()}}).catch(()=>{});showChat('me',shownName(),text)}
-  $('chatInput').value='';};
+function sendChatText(value){
+  const text=stripInvisible(value).slice(0,200);if(!text)return false;
+  if(!hasEntered||!room||!room.connected()){toast('정원에 다시 연결되면 보낼 수 있어요');return false}
+  const now=Date.now();
+  if(sendChatText.lastSent&&now-sendChatText.lastSent<1100){toast('한마디씩 천천히 보내 주세요');return false}
+  if(!room.send({t:'chat',text})){toast('연결을 확인하고 다시 보내 주세요');return false}
+  sendChatText.lastSent=now;return true;
+}
+$('chatBar').onsubmit=e=>{e.preventDefault();if(sendChatText($('chatInput').value))$('chatInput').value=''};
+function toggleQuickPhrases(open){
+  $('quickPhrases').hidden=!open;
+  $('quickPhrasesBtn').setAttribute('aria-expanded',String(open));
+  $('quickPhrasesBtn').setAttribute('aria-pressed',String(open));
+  if(open)closePoseMenu();
+}
+$('quickPhrasesBtn').onclick=()=>toggleQuickPhrases($('quickPhrases').hidden);
+for(const phrase of ['굿모닝','굿나잇','ㅋㅋㅋ','ㅎㅎ','뭐해?','밥은?','어디야?']){
+  const button=document.createElement('button');button.type='button';button.textContent=phrase;
+  button.onclick=()=>{if(sendChatText(phrase))toggleQuickPhrases(false)};
+  $('quickPhrases').appendChild(button);
+}
+$('quickPhrases').addEventListener('keydown',e=>{if(e.key==='Escape'){toggleQuickPhrases(false);$('quickPhrasesBtn').focus()}});
+
+
+
+/* ---------- one tab visit: survives reload, ends on explicit leave ---------- */
+const VISIT_KEY='garden.visit.v1';
+function newVisitToken(){
+  const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
+  return [...bytes].map(value=>value.toString(16).padStart(2,'0')).join('');
+}
+function readVisit(){
+  try{
+    const value=JSON.parse(sessionStorage.getItem(VISIT_KEY)||'null');
+    if(value&&value.v===1&&/^[a-f0-9]{64}$/.test(value.token||'')&&stripInvisible(value.name).slice(0,12))return value;
+  }catch(e){}
+  return null;
+}
+function clearVisit(){try{sessionStorage.removeItem(VISIT_KEY)}catch(e){}}
+function saveVisit(){
+  if(!hasEntered||!visitToken)return;
+  const p=me.g.position,message=lastMessages.get('me');
+  const snapshot={v:1,token:visitToken,name:myNick,look:myLook,dog:myDog,
+    x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist},pose,
+    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count},
+    lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
+  try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot))}catch(e){}
+  lastVisitSave=performance.now();
+}
+function restoreVisit(){
+  const saved=readVisit();if(!saved)return false;
+  visitToken=saved.token;myNick=stripInvisible(saved.name).slice(0,12);hasEntered=true;
+  store.set('garden.name',myNick);
+  if(validLook(saved.look)&&validDog(saved.dog))applyMyLook(saved.look,saved.dog,false);
+  if(Number.isFinite(saved.x)&&Number.isFinite(saved.z)){
+    const pos=collide(saved.x,saved.z,.4);me.g.position.set(pos[0],0,pos[1]);
+  }
+  if(Number.isFinite(saved.h))me.g.rotation.y=saved.h;
+  if(saved.cam){
+    if(Number.isFinite(saved.cam.yaw))cam.yaw=saved.cam.yaw;
+    if(Number.isFinite(saved.cam.pitch))cam.pitch=Math.max(.05,Math.min(1.2,saved.cam.pitch));
+    if(Number.isFinite(saved.cam.dist))cam.dist=Math.max(2.5,Math.min(12,saved.cam.dist));
+  }
+  pose=['stand','sit','lie','wave','coffee','pray','bow'].includes(saved.pose)?saved.pose:'stand';
+  const pr=saved.practice||{};
+  if(Number.isInteger(pr.count))practice.count=Math.min(108,Math.max(practice.count,pr.count));
+  practice.mode=['pray','single','auto'].includes(pr.mode)?pr.mode:'idle';
+  if(practice.count>=108&&practice.mode!=='pray')practice.mode='idle';
+  practice.elapsed=Number.isFinite(pr.elapsed)?Math.max(0,Math.min(7.999,pr.elapsed)):0;
+  practice.paused=!!pr.paused;
+  if(practice.mode==='pray')pose='pray';
+  else if(['single','auto'].includes(practice.mode))pose='bow';
+  else if(pose==='pray'||pose==='bow')pose='stand';
+  me.bowPhase=practice.elapsed/8;me.speed=0;
+  myDogObj.g.position.set(me.g.position.x-Math.cos(me.g.rotation.y),0,me.g.position.z+Math.sin(me.g.rotation.y));
+  userMoved=true;autoJoined=true;target=null;marker.visible=false;sendDirty=true;
+  refreshMine();syncPoseButtons();practiceUI();closeNameDialog();
+  if(saved.lastChat&&typeof saved.lastChat.text==='string')rememberLastMessage('me',myNick,saved.lastChat.text,saved.lastChat.at);
+  startGardenConnection();saveVisit();return true;
+}
+function leaveGarden(){
+  if(room&&room.kind==='ws'){room.send({t:'leave'});room.close()}
+  room=null;hasEntered=false;visitToken='';clearVisit();
+  for(const key of [...peers.keys()])removePeer(key);
+  disposeBubble('me');me.bubble=null;me.tag.visible=true;
+  pendingHello=[];autoJoined=false;userMoved=false;
+  endPractice(false);setAudioOn(false);closeYouTube();closePoseMenu();
+  toggleChat(false);toggleChatHistory(false);toggleQuickPhrases(false);$('shareDialog').hidden=true;
+  Object.keys(lastSent).forEach(key=>delete lastSent[key]);
+  $('chatLog').textContent='';historyKeys.clear();sharedFlowers=null;renderFlowers(localFlowers);
+  openNameDialog();updateWho();toast('정원에서 나왔어요');
+}
+$('leaveBtn').onclick=leaveGarden;
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveVisit()});
+addEventListener('pagehide',saveVisit);
+document.addEventListener('freeze',saveVisit);
 
 /* ---------- room server (Cloudflare Worker + Durable Object) ---------- */
 // 고정 주소 하나, 공유 정원 하나. 방문자는 서버 주소나 방 코드를 입력하지 않는다.
@@ -1229,7 +1335,7 @@ function startGardenConnection(){
 function connectRoomServer(base,code){
   const peersById=new Map(),connL=[],peerL=[];
   let ws=null,connected=false,you=null,retry=0,stop=false,emitQueued=false,local={},sentState='';
-  let pingTimer=null,retryTimer=null,handshakeTimer=null,lastReceived=0,connectionStatus='정원에 연결하는 중…';
+  let pingTimer=null,retryTimer=null,handshakeTimer=null,lastReceived=0,connectionStartedAt=0,connectionStatus='정원에 연결하는 중…';
   const api={kind:'ws',code,clockOffset:0,prayerSlot:null,
     connected:()=>connected,status:()=>connectionStatus,
     send(o){if(!stop&&ws&&ws.readyState===1){try{ws.send(JSON.stringify(o));return true}catch(e){}}return false},
@@ -1242,7 +1348,8 @@ function connectRoomServer(base,code){
     profile(){if(connected)api.send({t:'profile',name:myNick,look:myLook,dog:myDog})},
     close(){
       stop=true;clearTimeout(retryTimer);clearTimeout(handshakeTimer);clearInterval(pingTimer);
-      removeEventListener('online',wake);document.removeEventListener('visibilitychange',wake);
+      removeEventListener('online',wake);removeEventListener('focus',wake);removeEventListener('pageshow',wake);
+      document.removeEventListener('visibilitychange',wake);document.removeEventListener('resume',wake);
       const socket=ws;ws=null;if(socket)try{socket.close(1000,'left garden')}catch(e){}
       peersById.clear();setConn(false,'정원 연결을 종료했어요');
     }};
@@ -1265,17 +1372,19 @@ function connectRoomServer(base,code){
   function disconnected(message){
     clearTimeout(handshakeTimer);clearInterval(pingTimer);
     const socket=ws;ws=null;if(socket)try{socket.close()}catch(e){}
-    peersById.clear();emit();setConn(false,message);if(!stop)schedule();
+    // 잠깐 끊겼다고 친구들을 지우지 않고 재연결 시 받은 목록으로 갱신한다.
+    setConn(false,message);if(!stop)schedule();
   }
   function open(){
     if(stop)return;
     clearTimeout(retryTimer);retryTimer=null;
     if(navigator.onLine===false){setConn(false,'인터넷 연결을 기다리는 중…');schedule();return}
     setConn(false,retry?'정원에 다시 연결하는 중…':'정원에 연결하는 중…');
+    connectionStartedAt=Date.now();
     let socket;try{socket=new WebSocket(base+'/room/'+code);ws=socket}catch(e){disconnected('친구 연결을 다시 시도하는 중…');return}
     handshakeTimer=setTimeout(()=>{if(ws===socket&&!connected)disconnected('친구 연결이 지연되고 있어요 · 다시 시도하는 중…')},12000);
     socket.onopen=()=>{if(stop||ws!==socket)return;const p=me.g.position;lastReceived=Date.now();
-      api.send({t:'hello',name:myNick,look:myLook,dog:myDog,s:{x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0}});
+      api.send({t:'hello',resumeToken:visitToken,name:myNick,look:myLook,dog:myDog,s:{x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0}});
       clearInterval(pingTimer);pingTimer=setInterval(()=>{
         if(Date.now()-lastReceived>60000){disconnected('연결이 끊어졌어요 · 다시 연결하는 중…');return}
         api.send({t:'ping',c:Date.now()});
@@ -1283,9 +1392,13 @@ function connectRoomServer(base,code){
     socket.onmessage=ev=>{if(stop||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;api.prayerSlot=Number.isInteger(m.prayerSlot)?m.prayerSlot:null;
-          if(practice.mode!=='idle'&&api.prayerSlot!==null)placeAtPrayerSpot(api.prayerSlot);
+          if(practice.mode!=='idle'&&PRAYER_SPOTS[api.prayerSlot]){
+            const spot=PRAYER_SPOTS[api.prayerSlot];
+            if(Math.hypot(me.g.position.x-spot.x,me.g.position.z-spot.z)>.05)placeAtPrayerSpot(api.prayerSlot);
+          }
           api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
           applyShared(m.shared);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
+        case 'replaced':api.close();setConn(false,'다른 창에서 정원을 이어서 열었어요');break;
         case 'prayer_place':{
           if(Number.isInteger(m.slot)&&PRAYER_SPOTS[m.slot]){
             api.prayerSlot=m.slot;
@@ -1310,18 +1423,23 @@ function connectRoomServer(base,code){
         case 'pong':if(Number.isFinite(m.s)&&Number.isFinite(m.c)){const rtt=Date.now()-m.c;if(rtt>=0&&rtt<3000)api.clockOffset=m.s-(m.c+rtt/2)}break;
         case 'full':stop=true;clearTimeout(retryTimer);disconnected('이 정원은 가득 찼어요 (최대 '+(m.max||16)+'명)');toast(connectionStatus);break;
       }};
-    socket.onclose=()=>{if(ws!==socket||stop)return;disconnected('친구 연결이 끊겼어요 · 다시 연결하는 중…')};
+    socket.onclose=event=>{
+      if(ws!==socket||stop)return;
+      if(event.code===4002){api.close();setConn(false,'다른 창에서 정원을 이어서 열었어요');return}
+      disconnected('친구 연결이 끊겼어요 · 다시 연결하는 중…');
+    };
     socket.onerror=()=>{};
   }
   function schedule(){if(stop||retryTimer)return;const wait=Math.min(15000,1000*Math.pow(2,retry++));retryTimer=setTimeout(()=>{retryTimer=null;open()},wait)}
   function wake(){
     if(stop||document.hidden||navigator.onLine===false)return;
-    if(connected&&Date.now()-lastReceived<=60000){api.send({t:'ping',c:Date.now()});return}
-    if(ws&&!connected)return;
+    if(connected&&ws&&ws.readyState===1&&Date.now()-lastReceived<=60000&&api.send({t:'ping',c:Date.now()}))return;
+    if(ws&&!connected&&ws.readyState<2&&Date.now()-connectionStartedAt<12000)return;
     if(ws)disconnected('정원에 다시 연결하는 중…');
     clearTimeout(retryTimer);retryTimer=null;open();
   }
-  addEventListener('online',wake);document.addEventListener('visibilitychange',wake);
+  addEventListener('online',wake);addEventListener('focus',wake);addEventListener('pageshow',wake);
+  document.addEventListener('visibilitychange',wake);document.addEventListener('resume',wake);
   open();return api;
 }
 function openShareDialog(message){
@@ -1353,7 +1471,7 @@ $('inviteBtn').onclick=callFriends;
 $('shareCopy').onclick=copyGardenLink;$('shareClose').onclick=closeShareDialog;
 $('shareLink').onclick=e=>e.target.select();
 $('shareDialog').addEventListener('keydown',e=>{if(e.key==='Escape')closeShareDialog()});
-openNameDialog();updateWho();
+if(!restoreVisit()){openNameDialog();updateWho()}
 
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.8?72:55;camera.updateProjectionMatrix()}
@@ -1366,6 +1484,7 @@ scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0xfff2e0,size:.09,
 const clock=new THREE.Clock();let sendAcc=0;
 function tick(){
   const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;if(appHidden){requestAnimationFrame(tick);return}
+  if(hasEntered&&performance.now()-lastVisitSave>2000)saveVisit();
   let f=move.y,s=move.x;
   if(keys.KeyW||keys.ArrowUp)f=1;if(keys.KeyS||keys.ArrowDown)f=-1;
   if(keys.KeyA||keys.ArrowLeft)s=-1;if(keys.KeyD||keys.ArrowRight)s=1;
