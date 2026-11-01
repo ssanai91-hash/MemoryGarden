@@ -240,6 +240,13 @@ button:disabled{opacity:.5;cursor:default}
 }
 
 #gardenPanel #homeInstallBtn,#gardenPanel #qualityBtn{grid-column:1/-1}
+body.listening-room #boardBtn,body.listening-room #flowerBtn,body.listening-room #skyViewBtn,body.listening-room #firePlayList,body.listening-room #firePlayBtn,body.listening-room #pFuel,body.listening-room #auroraBtn,body.listening-room #fireworksBtn,body.listening-room #jarBtn,body.listening-room #campfireStatus{display:none!important}
+#listeningControls{display:flex;flex-direction:column;gap:4px;pointer-events:auto}
+#listeningRecords{display:grid;gap:8px;margin:14px 0}
+#listeningRecords button{text-align:left;border-radius:12px;padding:12px 14px;min-height:58px}
+#listeningRecords strong,#listeningRecords small{display:block}#listeningRecords small{font-size:11px;margin-top:5px;opacity:.8}
+#listeningVolume{width:100%;accent-color:var(--accent)}
+#listeningAudio .listening-audio-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #qualityDialog label{display:block;font-size:13px;margin:12px 0}
 #qualityMode{box-sizing:border-box;width:100%;min-height:42px;margin-top:7px;border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff;color:var(--ink);font:inherit}
 #qualityDialog summary{cursor:pointer;font-size:13px;padding:10px 0}
@@ -385,6 +392,14 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   </div>
 </header>
 
+<dialog class="home-install-help" id="listeningAudio" aria-labelledby="listeningAudioTitle">
+  <h2 id="listeningAudioTitle">호숫가 오디오</h2><p id="listeningStatus">오디오 전원이 꺼져 있어요</p>
+  <div class="listening-audio-actions"><button id="listeningPower" class="primary" type="button">오디오 켜기</button><button id="listeningMute" type="button">내 소리 끄기</button></div>
+  <div id="listeningRecords" aria-label="오리지널 레코드"></div>
+  <label for="listeningVolume">내가 듣는 음량<input id="listeningVolume" type="range" min="0" max="100" value="65"></label>
+  <p>곡과 전원은 음악방 친구들과 함께 바뀌어요. 음량과 소리 끄기는 나에게만 적용해요.</p>
+  <div class="home-install-actions"><button id="listeningClose" type="button">닫기</button></div>
+</dialog>
 <dialog class="home-install-help" id="qualityDialog" aria-labelledby="qualityTitle">
   <h2 id="qualityTitle">화면 품질</h2>
   <label for="qualityMode">풍경 표현<select id="qualityMode">
@@ -483,7 +498,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subDrink" aria-expanded="false" aria-controls="subDrink">마시기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button><button id="lookBtn" type="button">모습 바꾸기 🎲</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 접기</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subDrink" class="action-sub" role="group" aria-label="마시기" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button class="sub-back" type="button" data-back="subDrink">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subDrink" aria-expanded="false" aria-controls="subDrink">마시기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button><button id="lookBtn" type="button">모습 바꾸기 🎲</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 접기</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subDrink" class="action-sub" role="group" aria-label="마시기" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button class="sub-back" type="button" data-back="subDrink">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
 <div class="dock-actions" id="dockActions" role="group" aria-label="대화 목록과 동작" hidden><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
@@ -761,6 +776,9 @@ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.info.autoReset=false;
 renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;
 const scene=new THREE.Scene();
+let worldSpace='garden',listeningDoor=null,pendingShake=null,shakeTimer=0;
+const listening={scene:null,returnPoint:null,state:{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0},audio:null,
+  muted:store.get('garden.listening.muted')==='1',volume:Math.max(0,Math.min(1,Number(store.get('garden.listening.volume')??'.65')))||0};
 scene.fog=new THREE.Fog(0xe9dccb,30,95);
 const camera=new THREE.PerspectiveCamera(55,1,0.1,400);
 const sky=new THREE.Mesh(new THREE.SphereGeometry(300,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
@@ -883,6 +901,7 @@ function updateScenery(){
   }
 }
 function performancePlace(){
+  if(worldSpace==='listening')return '음악방';
   const x=me.g.position.x,z=me.g.position.z;
   if(cam.sky)return '밤하늘';
   if(Math.hypot(x-FALLS.x,z-FALLS.z)<18)return '폭포';
@@ -960,7 +979,8 @@ const nearWaterworks=(x,z,pad)=>lakeIn(x,z,pad)||Math.hypot(x-HUT.x,z-HUT.z)<8+p
   (lakeS(x,z)>FALLS.s+1&&lakeS(x,z)<FALLS.s+14&&Math.abs(lakeQ(x,z))<14+pad)||streamDist(x,z)<1.4+pad||
   (Math.abs(lakeQ(x,z))<1.4+pad&&lakeS(x,z)>LAKE.deckA-1&&lakeS(x,z)<FALLS.s);
 // 걸어 다니는 높이: 호수 데크, 농막 마루, 평상
-function groundY(x,z){
+function groundY(x,z,space=worldSpace){
+  if(space==='listening')return 0;
   let y=0;const s=lakeS(x,z),q=lakeQ(x,z);
   if(Math.abs(q)<1.2&&s>LAKE.deckA&&s<LAKE.deckB)y=.32*Math.min(1,(s-LAKE.deckA)/1.3,(LAKE.deckB-s)/1.3);
   const l=hutToLocal(x,z);
@@ -1164,7 +1184,8 @@ const waterworks={sheets:[],mist:null,foam:[],tex:null};
   const tray=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.05,16),M(0x6b4a30));tray.position.set(-.7,.5,1.1);hut.add(tray);
   const kettle=new THREE.Mesh(new THREE.SphereGeometry(.12,12,10),M(0xb7b2a8));kettle.position.set(-.72,.6,1.1);kettle.scale.y=.8;hut.add(kettle);
   // door, window glow, porch bulb
-  part(plank,F(0x6f8d6a),[.6,1.05,-.08],[.95,1.95,.06],null,hut);const knob=new THREE.Mesh(new THREE.SphereGeometry(.04,8,6),M(0xd8c27a));knob.position.set(.25,1.0,-.03);hut.add(knob);
+  listeningDoor=part(plank,F(0x6f8d6a),[.6,1.05,-.08],[.95,1.95,.06],null,hut);
+  {const c=document.createElement('canvas');c.width=256;c.height=80;const x=c.getContext('2d');x.fillStyle='#493624';x.fillRect(0,0,256,80);x.fillStyle='#f4dfb2';x.font='bold 38px sans-serif';x.textAlign='center';x.fillText('음악방 ♫',128,53);const tx=new THREE.CanvasTexture(c);tx.encoding=THREE.sRGBEncoding;const sign=new THREE.Mesh(new THREE.PlaneGeometry(1.12,.35),new THREE.MeshBasicMaterial({map:tx,toneMapped:false}));sign.position.set(.6,2.27,-.02);hut.add(sign)}const knob=new THREE.Mesh(new THREE.SphereGeometry(.04,8,6),M(0xd8c27a));knob.position.set(.25,1.0,-.03);hut.add(knob);
   const win=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.8),new THREE.MeshBasicMaterial({color:C(0xffcf86),toneMapped:false}));win.position.set(-1.0,1.55,-.07);hut.add(win);
   part(plank,F(0x5e4128),[-1.0,1.55,-.06],[1.25,.07,.05],null,hut);part(plank,F(0x5e4128),[-1.0,1.55,-.06],[.05,.95,.05],null,hut);
   const bulb=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),new THREE.MeshBasicMaterial({color:C(0xffd59a),toneMapped:false}));bulb.position.set(0,2.45,1.4);hut.add(bulb);
@@ -1195,6 +1216,213 @@ function updateWaterworks(dt,t){
   const sh=underHutRoof(me.g.position.x,me.g.position.z);
   if(sh&&!waterworks.toldHut&&hasEntered){waterworks.toldHut=true;toast('농막 처마 아래예요 · 평상에서 낮잠을 자 보세요')}
 }
+/* ---------- lakeside listening room: built only on first entry ---------- */
+const LISTENING_SEATS=[{x:-2.1,z:1.8},{x:.1,z:2.6},{x:2.35,z:1.8},{x:3.9,z:3.5}];
+const LISTENING_RECORDS=[{id:'bluehour',name:'블루 아워',desc:'느긋한 전자 피아노와 베이스',color:0x477f91},{id:'rainwood',name:'나무에 내리는 비',desc:'맑은 건반과 따뜻한 화음',color:0x9b7550},{id:'starlight',name:'별빛의 잔향',desc:'천천히 번지는 신시사이저',color:0x7771a6}];
+function listeningSeatAt(x,z){return LISTENING_SEATS.findIndex(p=>Math.hypot(p.x-x,p.z-z)<.32)}
+function nearListeningDoor(x,z){const p=hutToLocal(x,z);return Math.abs(p.lx-.6)<1.15&&p.lz>0&&p.lz<1.8}
+function makeListeningScene(){
+  if(listening.scene)return listening.scene;
+  listening.audioTargets=[];listening.chairs=[];
+  const sc=new THREE.Scene();sc.background=new THREE.Color(0x30291f);sc.fog=new THREE.Fog(0x30291f,24,44);listening.scene=sc;
+  const roomMats=new Map(),mat=(color,rough=.7,metal=0)=>{const key=color+':'+rough+':'+metal;if(!roomMats.has(key))roomMats.set(key,new THREE.MeshStandardMaterial({color:C(color),roughness:rough,metalness:metal}));return roomMats.get(key)};
+  const oak=mat(0xb68b58),walnut=mat(0x67432f),black=mat(0x171b20,.4),silver=mat(0xb9b6aa,.28,.7),leather=mat(0x773e2c,.5),fabric=mat(0xd6c2a1,.95);
+  const cube=(x,y,z,w,h,d,m,parent=sc)=>part(BOX,m,[x,y,z],[w,h,d],null,parent);
+  const rounded=(x,y,z,w,h,d,m,parent=sc)=>{const o=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),m);o.position.set(x,y,z);o.scale.set(w/2,h/2,d/2);o.castShadow=o.receiveShadow=true;parent.add(o);return o};
+  const woodTexture=document.createElement('canvas');woodTexture.width=128;woodTexture.height=256;const wx=woodTexture.getContext('2d');wx.fillStyle='#a87e50';wx.fillRect(0,0,128,256);
+  for(let i=0;i<150;i++){const x=(i*37)%128;wx.strokeStyle=i%3?'rgba(75,43,21,.10)':'rgba(250,221,162,.18)';wx.beginPath();wx.moveTo(x,0);wx.bezierCurveTo(x+8,80,x-6,160,x+3,256);wx.stroke()}
+  const woodTex=new THREE.CanvasTexture(woodTexture);woodTex.encoding=THREE.sRGBEncoding;const wallMat=new THREE.MeshStandardMaterial({map:woodTex,color:C(0xe6d3af),roughness:.85});
+  cube(0,-.15,0,12.6,.3,12,walnut);cube(0,.015,.5,7.7,.04,7.5,mat(0xafa18c,.98));
+  // Rear wall and side walls are cut away only where the camera sits.
+  const back=cube(0,2.45,-5.8,12.5,4.9,.18,wallMat),left=cube(-6.2,2.45,0,.18,4.9,11.6,wallMat),right=cube(6.2,2.45,0,.18,4.9,11.6,wallMat),front=cube(0,2.45,5.8,12.5,4.9,.18,wallMat);
+  listening.walls=[{mesh:back,axis:'z',sign:-1},{mesh:left,axis:'x',sign:-1},{mesh:right,axis:'x',sign:1},{mesh:front,axis:'z',sign:1}];
+  cube(0,4.7,-5.45,12.2,.16,.35,walnut);cube(-5.95,4.7,0,.35,.16,11,walnut);cube(5.95,4.7,0,.35,.16,11,walnut);
+  const curtain=mat(0x9c8472,.97);for(let i=0;i<36;i++)rounded(-5.8+i*.33,2.6,-5.55,.48,4.3,.28,curtain);
+  const blocks=[];
+  for(let side=0;side<3;side++)for(let i=0;i<12;i++)for(let j=0;j<7;j++){
+    const depth=.12+((i*7+j*11+side*3)%9)*.045,c=C([0xc7a775,0xb68b58,0xd3b884][(i+j)%3]);
+    if(side===0){if(i>3&&i<8&&j<4)continue;blocks.push({x:-5.2+i*.94,y:1.55+j*.4,z:-5.16+depth/2,sx:.85,sy:.34,sz:depth,c})}
+    else blocks.push({x:(side===1?-1:1)*(5.94-depth/2),y:1.5+j*.4,z:-4.5+i*.73,sx:depth,sy:.34,sz:.65,c});
+  }
+  const diffuser=instanced(BOX,new THREE.MeshStandardMaterial({color:0xffffff,roughness:.85}),blocks,false);sc.add(diffuser);
+  const ceiling=new THREE.Group();ceiling.position.set(0,4.4,-1.7);sc.add(ceiling);
+  for(let x=-1.8;x<=1.8;x+=.45)for(let z=-1;z<=1;z+=.4)cube(x,((Math.round(x*10)+Math.round(z*10))%3)*.04,z,.34,.2,.3,fabric,ceiling);
+  // Full-height floorstanding speakers, driver surrounds and cones.
+  listening.cones=[];
+  const ringGeo=new THREE.TorusGeometry(1,.08,8,32),coneGeo=new THREE.CylinderGeometry(1,.7,.09,32);
+  for(const sx of[-3.6,3.6]){
+    cube(sx,.08,-4.1,1.5,.16,1.45,black);cube(sx,1.63,-4.15,1.06,3.05,1.05,walnut);cube(sx,1.65,-3.605,.9,2.88,.05,black);
+    for(const [y,r] of [[.63,.34],[1.43,.34],[2.22,.24],[2.88,.14]]){
+      const ring=new THREE.Mesh(ringGeo,silver);ring.position.set(sx,y,-3.55);ring.scale.setScalar(r);sc.add(ring);
+      const cone=new THREE.Mesh(coneGeo,mat(0x34383b,.6));cone.rotation.x=Math.PI/2;cone.position.set(sx,y,-3.55);cone.scale.set(r,.7,r);sc.add(cone);listening.cones.push(cone);
+      rounded(sx,y,-3.48,r*.9,r*.9,.13,black);
+    }
+    for(const dx of[-.42,.42])for(const y of[.35,2.98])rounded(sx+dx,y,-3.56,.035,.035,.025,silver);
+  }
+  // Floating equipment shelves, amplifier, DAC, power amp and record player.
+  for(const y of[.22,.78,1.34])cube(0,y,-4.25,4.6,.1,1.25,walnut);
+  for(const x of[-2.1,2.1])for(const z of[-4.76,-3.75])cube(x,.82,z,.055,1.6,.055,silver);
+  const equipment=(x,y,w,col)=>{listening.audioTargets.push(cube(x,y,-4.18,w,.36,.76,mat(col,.38,.4)));for(const dx of[-w*.42,w*.42]){const knob=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.05,20),silver);knob.rotation.x=Math.PI/2;knob.position.set(x+dx,y,-3.77);sc.add(knob)}cube(x,y,-3.785,w*.52,.15,.015,black)};
+  equipment(-1.08,.49,1.75,0x20252a);equipment(1.08,.49,1.75,0x20252a);equipment(0,1.03,3.2,0xb3b3aa);
+  const ledMat=new THREE.MeshBasicMaterial({color:0x84b9a1,toneMapped:false});listening.led=ledMat;
+  cube(0,1.04,-3.78,.85,.12,.025,ledMat);
+  listening.needles=[];for(const x of[-.9,.9]){cube(x,1.055,-3.775,.52,.21,.02,new THREE.MeshBasicMaterial({color:0xeacb8d,toneMapped:false}));const n=cube(x,1.025,-3.75,.014,.15,.014,black);listening.needles.push(n)}
+  const deck=new THREE.Group();deck.position.set(-.85,1.43,-4.14);sc.add(deck);cube(0,.08,0,1.65,.12,1.02,black,deck);
+  const platter=new THREE.Mesh(new THREE.CylinderGeometry(.52,.52,.045,48),silver);platter.position.set(-.18,.18,0);deck.add(platter);
+  const record=new THREE.Group();record.position.set(-.18,.21,0);deck.add(record);listening.record=record;
+  const vinyl=new THREE.Mesh(new THREE.CylinderGeometry(.49,.49,.018,48),black);record.add(vinyl);
+  const label=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.02,32),mat(0x477f91));record.add(label);listening.recordLabel=label;
+  cube(.27,.012,0,.025,.02,.025,fabric,record);cube(.54,.24,-.2,.035,.04,.57,silver,deck);rounded(.54,.26,.1,.1,.07,.12,black,deck);
+  const screenCanvas=document.createElement('canvas');screenCanvas.width=1024;screenCanvas.height=512;listening.screenCanvas=screenCanvas;
+  listening.screenTexture=new THREE.CanvasTexture(screenCanvas);listening.screenTexture.encoding=THREE.sRGBEncoding;
+  cube(0,3.18,-5.06,4.55,2.35,.15,black);
+  const screen=new THREE.Mesh(new THREE.PlaneGeometry(4.35,2.15),new THREE.MeshBasicMaterial({map:listening.screenTexture,toneMapped:false}));screen.position.set(0,3.18,-4.965);sc.add(screen);listening.audioTargets.push(screen,deck);
+  // Record/book shelves, filled spines, a small coffee table and a lake picture window.
+  for(const x of[-5.45,-3.9])cube(x,1.85,2.9,.1,3.7,2.45,walnut);
+  for(const y of[.22,1.18,2.14,3.1,3.7])cube(-4.67,y,2.9,1.65,.08,2.45,walnut);
+  const spines=[];for(let row=0;row<3;row++)for(let i=0;i<22;i++)spines.push({x:-5.28+i*.057,y:.69+row*.96,z:3.7,sx:.04,sy:.7+(i%4)*.035,sz:.65,c:C([0x4b6155,0xa88763,0x293e48,0xb9a780,0x754635][i%5])});sc.add(instanced(BOX,new THREE.MeshLambertMaterial({color:0xffffff}),spines,false));
+  cube(-4.65,1.23,1.78,1.45,.02,.03,ledMat);
+  const windowCanvas=document.createElement('canvas');windowCanvas.width=512;windowCanvas.height=512;const wc=windowCanvas.getContext('2d'),skyGrad=wc.createLinearGradient(0,0,0,512);skyGrad.addColorStop(0,'#162d45');skyGrad.addColorStop(.6,'#477574');skyGrad.addColorStop(1,'#1c3a3b');wc.fillStyle=skyGrad;wc.fillRect(0,0,512,512);
+  for(let l=0;l<3;l++){wc.fillStyle=['#294c55','#315e58','#244b3d'][l];wc.beginPath();wc.moveTo(0,290+l*45);for(let x=0;x<=512;x+=16)wc.lineTo(x,220+l*50+Math.sin(x*.012+l)*38+Math.cos(x*.027)*16);wc.lineTo(512,512);wc.lineTo(0,512);wc.fill()}
+  wc.fillStyle='#447c80';wc.fillRect(0,365,512,147);wc.strokeStyle='#a3c5b0';for(let i=0;i<36;i++){wc.globalAlpha=.1+(i%4)*.05;wc.beginPath();wc.moveTo((i*97)%512,372+i*4);wc.lineTo((i*97)%512+30+(i%4)*22,372+i*4);wc.stroke()}wc.globalAlpha=1;
+  const wt=new THREE.CanvasTexture(windowCanvas);wt.encoding=THREE.sRGBEncoding;const windowMesh=new THREE.Mesh(new THREE.PlaneGeometry(3.5,2.1),new THREE.MeshBasicMaterial({map:wt,toneMapped:false}));windowMesh.rotation.y=-Math.PI/2;windowMesh.position.set(6.07,2.55,-.5);sc.add(windowMesh);
+  for(const y of[1.45,3.65])cube(6.02,y,-.5,.18,.14,3.7,walnut);for(const z of[-2.3,1.3])cube(6.02,2.55,z,.18,2.25,.13,walnut);cube(5.99,2.55,-.5,.13,2.2,.07,walnut);
+  LISTENING_SEATS.forEach((p,i)=>{
+    const chair=new THREE.Group();chair.position.set(p.x,0,p.z);chair.rotation.y=Math.PI;sc.add(chair);listening.chairs.push(chair);
+    cube(0,.23,-.05,.62,.1,.65,walnut,chair);cube(0,.48,-.18,.12,.5,.12,silver,chair);
+    rounded(0,.67,0,1.42,.42,1.35,leather,chair);const backrest=rounded(0,1.25,-.55,1.5,1.45,.4,leather,chair);backrest.rotation.x=-.15;
+    rounded(0,1.8,-.65,1.05,.4,.35,leather,chair);for(const x of[-.72,.72])rounded(x,.93,.02,.35,.42,1.5,leather,chair);
+    if(i<3){rounded(0,.39,1.45,.96,.24,.74,leather,chair);cube(0,.18,1.45,.11,.35,.1,silver,chair)}
+  });
+  cube(3.7,.63,-.5,1.6,.1,.95,walnut);for(const x of[3.1,4.3])cube(x,.32,-.5,.08,.62,.7,black);
+  const cup=new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,.2,20),fabric);cup.position.set(3.7,.78,-.5);sc.add(cup);
+  cube(4.5,1.4,5.69,1.1,2.8,.1,walnut);listening.exitDoor=cube(4.5,1.4,5.61,.92,2.6,.08,mat(0x896346));rounded(4.16,1.4,5.55,.09,.09,.08,silver);
+  const light=new THREE.HemisphereLight(0xffe9cd,0x4c3931,.88);sc.add(light);
+  const key=new THREE.DirectionalLight(0xffdfb1,1.15);key.position.set(-3,6,3);key.castShadow=true;key.shadow.mapSize.set(1024,1024);Object.assign(key.shadow.camera,{left:-8,right:8,top:8,bottom:-8,near:.1,far:24});key.shadow.normalBias=.04;sc.add(key);listening.light=key;
+  const warm=new THREE.PointLight(0xffae6c,.65,13,1.8);warm.position.set(-4,3.2,1);sc.add(warm);
+  paintListeningScreen();return sc;
+}
+function paintListeningScreen(){
+  if(!listening.screenCanvas)return;const x=listening.screenCanvas.getContext('2d'),s=listening.state,record=LISTENING_RECORDS.find(r=>r.id===s.track)||LISTENING_RECORDS[0];
+  x.fillStyle='#101d23';x.fillRect(0,0,1024,512);const g=x.createRadialGradient(250,220,20,250,220,320);g.addColorStop(0,'#376666');g.addColorStop(1,'#101d23');x.fillStyle=g;x.fillRect(0,0,1024,512);
+  x.strokeStyle='#a6bba5';x.lineWidth=3;for(let i=0;i<5;i++){x.beginPath();x.arc(240,250,68+i*17,0,Math.PI*2);x.stroke()}x.fillStyle='#d5b883';x.beginPath();x.arc(240,250,34,0,Math.PI*2);x.fill();
+  x.textAlign='left';x.fillStyle='#ddc9a7';x.font='22px sans-serif';x.fillText('LAKESIDE LISTENING ROOM',450,150);x.font='bold 42px sans-serif';x.fillStyle='#f2e9d7';x.fillText(s.power?record.name:'음악이 머무는 방',450,237);x.font='23px sans-serif';x.fillStyle='#a6b8af';x.fillText(s.power?'오리지널 세션 · 함께 듣는 중':'오디오를 켜고 잠시 쉬어 가요',450,290);
+  x.fillStyle='#789e94';x.fillRect(450,338,450,2);x.font='18px sans-serif';x.fillText('WOOD / WARM LIGHT / GOOD COMPANY',450,390);listening.screenTexture.needsUpdate=true;
+  listening.recordLabel.material.color.copy(C(record.color));
+}
+function syncListeningActors(){
+  $('listeningControls').hidden=worldSpace!=='listening';
+  if(worldSpace==='listening')makeListeningScene();
+  const put=(P,D,space)=>{const parent=space==='listening'?listening.scene:scene;P.g.userData.space=D.g.userData.space=space;const visible=space===worldSpace;P.g.visible=D.g.visible=visible&&!cam.sky;if(parent&&P.g.parent!==parent){parent.add(P.g);parent.add(D.g)}};
+  put(me,myDogObj,worldSpace);for(const e of peers.values())put(e.P,e.D,e.space||'garden');
+}
+function stopListeningMovement(){pendingStoke=false;pendingShake=null;clearTimeout(fuelTimer);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);me.speed=0;sendDirty=true;userMoved=true;autoJoined=true}
+function enterListening(fromHistory=false,restored=null){
+  if(!hasEntered||visitEnded||worldSpace==='listening')return;
+  if(room&&room.connected()&&!room.listeningVersion){toast('음악방 서버가 아직 준비되지 않았어요. 최신 버전으로 반영해 주세요.');return}
+  const back=restored&&restored.roomReturn;listening.returnPoint=back&&[back.x,back.z,back.h].every(Number.isFinite)?back:{x:me.g.position.x,z:me.g.position.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist}};
+  closeOtherMenus('listening');endCalm(true);endPractice(false);if(cam.sky)setSkyView(false,true);closeYouTube();
+  worldSpace='listening';makeListeningScene();document.body.classList.add('listening-room');
+  me.g.position.set(4.45,0,4.45);me.g.rotation.y=Math.PI;myDogObj.g.position.set(3.5,0,4.4);pose='stand';cam.yaw=0;cam.pitch=.22;cam.dist=4.8;
+  syncListeningActors();listening.scene.add(marker);stopListeningMovement();syncPoseButtons();resetQualitySampling();ensureListeningAudio();syncListeningSound();renderListeningUI();
+  if(historyReady&&!fromHistory&&history.state?.gardenView!=='listening')history.pushState({gardenView:'listening'},'',location.href);
+  if(!restored){sendPresence();saveVisit();toast('호숫가 음악방 · 의자에 앉아 오디오를 켜 보세요')}
+}
+function exitListening(fromHistory=false){
+  if(worldSpace!=='listening')return;if($('listeningAudio').open)$('listeningAudio').close();
+  worldSpace='garden';document.body.classList.remove('listening-room');
+  const fallback=hutLocal(.6,1.25),back=listening.returnPoint||{...fallback,h:HUT.h+Math.PI},p=collide(back.x,back.z,.4,'garden');
+  me.g.position.set(p[0],0,p[1]);me.g.rotation.y=back.h;myDogObj.g.position.set(p[0]+.8,0,p[1]);pose='stand';
+  if(back.cam){cam.yaw=Number.isFinite(back.cam.yaw)?back.cam.yaw:HUT.h;cam.pitch=Number.isFinite(back.cam.pitch)?back.cam.pitch:.25;cam.dist=Number.isFinite(back.cam.dist)?back.cam.dist:8}
+  syncListeningActors();scene.add(marker);silenceListeningNotes();stopListeningMovement();environmentTick=99;resetQualitySampling();syncListeningSound();syncPoseButtons();renderMusicUI();sendPresence();saveVisit();
+  if(historyReady&&!fromHistory&&history.state?.gardenView==='listening')history.back();
+}
+function sitListening(preferred){
+  if(worldSpace!=='listening')return;
+  if(listeningSeatAt(me.g.position.x,me.g.position.z)>=0&&pose==='sit'){pose='stand';me.g.position.z+=1.05;stopListeningMovement();return}
+  const seats=LISTENING_SEATS.filter(p=>![...peers.values()].some(e=>e.space==='listening'&&Math.hypot(e.x-p.x,e.z-p.z)<.4));
+  seats.sort((a,b)=>Math.hypot(a.x-me.g.position.x,a.z-me.g.position.z)-Math.hypot(b.x-me.g.position.x,b.z-me.g.position.z));
+  if(!seats.length){toast('의자에 친구들이 모두 앉아 있어요');return}const p=Number.isInteger(preferred)&&seats.includes(LISTENING_SEATS[preferred])?LISTENING_SEATS[preferred]:seats[0];endPractice(false);me.g.position.set(p.x,0,p.z);me.g.rotation.y=Math.PI;pose='sit';cam.yaw=0;cam.dist=4.2;cam.pitch=.18;stopListeningMovement();syncPoseButtons();sendPresence();saveVisit();
+}
+function listeningCollide(x,z,r){
+  x=THREE.MathUtils.clamp(x,-5.55+r,5.55-r);z=THREE.MathUtils.clamp(z,-3.0+r,5.3-r);
+  // Reserve the equipment front, record shelf, coffee table and chair backs.
+  for(const o of[{x:-4.6,z:3.0,r:1.12},{x:3.7,z:-.5,r:.7},...LISTENING_SEATS.map(p=>({x:p.x,z:p.z+.65,r:.45}))]){
+    const dx=x-o.x,dz=z-o.z,d=Math.hypot(dx,dz);if(d<o.r+r&&d>.0001){x=o.x+dx/d*(o.r+r);z=o.z+dz/d*(o.r+r)}
+  }return[THREE.MathUtils.clamp(x,-5.55+r,5.55-r),THREE.MathUtils.clamp(z,-3+r,5.3-r)];
+}
+function listeningPositionMs(){const s=listening.state;return Math.max(0,(s.offsetMs||0)+(s.power?serverNow()-s.startedAt:0))}
+function applyListeningState(s){
+  if(!s||!LISTENING_RECORDS.some(r=>r.id===s.track)||typeof s.power!=='boolean'||!Number.isFinite(s.rev)||s.rev<listening.state.rev)return;
+  const changed=s.rev!==listening.state.rev||s.track!==listening.state.track||s.power!==listening.state.power;
+  listening.state={track:s.track,power:s.power,startedAt:Number.isFinite(s.startedAt)?s.startedAt:0,offsetMs:Number.isFinite(s.offsetMs)?Math.max(0,s.offsetMs):0,rev:s.rev};
+  if(changed){silenceListeningNotes();paintListeningScreen();syncListeningSound()}renderListeningUI();
+}
+function listeningRequest(action,value){
+  if(worldSpace!=='listening')return;ensureListeningAudio();
+  if(room){if(!room.connected()){toast('다시 연결되면 오디오를 조작할 수 있어요');return}sendPresence();room.send({t:'listening_music',action,...(action==='track'?{track:value}:{power:!!value})});return}
+  const old=listening.state,now=serverNow();applyListeningState({track:action==='track'?value:old.track,power:action==='track'?true:!!value,offsetMs:action==='track'?0:listeningPositionMs(),startedAt:now,rev:old.rev+1});
+}
+function ensureListeningAudio(){
+  if(listening.audio){listening.audio.ac.resume().catch(()=>{});return true}const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
+  const ac=new Ctx(),gain=ac.createGain(),eq=ac.createBiquadFilter(),analyser=ac.createAnalyser();eq.type='lowpass';eq.frequency.value=10000;analyser.fftSize=128;gain.gain.value=0;eq.connect(gain);gain.connect(analyser);analyser.connect(ac.destination);
+  listening.audio={ac,gain,eq,analyser,data:new Uint8Array(analyser.frequencyBinCount),seen:new Set(),nodes:new Set()};ac.resume().catch(()=>{});return true;
+}
+function silenceListeningNotes(){
+  const a=listening.audio;if(!a)return;a.seen.clear();for(const n of a.nodes)try{n.stop()}catch(e){}a.nodes.clear();
+}
+function syncListeningSound(){
+  const a=listening.audio;if(a){const audible=worldSpace==='listening'&&listening.state.power&&!listening.muted&&!document.hidden&&!visitEnded&&hasEntered;a.gain.gain.setTargetAtTime(audible?listening.volume:0,a.ac.currentTime,.12);if(audible)a.ac.resume().catch(()=>{})}
+  if(worldSpace==='listening'){
+    if(skyMusic.ac)skyMusic.master.gain.setTargetAtTime(0,skyMusic.ac.currentTime,.12);
+    if(AC)master.gain.setTargetAtTime(0,AC.currentTime,.12);closeYouTube();
+  }else{$('soundToggle').setAttribute('aria-pressed',String(skyMusic.on));$('soundToggle').setAttribute('aria-label',skyMusic.on?'배경음 끄기':'배경음 켜기');$('soundToggle').title=skyMusic.on?'배경음 끄기':'배경음 켜기';syncSkyMusicOutput();if(AC&&audioOn)master.gain.setTargetAtTime(music.track&&music.track!=='banya'?vol:0,AC.currentTime,.3);if(music.track==='banya'&&hasEntered)showYouTube()}
+}
+function scheduleListeningAudio(){
+  const a=listening.audio;if(!a||a.ac.state!=='running'||worldSpace!=='listening'||!listening.state.power||listening.muted||document.hidden||visitEnded||!hasEntered)return;
+  const pos=listeningPositionMs()/1000,track=listening.state.track,chords=[[48,55,59,64],[45,52,55,60],[41,48,52,57],[43,50,53,59]],piano=track!=='starlight',beat=track==='rainwood'?.65:track==='starlight'?1:.55;
+  const note=(m,t,d,level,pan)=>{
+    const osc=a.ac.createOscillator(),g=a.ac.createGain(),p=a.ac.createStereoPanner();osc.type=piano?'triangle':'sine';osc.frequency.value=440*Math.pow(2,(m-69)/12);p.pan.value=pan;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(level,t+(piano?.015:.35));g.gain.exponentialRampToValueAtTime(.0001,t+d);osc.connect(g);g.connect(p);p.connect(a.eq);osc.start(t);osc.stop(t+d+.05);a.nodes.add(osc);osc.onended=()=>{a.nodes.delete(osc);osc.disconnect();g.disconnect();p.disconnect()};
+  };
+  for(let step=Math.ceil(pos/beat);step*beat<=pos+.35;step++){
+    const key=listening.state.rev+':'+step;if(a.seen.has(key))continue;a.seen.add(key);const at=a.ac.currentTime+step*beat-pos+.03,chord=chords[Math.floor(step/8)%4];
+    if(step%8===0){chord.forEach((m,i)=>note(m,at+i*.035,beat*7.5,.022,(i-1.5)*.3));note(chord[0]-12,at,beat*3,.045,0)}
+    if(step%2===0){const m=chord[(step/2+Math.floor(step/8))%4]+12;note(m,at,beat*(piano?2.8:3.8),.035,Math.sin(step*.7)*.45)}
+  }
+  if(a.seen.size>100)a.seen=new Set([...a.seen].slice(-40));
+}
+function renderListeningUI(){
+  const state=listening.state,record=LISTENING_RECORDS.find(r=>r.id===state.track)||LISTENING_RECORDS[0];
+  $('listeningPower').textContent=state.power?'오디오 끄기':'오디오 켜기';$('listeningPower').setAttribute('aria-pressed',String(state.power));
+  $('listeningMute').textContent=listening.muted?'내 소리 켜기':'내 소리 끄기';$('listeningMute').setAttribute('aria-pressed',String(listening.muted));
+  $('listeningStatus').textContent=(state.power?'함께 듣는 중 · '+record.name:'오디오 전원이 꺼져 있어요')+(room&&!room.connected()?' · 재연결 중':'');
+  for(const b of $('listeningRecords').querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.record===state.track));
+  if(worldSpace==='listening'){$('soundToggle').setAttribute('aria-pressed',String(listening.state.power&&!listening.muted));$('soundToggle').setAttribute('aria-label',listening.muted?'내 소리 켜기':'내 소리 끄기');$('soundToggle').title=listening.muted?'내 소리 켜기':'내 소리 끄기';$('nowPlaying').hidden=false;$('nowPlaying').textContent='♪ '+(state.power?record.name:'호숫가 음악방 · 잠시 쉬어 가요');}
+}
+function openListeningAudio(){
+  if(worldSpace!=='listening')return;if(typeof $('listeningAudio').showModal!=='function'){toast('이 브라우저에서는 오디오 창을 열 수 없어요');return}closeOtherMenus('listening');stopListeningMovement();if(!ensureListeningAudio())toast('이 브라우저는 오디오 재생을 지원하지 않아요');syncListeningSound();renderListeningUI();if(!$('listeningAudio').open)$('listeningAudio').showModal();
+}
+function updateListening(dt,t){
+  if(worldSpace!=='listening')return;
+  sceneryVisible=0;
+  const level=QUALITY_LEVELS[quality.level];if(listening.light.shadow.mapSize.x!==level.shadow){if(listening.light.shadow.map){listening.light.shadow.map.dispose();listening.light.shadow.map=null}listening.light.shadow.mapSize.set(level.shadow,level.shadow);renderer.shadowMap.needsUpdate=true}
+  listening.exitDoor.visible=camera.position.z<5.3;
+  for(const wall of listening.walls)wall.mesh.visible=wall.axis==='x'?wall.sign*camera.position.x<5.7:wall.sign*camera.position.z<5.3;
+  listening.audioTick=(listening.audioTick||0)+dt;if(listening.audioTick>.12){listening.audioTick=0;scheduleListeningAudio()}
+  let energy=0;const a=listening.audio;if(a&&!listening.muted){a.analyser.getByteFrequencyData(a.data);energy=a.data.reduce((sum,v)=>sum+v,0)/a.data.length/255}
+  listening.needles.forEach((n,i)=>n.rotation.z=THREE.MathUtils.lerp(n.rotation.z,-.65+energy*(2.4+i*.12),Math.min(1,dt*12)));
+  listening.led.color.setHex(listening.state.power?0x84b9a1:0x263c34);
+  if(listening.state.power)listening.record.rotation.y=-(listeningPositionMs()/1000)*(33.333/60)*Math.PI*2;
+  $('listeningSeatBtn').textContent=pose==='sit'&&listeningSeatAt(me.g.position.x,me.g.position.z)>=0?'의자에서 일어나기':'의자에 앉기';
+}
+for(const record of LISTENING_RECORDS){const b=document.createElement('button');b.type='button';b.dataset.record=record.id;const title=document.createElement('strong'),desc=document.createElement('small');title.textContent=record.name;desc.textContent=record.desc;b.append(title,desc);b.onclick=()=>listeningRequest('track',record.id);$('listeningRecords').appendChild(b)}
+$('listeningPower').onclick=()=>listeningRequest('power',!listening.state.power);
+$('listeningMute').onclick=()=>{listening.muted=!listening.muted;store.set('garden.listening.muted',listening.muted?'1':'0');ensureListeningAudio();silenceListeningNotes();syncListeningSound();renderListeningUI()};
+$('listeningVolume').value=Math.round(listening.volume*100);$('listeningVolume').oninput=e=>{listening.volume=Number(e.target.value)/100;store.set('garden.listening.volume',String(listening.volume));syncListeningSound()};
+$('listeningAudioBtn').onclick=openListeningAudio;$('listeningSeatBtn').onclick=()=>sitListening();$('listeningExitBtn').onclick=()=>exitListening();$('listeningClose').onclick=()=>$('listeningAudio').close();
+$('listeningAudio').addEventListener('close',()=>{stopListeningMovement();$('listeningAudioBtn').focus()});
+document.addEventListener('visibilitychange',()=>{silenceListeningNotes();const a=listening.audio;if(a){if(document.hidden)a.ac.suspend().catch(()=>{});else syncListeningSound()}});
+
 /* ---------- solo calm: waterfall meditation, nap on the hut platform, firefly catching ---------- */
 const calmRec=(()=>{try{return Object.assign({meditate:0,nap:0,caught:0,jar:0},JSON.parse(store.get('garden.calm')||'{}'))}catch(e){return{meditate:0,nap:0,caught:0,jar:0}}})();
 const saveCalm=()=>store.set('garden.calm',JSON.stringify(calmRec));
@@ -1466,12 +1694,13 @@ function prayerSurfaceAt(x,z){return CENTERPIECE==='buddha'&&prayerSpotAt(x,z)>=
 const FIRE_SEATS=Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;return{x:Math.sin(a)*4.75,z:Math.cos(a)*4.75,a}});
 const CHAIR_SEATS=[];TABLE_SPOTS.forEach(t=>{for(let k=0;k<4;k++){const a=k*Math.PI/2+Math.PI/4;CHAIR_SEATS.push({x:t.x+Math.sin(a)*2,z:t.z+Math.cos(a)*2,table:t.i,h:a+Math.PI,k})}});
 const STOOLS=Array.from({length:8},(_,i)=>{const lx=-2.45+i*.7,p=pochaLocal(lx,.35);return{x:p.x,z:p.z,h:POCHA.h+Math.PI,i,lx}});
-function seatAt(x,z){
+function seatAt(x,z,space=worldSpace){
+  if(space==='listening'){const i=listeningSeatAt(x,z);return i<0?-1:20+i}
   const f=CENTERPIECE==='campfire'?FIRE_SEATS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.3):-1;if(f>=0)return f;
   const c=CHAIR_SEATS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.3);if(c>=0)return 100+c;
   const st=STOOLS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.25);return st>=0?200+st:-1;
 }
-function tableAt(x,z){const s=seatAt(x,z);return s>=200?99:s>=100?CHAIR_SEATS[s-100].table:-1}
+function tableAt(x,z){if(worldSpace==='listening')return -1;const s=seatAt(x,z);return s>=200?99:s>=100?CHAIR_SEATS[s-100].table:-1}
 {
   const parasolTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=16;const x=c.getContext('2d');
     for(let i=0;i<8;i++){x.fillStyle=i%2?'#f4f1ea':'#d8453a';x.fillRect(i*32,0,32,16)}const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t})();
@@ -1615,7 +1844,7 @@ function disposeUmbrella(P){
 }
 function updateUmbrellas(){
   const apply=(P,state,key,wanted)=>{
-    const show=wanted===true&&!UMBRELLA_BLOCKED_POSES.includes(state);
+    const show=P.g.userData.space!=='listening'&&wanted===true&&!UMBRELLA_BLOCKED_POSES.includes(state);
     if(!show){if(P.umbrella)P.umbrella.visible=false;return}
     const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=Math.min(0,P.tag.position.y-2.25);
   };
@@ -1731,16 +1960,17 @@ function makePerson(L){
 }
 const prayerContactBounds=new THREE.Box3();
 function posePerson(P,pose,dt,t){
-  P.g.position.y+=(groundY(P.g.position.x,P.g.position.z)-P.g.position.y)*Math.min(1,dt*12);
+  const personSpace=P.g.userData.space||'garden';
+  P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)-P.g.position.y)*Math.min(1,dt*12);
   if(P.eyes){P.blinkT-=dt;const close=P.blinkT<0&&P.blinkT>-.13;P.eyes.forEach(e=>e.scale.y=close?.012:.075);if(P.blinkT<-.13)P.blinkT=2+Math.random()*4}
-  if(P.speed>2.2&&P.g.parent){P.dustT=(P.dustT||0)-dt;if(P.dustT<0){P.dustT=.22;puffDust(P.g.position.x,P.g.position.z)}}
+  if(personSpace==='garden'&&worldSpace==='garden'&&P.speed>2.2&&P.g.parent){P.dustT=(P.dustT||0)-dt;if(P.dustT<0){P.dustT=.22;puffDust(P.g.position.x,P.g.position.z)}}
   const w=Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
   const sw=Math.sin(P.walkT)*.7*w,k=Math.min(1,dt*10);
   const L=(o,v)=>o+(v-o)*k;
   let torsoLean=0;
   let rx=0,ry=Math.abs(Math.cos(P.walkT))*.04*w,rz=0,tagY=2.25;
   let leg=[sw,-sw],arm=[-sw*.8,sw*.8],armZ=[-.06,.06];
-  const still=w<.1,onLog=still&&seatAt(P.g.position.x,P.g.position.z)>=0;
+  const still=w<.1,onLog=still&&seatAt(P.g.position.x,P.g.position.z,personSpace)>=0;
   if(pose==='sit'&&still){ry=onLog?-.13:-.5;leg=onLog?[-1.25,-1.25]:[-1.5,-1.5];arm=[-.7,-.7];tagY=onLog?2.05:1.8}
   else if(pose==='lie'&&still){rx=-Math.PI/2;ry=.28;rz=.85;leg=[0,0];arm=[0,0];armZ=[-.5,.5];tagY=.9}
   else if(pose==='prone'&&still){rx=Math.PI/2;ry=.28;rz=-.85;leg=[0,0];arm=[-2.5,-2.5];armZ=[-.18,.18];tagY=.9}
@@ -1755,12 +1985,13 @@ function posePerson(P,pose,dt,t){
   else if(pose==='cheers'&&still){arm=[onLog?-.7:0,-2.5];armZ=[-.06,-.35];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
   else if(['coffee','beer','soda','soju','makgeolli'].includes(pose)&&still){const c=Math.max(0,Math.sin(t*.7));arm=[onLog?-.7:0,-.9-c*1.3];armZ=[-.06,-.25-c*.15];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
   else if(pose==='fuel'&&still){const c=(Math.sin(t*3.2)+1)/2;torsoLean=.55;ry=-.28;leg=[-.7,.35];arm=[-1.1-c*.7,-1.1-c*.7];armZ=[.2,-.2];tagY=1.9}
-  const held=pose==='cheers'?(P.lastDrink||'soju'):pose,atPocha=seatAt(P.g.position.x,P.g.position.z)>=200;
+  if(personSpace==='listening'&&pose==='sit'&&onLog){torsoLean=-.16;rz=.13;ry=-.08;arm=[-.65,-.65]}
+  const held=pose==='cheers'?(P.lastDrink||'soju'):pose,atPocha=seatAt(P.g.position.x,P.g.position.z,personSpace)>=200;
   P.cup.visible=held==='coffee'&&still;P.can.visible=held==='beer'&&still&&!atPocha;P.soda.visible=held==='soda'&&still&&!atPocha;
   P.shot.visible=held==='soju'&&still;P.riceCup.visible=held==='makgeolli'&&still;P.beerGlass.visible=held==='beer'&&still&&atPocha;P.sodaGlass.visible=held==='soda'&&still&&atPocha;
   if(P.umbrella&&P.umbrella.visible){arm[0]=-.9;armZ[0]=.25}
   if(['beer','soda','soju','makgeolli'].includes(pose))P.lastDrink=pose;
-  if(still&&seatAt(P.g.position.x,P.g.position.z)>=200&&['sit','coffee','beer','soda','soju','cheers','makgeolli'].includes(pose)){ry+=.3;tagY+=.3}
+  if(still&&seatAt(P.g.position.x,P.g.position.z,personSpace)>=200&&['sit','coffee','beer','soda','soju','cheers','makgeolli'].includes(pose)){ry+=.3;tagY+=.3}
   P.head.rotation.x=L(P.head.rotation.x,pose==='standing_pray'&&still?.26:0);
   P.torso.rotation.x=L(P.torso.rotation.x,torsoLean);
   P.rig.rotation.x=L(P.rig.rotation.x,rx);P.rig.position.y=L(P.rig.position.y,ry);P.rig.position.z=L(P.rig.position.z,rz);
@@ -1768,7 +1999,7 @@ function posePerson(P,pose,dt,t){
   if(P.knives){const on=pose==='pray2'&&w<.1;P.knives.forEach(k=>k.visible=on)}
   for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
   // 절하기·누워있기·엎드리기에서 몸이 바닥이나 방석에 묻히지 않게 한다.
-  const surface=prayerSurfaceAt(P.g.position.x,P.g.position.z);
+  const surface=personSpace==='listening'?0:prayerSurfaceAt(P.g.position.x,P.g.position.z);
   if(pose==='pray'||pose==='bow'||pose==='lie'||pose==='prone'||surface>.035){
     P.g.updateMatrixWorld(true);let lowest=Infinity;
     for(const mesh of P.contactMeshes){
@@ -1956,7 +2187,8 @@ function makeCat(spec){
 }
 
 const angLerp=(a,b,k)=>{let d=b-a;d=Math.atan2(Math.sin(d),Math.cos(d));return a+d*k};
-function collide(x,z,r){
+function collide(x,z,r,space=worldSpace){
+  if(space==='listening')return listeningCollide(x,z,r);
   const d=Math.hypot(x,z);if(d>WORLD_R){x*=WORLD_R/d;z*=WORLD_R/d}
   for(const o of obstacles){const dx=x-o.x,dz=z-o.z,dd=Math.hypot(dx,dz),min=o.r+r;if(dd<min&&dd>1e-4){x=o.x+dx/dd*min;z=o.z+dz/dd*min}}
   if(lakeIn(x,z,.4)){const s=lakeS(x,z),q=lakeQ(x,z);
@@ -1970,7 +2202,7 @@ function updateDog(D,ox,oz,oh,ownerPose,ownerMoving,dt,t){
   const tx=ox-Math.cos(oh)*1.0-Math.sin(oh)*back,tz=oz+Math.sin(oh)*1.0-Math.cos(oh)*back;
   const dx=tx-D.g.position.x,dz=tz-D.g.position.z,dd=Math.hypot(dx,dz);
   let dm=0;
-  if(dd>.3){const v=Math.min(dd*2.4,5)*dt;const[x,z]=collide(D.g.position.x+dx/dd*v,D.g.position.z+dz/dd*v,D.kind==='cat'?.26:.35);D.g.position.x=x;D.g.position.z=z;D.g.position.y=groundY(x,z);dm=v;
+  if(dd>.3){const v=Math.min(dd*2.4,5)*dt;const[x,z]=collide(D.g.position.x+dx/dd*v,D.g.position.z+dz/dd*v,D.kind==='cat'?.26:.35,D.g.userData.space||'garden');D.g.position.x=x;D.g.position.z=z;D.g.position.y=groundY(x,z,D.g.userData.space||'garden');dm=v;
     D.g.rotation.y=angLerp(D.g.rotation.y,Math.atan2(dx,dz),Math.min(1,dt*6))}
   else D.g.rotation.y=angLerp(D.g.rotation.y,resting?oh:Math.atan2(ox-D.g.position.x,oz-D.g.position.z),Math.min(1,dt*3));
   if(dm>0)D.walk+=dm*9;
@@ -2013,7 +2245,7 @@ function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 
 refreshMine();
 let pose='stand',sendDirty=true;
 function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',prone:'pProne',coffee:'pCoffee',beer:'pBeer',standing_pray:'standingPrayBtn',pray2:'pray2Btn',shake:'shakeBtn'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k));if(typeof markActionCategories==='function')markActionCategories()}
-function setPose(p){const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;pendingStoke=false;
+function setPose(p){if(worldSpace==='listening'&&p==='sit'){sitListening();return}const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;pendingStoke=false;
   if(pose==='sit')sitNearest();
   syncPoseButtons();sendDirty=true;closePoseMenu()}
 let pendingStoke=false,fuelTimer=0,pendingFireAction='stoke';
@@ -2034,7 +2266,7 @@ $('umbrellaOnBtn').onclick=()=>setMyUmbrella(true);$('umbrellaOffBtn').onclick=(
 function sitNearest(){
   const seats=[];if(CENTERPIECE==='campfire')FIRE_SEATS.forEach(sp=>seats.push({x:sp.x,z:sp.z,h:Math.atan2(-sp.x,-sp.z),fire:true}));
   CHAIR_SEATS.forEach(sp=>seats.push({x:sp.x,z:sp.z,h:sp.h}));
-  const px=me.g.position.x,pz=me.g.position.z,taken=sp=>[...peers.values()].some(e=>Math.hypot(e.x-sp.x,e.z-sp.z)<.4);
+  const px=me.g.position.x,pz=me.g.position.z,taken=sp=>[...peers.values()].some(e=>(e.space||'garden')==='garden'&&Math.hypot(e.x-sp.x,e.z-sp.z)<.4);
   let best=null,bd=Infinity;seats.forEach(sp=>{const d=Math.hypot(sp.x-px,sp.z-pz);if(!taken(sp)&&d<bd){bd=d;best=sp}});
   if(!best||bd>18)return;
   move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
@@ -2043,7 +2275,8 @@ function sitNearest(){
   cam.yaw=best.h+Math.PI;cam.pitch=best.fire?.22:.08;cam.dist=best.fire?7.5:4.6;
 }
 function sitAtFire(){
-  const taken=i=>[...peers.values()].some(e=>Math.hypot(e.x-FIRE_SEATS[i].x,e.z-FIRE_SEATS[i].z)<.4);
+  if(worldSpace==='listening'){sitListening();return}
+  const taken=i=>[...peers.values()].some(e=>(e.space||'garden')==='garden'&&Math.hypot(e.x-FIRE_SEATS[i].x,e.z-FIRE_SEATS[i].z)<.4);
   let best=-1,bd=Infinity;FIRE_SEATS.forEach((sp,i)=>{const d=Math.hypot(sp.x-me.g.position.x,sp.z-me.g.position.z);if(!taken(i)&&d<bd){bd=d;best=i}});
   if(best<0){toast('모닥불 자리가 가득 찼어요');return}
   const sp=FIRE_SEATS[best];move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
@@ -2085,6 +2318,7 @@ function syncStandingPrayerBubble(key,P,state,name){
 /* ---------- input ---------- */
 const cam={yaw:0,pitch:.25,dist:11.5,sky:false,skyPitch:.74,skyFov:75};
 function setSkyView(open,fromHistory=false){
+  if(open&&worldSpace==='listening'){toast('음악방에서 나가면 밤하늘을 볼 수 있어요');return}
   if(open===cam.sky)return;
   if(open){cam.gardenYaw=cam.yaw;cam.yaw=Math.atan2(120,200);cam.skyPitch=.74}
   else if(Number.isFinite(cam.gardenYaw))cam.yaw=cam.gardenYaw;
@@ -2102,7 +2336,7 @@ function setSkyView(open,fromHistory=false){
 $('skyViewBtn').onclick=()=>setSkyView(true);
 $('skyReturn').onclick=()=>setSkyView(false);
 const keys={};
-addEventListener('keydown',e=>{if(!$('welcome').hidden||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;keys[e.code]=true});
+addEventListener('keydown',e=>{if(!$('welcome').hidden||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('listeningAudio').open||e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;keys[e.code]=true});
 addEventListener('keyup',e=>keys[e.code]=false);
 let move={x:0,y:0},target=null;
 const joy=$('joy'),knob=$('knob');let joyId=null;
@@ -2125,7 +2359,8 @@ marker.rotation.x=-Math.PI/2;marker.visible=false;scene.add(marker);
 function lookEnd(e){const p=looks.get(e.pointerId);looks.delete(e.pointerId);if(!p||e.type==='pointercancel'||cam.sky)return;
   if(!p.moved&&performance.now()-p.t<400){
     ray.setFromCamera({x:e.clientX/innerWidth*2-1,y:-(e.clientY/innerHeight)*2+1},camera);
-    if(hasEntered&&ray.intersectObject(bulletinGroup,true).length){gardenBoard.open();return}
+    if(worldSpace==='listening'){if(listening.exitDoor&&ray.intersectObject(listening.exitDoor).length){exitListening();return}if(listening.audioTargets&&ray.intersectObjects(listening.audioTargets,true).length){openListeningAudio();return}for(let i=0;i<listening.chairs.length;i++){if(ray.intersectObject(listening.chairs[i],true).length){sitListening(i);return}}}else if(hasEntered&&listeningDoor&&ray.intersectObject(listeningDoor).length&&nearListeningDoor(me.g.position.x,me.g.position.z)){enterListening();return}
+    if(worldSpace==='garden'&&hasEntered&&ray.intersectObject(bulletinGroup,true).length){gardenBoard.open();return}
     if(ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.position.set(x,.04,z);marker.visible=true}}}
 canvas.addEventListener('pointerup',lookEnd);canvas.addEventListener('pointercancel',lookEnd);
 canvas.addEventListener('wheel',e=>{e.preventDefault();if(cam.sky){cam.skyFov=Math.max(45,Math.min(95,cam.skyFov+e.deltaY*.025));resize()}else cam.dist=Math.max(2.5,Math.min(12,cam.dist+e.deltaY*.005))},{passive:false});
@@ -2135,7 +2370,7 @@ let room=null,userNS=null,db=null,assets=null,myId=null;
 const peers=new Map();
 let pendingHello=[],userMoved=false,autoJoined=false;
 function goToFriend(auto){
-  let best=null,bd=1e9;for(const e of peers.values()){const d=Math.hypot(e.x-me.g.position.x,e.z-me.g.position.z);if(d<bd){bd=d;best=e}}
+  let best=null,bd=1e9;for(const e of peers.values()){if((e.space||'garden')!==worldSpace)continue;const d=Math.hypot(e.x-me.g.position.x,e.z-me.g.position.z);if(d<bd){bd=d;best=e}}
   if(!best)return;
   const a=Math.random()*Math.PI*2;const[x,z]=collide(best.x+Math.cos(a)*1.8,best.z+Math.sin(a)*1.8,.4);
   me.g.position.set(x,0,z);me.g.rotation.y=Math.atan2(best.x-x,best.z-z);
@@ -2146,11 +2381,11 @@ function goToFriend(auto){
 const lastSent={};
 function sendPresence(){
   if(!room)return;const p=me.g.position;
-  const patch={x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,u:myUmbrella,look:myLook,dog:myDog,uid:myId,nick:myNick||null};
+  const patch={space:worldSpace,x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,u:myUmbrella,look:myLook,dog:myDog,uid:myId,nick:myNick||null};
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
-function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);disposeBubble(k,keepMessage);scene.remove(e.P.g);scene.remove(e.D.g);peers.delete(k)}
+function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.g.parent?.remove(e.D.g);peers.delete(k)}
 function onPeerList(change){
   const seen=new Set();
   for(const pr of change.peers){
@@ -2167,6 +2402,7 @@ function onPeerList(change){
       e={P,D,key,x:s.x,z:s.z,h:0,pose:'stand',by:pr.by||(typeof s.uid==='string'?s.uid:null),dog:dog};
       peers.set(pr.peer,e);if(!known&&!pr.quiet)pendingHello.push(pr.peer);
     }
+    const nextSpace=s.space==='listening'?'listening':'garden';if(e.space!==undefined&&e.space!==nextSpace){e.P.g.position.set(s.x,0,s.z);e.D.g.position.set(s.x+.8,0,s.z)}e.space=nextSpace;
     e.x=Math.max(-WORLD_R,Math.min(WORLD_R,s.x));e.z=Math.max(-WORLD_R,Math.min(WORLD_R,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
     e.nick=typeof s.nick==='string'?stripInvisible(s.nick).slice(0,12):'';e.away=!!s.away;e.umbrella=s.u===true;
     if(s.say&&typeof s.say.text==='string'&&Number.isFinite(s.say.at))rememberLastMessage(pr.peer,e.nick||e.nm||'친구',s.say.text,s.say.at);
@@ -2175,17 +2411,17 @@ function onPeerList(change){
   }
   for(const k of[...peers.keys()])if(!seen.has(k))removePeer(k);
   if(practice.mode==='idle'&&!userMoved&&!autoJoined&&peers.size){autoJoined=true;goToFriend(true)}
-  updateWho();resolveNames();
+  syncListeningActors();updateWho();resolveNames();
 }
 function updateWho(){
   const n=peers.size,connected=room&&room.connected();
-  $('goBtn').hidden=!connected||n===0;
+  $('goBtn').hidden=!connected||![...peers.values()].some(e=>(e.space||'garden')===worldSpace);
   $('leaveBtn').hidden=!hasEntered;syncChatDock();
   $('whoText').textContent=!hasEntered?'이름을 확인하고 들어와 주세요':!room?'지금은 혼자 산책 중이에요':!connected?room.status():n===0?'지금은 나 혼자예요 · 친구를 불러 보세요':'지금 '+(n+1)+'명이 함께 있어요';
   $('dot').classList.toggle('off',!connected);renderVisitors();
 }
 function renderVisitors(){
-  const names=[...(hasEntered?[shownName()==='나'?'나':shownName()+' (나)']:[]),...[...peers.values()].map(p=>(p.nick||p.nm||'친구')+(p.away?' · 잠시 자리 비움':''))];
+  const names=[...(hasEntered?[shownName()==='나'?'나':shownName()+' (나)']:[]),...[...peers.values()].map(p=>(p.nick||p.nm||'친구')+(p.space==='listening'?' · 음악방':'')+(p.away?' · 잠시 자리 비움':''))];
   const key=JSON.stringify(names);if(renderVisitors.key===key)return;renderVisitors.key=key;
   const list=$('visitorNames');list.textContent='';
   for(const name of names){const item=document.createElement('span');item.textContent=name;list.appendChild(item)}
@@ -2210,9 +2446,9 @@ if(document.fonts)document.fonts.ready.then(()=>{refreshMine();resolveNames()});
 
 function applyMyLook(look,dog,save){
   const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
-  disposeUmbrella(me);scene.remove(me.g);scene.remove(myDogObj.g);
+  disposeUmbrella(me);me.g.parent?.remove(me.g);myDogObj.g.parent?.remove(myDogObj.g);
   myLook=look;myDog=dog;me=makePerson(myLook);myDogObj=makeDog(myDog);
-  me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);refreshMine();restoreLastBubble('me',shownName());
+  me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);syncListeningActors();refreshMine();restoreLastBubble('me',shownName());
   store.set('mem.look',JSON.stringify(myLook));savePetPreference(myDog);store.set('garden.pet',petKind(myDog));
   if(save&&db&&myId)db.doc('data/users/'+myId+'/garden').set({look:myLook,dog:myDog}).catch(()=>{});
   sendDirty=true;
@@ -2403,7 +2639,7 @@ function ambBird(t,lv){
   }
 }
 function ambUpdate(){
-  if(!skyMusic.ac)return;ambInit();const ac=amb.ac,now=ac.currentTime,x=me.g.position.x,z=me.g.position.z;
+  if(worldSpace==='listening'||!skyMusic.ac)return;ambInit();const ac=amb.ac,now=ac.currentTime,x=me.g.position.x,z=me.g.position.z;
   const set=(k,v)=>amb.g[k].gain.setTargetAtTime(v,now,.6);
   const near=(d,R)=>{const k=Math.max(0,1-d/R);return k*k};
   const dF=Math.hypot(x-FALLS.x,z-FALLS.z),dS=streamDist(x,z),dL=Math.max(0,Math.hypot(x-LAKE.x,z-LAKE.z)-lakeR(Math.atan2(z-LAKE.z,x-LAKE.x)));
@@ -2420,7 +2656,7 @@ function ambUpdate(){
 }
 function skySchedule(){
   if(skyMusic.on&&!visitEnded&&hasEntered&&!document.hidden){try{ambUpdate()}catch(e){}}
-  if(!skyMusic.on||visitEnded||!hasEntered||document.hidden||music.track)return;
+  if(worldSpace==='listening'||!skyMusic.on||visitEnded||!hasEntered||document.hidden||music.track)return;
   bgmUpdateScene();skyMusic.dest=bgmGain(bgm.scene);
   if(bgm.scene!=='sky'){bgmRun(bgm.scene);if(skyMusic.seen.size>400)skyMusic.seen=new Set([...skyMusic.seen].slice(-120));return}
   const ac=skyMusic.ac,now=serverNow()/1000,ahead=2.5;
@@ -2439,13 +2675,13 @@ function setSkyMusic(on){
   if(on&&!skyInit()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
   skyMusic.on=on;skyMusic.want=on;store.set('garden.music',on?'1':'0');$('soundToggle').setAttribute('aria-pressed',String(on));$('soundToggle').textContent='♪';$('soundToggle').setAttribute('aria-label',on?'배경음 끄기':'배경음 켜기');$('soundToggle').title=on?'배경음 끄기':'배경음 켜기';
   if(!skyMusic.ac)return;const ac=skyMusic.ac;
-  if(on){ac.resume().catch(()=>{});skyMusic.master.gain.cancelScheduledValues(ac.currentTime);skyMusic.master.gain.setTargetAtTime(music.track?0:.9,ac.currentTime,.8);clearInterval(skyMusic.timer);skyMusic.timer=setInterval(skySchedule,400);skySchedule()}
+  if(on){ac.resume().catch(()=>{});skyMusic.master.gain.cancelScheduledValues(ac.currentTime);skyMusic.master.gain.setTargetAtTime(worldSpace==='listening'||music.track?0:.9,ac.currentTime,.8);clearInterval(skyMusic.timer);skyMusic.timer=setInterval(skySchedule,400);skySchedule()}
   else{skyMusic.master.gain.setTargetAtTime(0,ac.currentTime,.3);clearInterval(skyMusic.timer)}
   try{renderMusicUI()}catch(e){}
 }
-$('soundToggle').onclick=e=>{e.stopPropagation();setSkyMusic(!skyMusic.on)};
+$('soundToggle').onclick=e=>{e.stopPropagation();if(worldSpace==='listening'){$('listeningMute').click();return}setSkyMusic(!skyMusic.on)};
 // 브라우저는 사용자가 한 번 누르기 전에는 소리를 막는다. 첫 터치·클릭·키 입력에 맞춰 켠다.
-function skyFirstGesture(){if(!visitEnded&&hasEntered&&skyMusic.want&&!skyMusic.on)setSkyMusic(true)}
+function skyFirstGesture(){if(worldSpace==='listening'){if(!listening.muted&&!visitEnded&&hasEntered){ensureListeningAudio();syncListeningSound()}return}if(!visitEnded&&hasEntered&&skyMusic.want&&!skyMusic.on)setSkyMusic(true)}
 addEventListener('pointerdown',skyFirstGesture,true);addEventListener('keydown',skyFirstGesture,true);
 document.addEventListener('visibilitychange',()=>{
   if(!skyMusic.ac)return;
@@ -2453,7 +2689,7 @@ document.addEventListener('visibilitychange',()=>{
   else if(skyMusic.on&&!visitEnded&&hasEntered){skyMusic.ac.resume().catch(()=>{});skyMusic.seen.clear()}
 });
 function syncSkyMusicOutput(){
-  if(skyMusic.ac){skyMusic.master.gain.setTargetAtTime(skyMusic.on&&!music.track&&!visitEnded&&hasEntered?.9:0,skyMusic.ac.currentTime,.3);skyMusic.seen.clear()}
+  if(skyMusic.ac){skyMusic.master.gain.setTargetAtTime(worldSpace==='garden'&&skyMusic.on&&!music.track&&!visitEnded&&hasEntered?.9:0,skyMusic.ac.currentTime,.3);skyMusic.seen.clear()}
 }
 function silenceSkyMusic(){
   skyMusic.on=false;clearInterval(skyMusic.timer);skyMusic.timer=0;skyMusic.seen.clear();
@@ -2528,7 +2764,7 @@ function startBed(id){
     n.connect(lp);lp.connect(g);g.connect(master);n.start(t);l.start(t);bed.push(g,n,l)}
 }
 function schedule(){
-  if(visitEnded||!hasEntered||!AC||!audioOn||!music.track||!VOICES[music.track])return;
+  if(worldSpace==='listening'||visitEnded||!hasEntered||document.hidden||!AC||!audioOn||!music.track||!VOICES[music.track])return;
   const ti=TRACKS.findIndex(x=>x.id===music.track),pos=(serverNow()-music.startedAt)/1000,ahead=1.2;
   VOICES[music.track].forEach((v,vi)=>{
     for(let k=Math.max(0,Math.floor(pos/v.p));k<=Math.floor((pos+ahead)/v.p);k++){
@@ -2544,17 +2780,18 @@ function setAudioOn(on){
   if(on&&!initAudio()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
   audioOn=on;if(AC){if(on)AC.resume();master.gain.setTargetAtTime(on&&music.track!=='banya'?vol:0,AC.currentTime,.3);
     stopBed();sched.clear();if(on&&music.track)startBed(music.track)}
-  renderMusicUI();
+  if(worldSpace==='listening')syncListeningSound();renderMusicUI();
 }
 function applyMusic(m){
   const changed=m.track!==music.track||m.startedAt!==music.startedAt||m.videoId!==music.videoId;music=m;
   if(changed){if(m.track==='banya')showYouTube();else closeYouTube()}
   if(AC)master.gain.setTargetAtTime(audioOn&&music.track!=='banya'?vol:0,AC.currentTime,.2);
   if(changed&&AC&&audioOn){stopBed();sched.clear();if(music.track)startBed(music.track)}
-  syncSkyMusicOutput();renderMusicUI();
+  syncSkyMusicOutput();if(worldSpace==='listening')syncListeningSound();renderMusicUI();
 }
 let canPickMusic=true;
 function renderMusicUI(){
+  if(worldSpace==='listening'){renderListeningUI();return}
   const tr=TRACKS.find(x=>x.id===music.track);
   const bgmLabel=!tr&&skyMusic.on&&bgm.scene?BGM_NAMES[bgm.scene]:'';
   $('nowPlaying').hidden=!tr&&!bgmLabel;$('nowPlaying').textContent=tr?`♪ 함께 듣는 중 · ${tr.name}`:bgmLabel?`♪ 배경음 · ${bgmLabel}`:'';
@@ -2579,6 +2816,7 @@ async function pickTrack(id,videoId){
 }
 function closeYouTube(){ $('youtubeMount').textContent='';$('youtubeCard').hidden=true }
 function showYouTube(){
+  if(worldSpace==='listening')return;
   const id=validVideoId(music.videoId)?music.videoId:DEFAULT_BANYA_VIDEO;
   const frame=document.createElement('iframe');frame.title='반야심경 · YouTube';
   frame.src='https://www.youtube.com/embed/'+id+'?playsinline=1&loop=1&playlist='+id+'&rel=0';
@@ -2610,12 +2848,13 @@ function setMusicExpanded(open){
   if(open)closeOtherMenus('music');
   $('musicPanel').hidden=!open;$('musicBtn').setAttribute('aria-expanded',String(open));syncMenuSections();
 }
-$('musicBtn').onclick=()=>setMusicExpanded($('musicPanel').hidden);
+$('musicBtn').onclick=()=>worldSpace==='listening'?openListeningAudio():setMusicExpanded($('musicPanel').hidden);
 $('vol').oninput=e=>{vol=e.target.value/100;if(AC&&audioOn&&music.track!=='banya')master.gain.setTargetAtTime(vol,AC.currentTime,.1)};
 renderMusicUI();
 
 
 function silenceMusicOnExit(){
+  silenceListeningNotes();if(listening.audio){listening.audio.ac.close().catch(()=>{});listening.audio=null}
   setAudioOn(false);closeYouTube();
   if(musicScheduleTimer){clearInterval(musicScheduleTimer);musicScheduleTimer=null}
   const previous=AC;AC=null;master=null;bus=null;noiseBuf=null;bed=[];sched.clear();
@@ -2626,6 +2865,7 @@ function silenceMusicOnExit(){
 /* ---------- folding menus: closed by default so the garden stays visible on phones ---------- */
 /* All expandable controls share one open menu. */
 function closeOtherMenus(keep){
+  if(keep!=='listening'&&$('listeningAudio').open)$('listeningAudio').close();
   if(keep!=='board'&&gardenBoard.isOpen())gardenBoard.close();
   if(keep!=='poses')closePoseMenu();
   if(keep!=='history')toggleChatHistory(false,false);
@@ -3415,7 +3655,7 @@ function setOrderPage(drink){$('orderFood').hidden=drink;$('orderDrink').hidden=
 $('orderTabFood').onclick=()=>setOrderPage(false);$('orderTabDrink').onclick=()=>setOrderPage(true);$('orderFlip').onclick=()=>setOrderPage($('orderDrink').hidden);
 $('dOrder').onclick=()=>toggleOrderMenu($('orderPanel').hidden);$('orderClose').onclick=()=>toggleOrderMenu(false);$('dClear').onclick=clearMySeat;
 function enterPocha(){
-  const taken=sp=>[...peers.values()].some(e=>Math.hypot(e.x-sp.x,e.z-sp.z)<.3);
+  const taken=sp=>[...peers.values()].some(e=>(e.space||'garden')==='garden'&&Math.hypot(e.x-sp.x,e.z-sp.z)<.3);
   const free=STOOLS.filter(sp=>!taken(sp));if(!free.length){toast('포차 자리가 가득 찼어요');return}
   const px=me.g.position.x,pz=me.g.position.z;free.sort((a,b)=>Math.hypot(a.x-px,a.z-pz)-Math.hypot(b.x-px,b.z-pz));const sp=free[0];
   endPractice(false);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
@@ -3457,6 +3697,8 @@ let ctxTick=0;
 function updateContext(dt){
   ctxTick+=dt;if(ctxTick<.25)return;ctxTick=0;syncTableBar();
   const b=$('ctxBtn'),x=me.g.position.x,z=me.g.position.z;
+  if(worldSpace==='listening'){b.hidden=true;return}
+  if(hasEntered&&nearListeningDoor(x,z)){b.textContent='음악방 들어가기';b.dataset.act='listening';b.hidden=false;return}
   if(inPocha()){b.textContent='포차 나오기';b.dataset.act='leave';b.hidden=false;return}
   if(seatedNow()){b.textContent='일어나기';b.dataset.act='up';b.hidden=false;return}
   if(pose!=='stand'&&pose!=='wave'){b.hidden=true;return}
@@ -3470,7 +3712,7 @@ function updateContext(dt){
 }
 $('ctxBtn').onclick=()=>{
   closePoseMenu();
-  const act=$('ctxBtn').dataset.act;if(act==='board'){gardenBoard.open();return}
+  const act=$('ctxBtn').dataset.act;if(act==='listening'){enterListening();return}if(act==='board'){gardenBoard.open();return}
   if(act==='firefly'||act==='nap'||act==='meditate'){if(act==='firefly')catchFirefly();else startCalm(act);ctxTick=1;updateContext(0);return}if(act==='enter'){enterPocha();ctxTick=1;updateContext(0);return}if(act==='leave'){leavePocha();ctxTick=1;updateContext(0);return}
   if(act==='up'){const sp=me.g.position,h=me.g.rotation.y;pose='stand';const [x,z]=collide(sp.x-Math.sin(h)*.8,sp.z-Math.cos(h)*.8,.4);me.g.position.x=x;me.g.position.z=z;sendDirty=true;syncPoseButtons()}
   else setPose('sit');
@@ -3752,7 +3994,7 @@ function rpsText(id,text){if($(id).textContent!==text)$(id).textContent=text}
 function nearestRpsPeer(){
   let nearest=null,distance=RPS_NEAR;
   for(const [id,peer] of peers){
-    if(peer.away)continue;
+    if(peer.away||(peer.space||'garden')!==worldSpace)continue;
     const d=Math.hypot(peer.x-me.g.position.x,peer.z-me.g.position.z);
     if(d<=distance){distance=d;nearest={id,name:peer.nick||peer.nm||'친구'}}
   }
@@ -3818,7 +4060,7 @@ function renderRps(){
   $('rpsCancel').hidden=!(playing||invited&&game.inviter);$('rpsCancel').disabled=!connected||!!rpsPending;
   rpsText('rpsCancel',playing?'게임 취소':'신청 취소');
   $('rpsRematch').hidden=!result;
-  const other=peers.get(game.opponent.id),near=other&&Math.hypot(other.x-me.g.position.x,other.z-me.g.position.z)<=RPS_NEAR;
+  const other=peers.get(game.opponent.id),near=other&&(other.space||'garden')===worldSpace&&Math.hypot(other.x-me.g.position.x,other.z-me.g.position.z)<=RPS_NEAR;
   $('rpsRematch').disabled=!connected||!!rpsPending||!near;$('rpsClose').hidden=!ended;
 }
 function dismissRps(){
@@ -3860,7 +4102,7 @@ function clearVisit(){try{sessionStorage.removeItem(VISIT_KEY)}catch(e){}}
 function saveVisit(){
   if(visitEnded||readExitFlag()||!hasEntered||!visitToken)return false;
   const p=me.g.position,message=lastMessages.get('me');
-  const snapshot={v:1,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
+  const snapshot={v:1,space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
     x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
     practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
@@ -3873,6 +4115,7 @@ function restoreVisit(){
   store.set('garden.name',myNick);
   if(typeof saved.umbrella==='boolean'){myUmbrella=saved.umbrella;store.set('garden.umbrella',myUmbrella?'1':'0')}syncUmbrellaButtons();
   if(validLook(saved.look)&&validDog(saved.dog))applyMyLook(saved.look,saved.dog,false);
+  if(saved.space==='listening')enterListening(true,saved);
   if(Number.isFinite(saved.x)&&Number.isFinite(saved.z)){
     const pos=collide(saved.x,saved.z,.4);me.g.position.set(pos[0],0,pos[1]);
   }
@@ -3926,6 +4169,7 @@ function showExitScreen(){
   if(animationFrameId!==null){cancelAnimationFrame(animationFrameId);animationFrameId=null}
 }
 function leaveGarden(closeWindow=true,notifyServer=true){
+  if(worldSpace==='listening')exitListening(true);
   gardenBoard.close(true);if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
   clearVisit();visitToken='';
@@ -3961,11 +4205,12 @@ document.addEventListener('freeze',saveVisit);
 function installGardenHistory(){
   if(visitEnded||historyReady)return;
   const saved=history.state&&history.state.gardenView,wasSky=cam.sky;
-  if(saved!=='garden'&&saved!=='sky'){
+  if(saved!=='garden'&&saved!=='sky'&&saved!=='listening'){
     history.replaceState({gardenView:'base'},'',location.href);
     history.pushState({gardenView:'garden'},'',location.href);
   }
   historyReady=true;
+  if(worldSpace==='listening'&&history.state?.gardenView!=='listening')history.pushState({gardenView:'listening'},'',location.href);
   if(wasSky&&history.state?.gardenView!=='sky')history.pushState({gardenView:'sky'},'',location.href);
 }
 function showLeaveConfirm(){
@@ -3978,7 +4223,10 @@ $('leaveConfirm').addEventListener('keydown',event=>{if(event.key==='Escape')can
 addEventListener('popstate',event=>{
   if(visitEnded||readExitFlag())return;
   const view=event.state&&event.state.gardenView;
-  if($('qualityDialog').open){$('qualityDialog').close();if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
+  if($('qualityDialog').open){$('qualityDialog').close();if(worldSpace==='listening')history.pushState({gardenView:'listening'},'',location.href);else if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
+  if($('listeningAudio').open){$('listeningAudio').close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
+  if(view==='listening'){enterListening(true);return}
+  if(worldSpace==='listening'){exitListening(true);if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if(gardenBoard.isOpen()){gardenBoard.close(true);if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if(view==='board'){gardenBoard.open(true);return}
   if(view==='sky'){if(!cam.sky)setSkyView(true,true);return}
@@ -4008,7 +4256,7 @@ function startGardenConnection(){
   try{history.replaceState(history.state,'',current.pathname+current.search+current.hash)}catch(e){}
   const base=(location.protocol==='https:'?'wss://':'ws://')+location.host;
   room=connectRoomServer(base,GARDEN_SPACE);
-  room.onPeers(onPeerList);room.onConnection(()=>{updateWho();renderRps();updateRpsInvite()});
+  room.onPeers(onPeerList);room.onConnection(()=>{updateWho();renderRps();updateRpsInvite();renderListeningUI()});
   updateWho();
 }
 function connectRoomServer(base,code){
@@ -4020,7 +4268,7 @@ function connectRoomServer(base,code){
     send(o){if(!stop&&ws&&ws.readyState===1){try{ws.send(JSON.stringify(o));return true}catch(e){}}return false},
     onPeers(fn){peerL.push(fn)},onConnection(fn){connL.push(fn);fn(connected)},
     presence(patch){Object.assign(local,patch);
-      const st={x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp,u:local.u===true},k=JSON.stringify(st);
+      const st={space:local.space==='listening'?'listening':'garden',x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp,u:local.u===true},k=JSON.stringify(st);
       if(k!==sentState&&Number.isFinite(st.x)&&connected&&api.send({t:'state',s:st}))sentState=k;
       if(connected&&('look' in patch||'dog' in patch||'nick' in patch))api.profile();
       return Promise.resolve()},
@@ -4066,7 +4314,7 @@ function connectRoomServer(base,code){
     let socket;try{socket=new WebSocket(base+'/room/'+code);ws=socket}catch(e){disconnected('친구 연결을 다시 시도하는 중…');return}
     handshakeTimer=setTimeout(()=>{if(ws===socket&&!connected)disconnected('친구 연결이 지연되고 있어요 · 다시 시도하는 중…')},12000);
     socket.onopen=()=>{if(stop||visitEnded||!hasEntered||ws!==socket)return;const p=me.g.position;lastReceived=Date.now();
-      api.send({t:'hello',resumeToken:visitToken,away:document.hidden,name:myNick,look:myLook,dog:myDog,s:{x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0,u:myUmbrella}});
+      api.send({t:'hello',resumeToken:visitToken,away:document.hidden,name:myNick,look:myLook,dog:myDog,s:{space:worldSpace,x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0,u:myUmbrella}});
       clearInterval(pingTimer);pingTimer=setInterval(()=>{
         if(Date.now()-lastReceived>60000){disconnected('연결이 끊어졌어요 · 다시 연결하는 중…');return}
         api.send({t:'ping',c:Date.now()});
@@ -4074,8 +4322,10 @@ function connectRoomServer(base,code){
     socket.onmessage=ev=>{if(stop||visitEnded||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;
-          api.selfId=you;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
+          api.selfId=you;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
+        case 'listening_audio':applyListeningState(m.audio);break;
+        case 'listening_error':toast(m.code==='space'?'음악방 안에서 오디오를 조작해 주세요.':m.code==='storage'?'저장을 확인하지 못했어요. 다시 눌러 주세요.':'잠시 후 다시 눌러 주세요.');break;
         case 'rps_state':applyRps(m.game);break;
         case 'rps_error':{
           rpsPending=null;
@@ -4182,6 +4432,7 @@ function layoutBubbles(dt){
   const gapX=16/Math.max(1,innerWidth),gapY=16/Math.max(1,innerHeight);
   for(const b of bubbles.values()){
     if(!b.parent||!b.parent.parent||!b.userData.tag)continue;
+    if((b.parent.userData.space||'garden')!==worldSpace){b.visible=false;continue}
     const g=b.parent,headY=b.userData.tag.position.y+.15;
     _bv.set(g.position.x,g.position.y+headY,g.position.z).applyMatrix4(camera.matrixWorldInverse);
     const depth=-_bv.z,dist=_bv.length();
@@ -4231,10 +4482,9 @@ function layoutBubbles(dt){
 
 
 /* ---------- handshake: walk up to the nearest friend, face each other and shake ---------- */
-let pendingShake=null,shakeTimer=0;
 function nearestFriend(maxD){
   let best=null,bd=maxD;
-  for(const [id,e] of peers){if(e.away)continue;const d=Math.hypot(e.x-me.g.position.x,e.z-me.g.position.z);if(d<bd){bd=d;best={id,e,d}}}
+  for(const [id,e] of peers){if(e.away||(e.space||'garden')!==worldSpace)continue;const d=Math.hypot(e.x-me.g.position.x,e.z-me.g.position.z);if(d<bd){bd=d;best={id,e,d}}}
   return best;
 }
 function startShake(){
@@ -4292,7 +4542,7 @@ function tick(){
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
-  if(cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
+  if(cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('listeningAudio').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
   if(mag>0&&pose!=='stand'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
@@ -4301,9 +4551,9 @@ function tick(){
   me.speed+=(moved-me.speed)*Math.min(1,dt*10);
   updatePractice(dt);
   posePerson(me,pose,dt,t);
-  updateEnvironment(dt,t);updateWaterworks(dt,t);
-  updateCampfire(dt);updateBonfire(dt,t);updateContext(dt);updateOwner(dt,t);updateRps(dt);
-  if(pendingStoke&&!target&&Math.hypot(me.g.position.x,me.g.position.z)<4)doStoke();
+  if(worldSpace==='garden'){updateEnvironment(dt,t);updateWaterworks(dt,t)}else updateUmbrellas();
+  if(worldSpace==='garden'){updateCampfire(dt);updateBonfire(dt,t);updateOwner(dt,t)}updateContext(dt);updateRps(dt);syncListeningActors();
+  if(worldSpace==='garden'&&pendingStoke&&!target&&Math.hypot(me.g.position.x,me.g.position.z)<4)doStoke();
   if(pendingShake&&!target){const e=peers.get(pendingShake);if(e&&Math.hypot(e.x-me.g.position.x,e.z-me.g.position.z)<2.6)doShake(pendingShake,true);else pendingShake=null}
   if(inPocha()){const st=STOOLS[mySeatIndex()],o=pochaLocal(st&&st.lx>0?3.7:-3.7,2.3);updateDog(myDogObj,o.x,o.z,POCHA.h,'sit',false,dt,t)}
   else updateDog(myDogObj,me.g.position.x,me.g.position.z,me.g.rotation.y,pose,me.speed>.3,dt,t);
@@ -4316,13 +4566,15 @@ function tick(){
     const sp=Math.hypot(P.g.position.x-px,P.g.position.z-pz)/Math.max(dt,1e-4);
     P.speed+=(Math.min(sp,4)-P.speed)*Math.min(1,dt*8);
     posePerson(P,e.pose,dt,t);
-    {const si=seatAt(P.g.position.x,P.g.position.z);if(si>=200&&P.speed<.3){const o=pochaLocal(STOOLS[si-200].lx>0?3.7:-3.7,2.3+((si-200)%4)*.5);updateDog(e.D,o.x,o.z,POCHA.h,'sit',false,dt,t)}else updateDog(e.D,P.g.position.x,P.g.position.z,P.g.rotation.y,e.pose,P.speed>.3,dt,t)}
+    {const si=seatAt(P.g.position.x,P.g.position.z,e.space||'garden');if(si>=200&&P.speed<.3){const o=pochaLocal(STOOLS[si-200].lx>0?3.7:-3.7,2.3+((si-200)%4)*.5);updateDog(e.D,o.x,o.z,POCHA.h,'sit',false,dt,t)}else updateDog(e.D,P.g.position.x,P.g.position.z,P.g.rotation.y,e.pose,P.speed>.3,dt,t)}
   }
 
   syncStandingPrayerBubble('me',me,pose,shownName());
   for(const [id,peer] of peers)syncStandingPrayerBubble(id,peer.P,peer.pose,peer.nick||peer.nm||'친구');
   const ax=me.g.position.x,az=me.g.position.z,cp=Math.cos(cam.pitch);
-  if(cam.sky){
+  if(worldSpace==='listening'){
+    camera.position.set(THREE.MathUtils.clamp(ax+sy*cam.dist*cp,-5.8,5.8),Math.min(4.25,1.65+Math.sin(cam.pitch)*cam.dist),THREE.MathUtils.clamp(az+cy*cam.dist*cp,-5.2,6.5));camera.lookAt(ax,1.5,az);
+  }else if(cam.sky){
     const elevation=cam.skyPitch;
     camera.position.set(ax,2.1,az);
     camera.lookAt(ax-sy*Math.cos(elevation)*100,2.1+Math.sin(elevation)*100,az-cy*Math.cos(elevation)*100);
@@ -4338,7 +4590,7 @@ function tick(){
     pg.attributes.position.needsUpdate=true}
   layoutBubbles(dt);windU.value=t;updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);
   if(!gardenBoard.isOpen()){
-    updateScenery();renderer.info.reset();renderer.render(scene,camera);
+    renderer.info.reset();if(worldSpace==='listening'){updateListening(dt,t);renderer.render(listening.scene,camera)}else{updateScenery();renderer.render(scene,camera)}
     sampleGardenFrame(frameStart,performance.now()-frameStart);
   }else resetQualitySampling();
   requestGardenFrame();
@@ -4348,5 +4600,6 @@ requestGardenFrame();
 </script>
 
 </body></html>
+
 
 

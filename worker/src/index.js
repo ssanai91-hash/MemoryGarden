@@ -8,6 +8,9 @@ const WORLD_R = 90;
 const MAX_PEERS = 16;
 const VISIT_AWAY_MS=5*60*1000,VISIT_MEMORY_MS=24*60*60*1000;
 const TRACKS=['dawn','wind','bowl','melody','banya'];
+const LISTENING_TRACKS=['bluehour','rainwood','starlight'];
+const spaceOf=s=>s&&s.space==='listening'?'listening':'garden';
+const sameSpace=(a,b)=>spaceOf(a)===spaceOf(b);
 const validVideo=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{11}$/.test(v);
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
 const BOARD_PAGE_SIZE=6,BOARD_MAX_NOTES=500,BOARD_MAX_TEXT=600;
@@ -32,7 +35,7 @@ const POCHA_STOOLS=Array.from({length:8},(_,i)=>{
 });
 const POCHA_DRINKS=['soju','beer','makgeolli','cider'];
 function pochaSeatFor(state){
-  if(!state||!['sit','coffee','beer','soda','soju','makgeolli','cheers'].includes(state.p))return -1;
+  if(!state||spaceOf(state)!=='garden'||!['sit','coffee','beer','soda','soju','makgeolli','cheers'].includes(state.p))return -1;
   return POCHA_STOOLS.findIndex(seat=>Math.hypot(seat.x-state.x,seat.z-state.z)<.25);
 }
 function trimPochaOrders(orders){
@@ -78,7 +81,8 @@ function cleanState(s) {
   if (!s || typeof s !== 'object') return null;
   const x = num(s.x, -WORLD_R, WORLD_R), z = num(s.z, -WORLD_R, WORLD_R);
   if (x === null || z === null) return null;
-  return { x, z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true };
+  const space=spaceOf(s);
+  return { space,x:space==='listening'?num(x,-5.6,5.6):x,z:space==='listening'?num(z,-3,5.3):z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true };
 }
 
 export class GardenRoom extends DurableObject {
@@ -92,6 +96,7 @@ export class GardenRoom extends DurableObject {
       };
       if (!Array.isArray(this.shared.pocha)) this.shared.pocha = [];
       if(!this.shared.music){this.shared.music={track:null,startedAt:0,videoId:null};await ctx.storage.put('shared',this.shared)}
+      this.listeningAudio=(await ctx.storage.get('listeningAudio'))||{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0};
       this.rps = (await ctx.storage.get('rpsGames')) || [];
       this.visits=(await ctx.storage.get('visits'))||{};
       // Preserve a pending alarm when waking from hibernation.
@@ -304,7 +309,7 @@ export class GardenRoom extends DurableObject {
     if (!game) return;
     const peers = this.readyPeers(), pair = game.players.map(player => peers.find(p => p.a.id === player));
     if (pair.some(p => !p)) return this.cancelRpsFor(id, 'disconnected');
-    if (Math.hypot(pair[0].a.s.x - pair[1].a.s.x, pair[0].a.s.z - pair[1].a.s.z) > RPS_BREAK_DISTANCE)
+    if (!sameSpace(pair[0].a.s,pair[1].a.s)||Math.hypot(pair[0].a.s.x - pair[1].a.s.x, pair[0].a.s.z - pair[1].a.s.z) > RPS_BREAK_DISTANCE)
       await this.cancelRpsFor(id, 'away');
   }
   async handleRps(ws, a, m) {
@@ -322,7 +327,7 @@ export class GardenRoom extends DurableObject {
       const other = this.readyPeers().find(p => p.a.id === m.peer);
       if (!other||other.a.away) { error('offline'); return; }
       if (this.rps.some(g => activeRps(g) && (g.players.includes(a.id) || g.players.includes(other.a.id)))) { error('busy'); return; }
-      if (Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > RPS_DISTANCE) { error('far'); return; }
+      if (!sameSpace(a.s,other.a.s)||Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > RPS_DISTANCE) { error('far'); return; }
       // Keep at most one completed match per player; a new invitation always takes priority.
       this.rps = this.rps.filter(g => !g.players.includes(a.id) && !g.players.includes(other.a.id));
       const game = { id: crypto.randomUUID(), players: [a.id, other.a.id], names: [a.name, other.a.name],
@@ -337,7 +342,7 @@ export class GardenRoom extends DurableObject {
       else {
         const other = this.readyPeers().find(p => p.a.id === game.players[0]);
         if (!other) this.finishRps(game, 'disconnected', now);
-        else if (Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > RPS_DISTANCE) this.finishRps(game, 'away', now);
+        else if (!sameSpace(a.s,other.a.s)||Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > RPS_DISTANCE) this.finishRps(game, 'away', now);
         else {
           game.status = 'playing';game.startAt = now + 800;game.deadline = game.startAt + 3000;game.expiresAt = game.deadline;
         }
@@ -402,7 +407,7 @@ export class GardenRoom extends DurableObject {
       for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
       if(ghosts.length)await this.saveVisits();
       const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', features:{board:1}, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1},listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }
@@ -460,6 +465,25 @@ export class GardenRoom extends DurableObject {
         this.broadcast({ t: 'flower', c, by: a.id });
         return;
       }
+      case 'listening_music': {
+        const error=code=>ws.send(JSON.stringify({t:'listening_error',code}));
+        if(spaceOf(a.s)!=='listening'){error('space');return}
+        if(!this.allow(a,'listening',2)){error('slow');return}
+        if(!['track','power'].includes(m.action)||m.action==='track'&&!LISTENING_TRACKS.includes(m.track)||m.action==='power'&&typeof m.power!=='boolean'){error('value');return}
+        try{
+          const next=await this.ctx.storage.transaction(async txn=>{
+            const prev=(await txn.get('listeningAudio'))||{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0},now=Date.now();
+            const position=Math.max(0,(prev.offsetMs||0)+(prev.power?now-prev.startedAt:0));
+            const sameTrack=m.action==='track'&&m.track===prev.track;
+            const value={track:m.action==='track'?m.track:prev.track,power:m.action==='track'?true:m.power,
+              offsetMs:m.action==='track'&&!sameTrack?0:position,startedAt:now,rev:(prev.rev||0)+1};
+            await txn.put('listeningAudio',value);return value;
+          });
+          if(next.rev>=this.listeningAudio.rev)this.listeningAudio=next;
+          this.broadcast({t:'listening_audio',audio:this.listeningAudio});
+        }catch(e){error('storage')}
+        return;
+      }
       case 'music': {
         if (!this.allow(a, 'm', 1)) return;
         if (m.track !== null && !TRACKS.includes(m.track)) return;
@@ -497,7 +521,7 @@ export class GardenRoom extends DurableObject {
         return;
       }
       case 'fireplay':{
-        if(!this.allow(a,'fireplay',1)||!['aurora','fireworks'].includes(m.kind)){ws.send(JSON.stringify({t:'fireplay_error',code:'slow'}));return;}
+        if(spaceOf(a.s)!=='garden'||!this.allow(a,'fireplay',1)||!['aurora','fireworks'].includes(m.kind)){ws.send(JSON.stringify({t:'fireplay_error',code:'slow'}));return;}
         if(m.kind==='aurora'&&Math.hypot(a.s.x,a.s.z)>8){ws.send(JSON.stringify({t:'fireplay_error',code:'far'}));return}
         const effect=this.shared.fireplay||{auroraUntil:0,fireworks:null},now=Date.now();
         if(m.kind==='aurora')effect.auroraUntil=now+10000;
@@ -508,13 +532,13 @@ export class GardenRoom extends DurableObject {
         // 악수: 가까이(4m) 있는 상대에게만 알린다. 상대 화면에서 마주 보고 손을 맞잡는다.
         if (!this.allow(a, 'shake', 1)) return;
         const other = this.readyPeers().find(p => p.a.id === m.to);
-        if (!other || other.a.away || Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > 4) return;
+        if (!other || other.a.away || !sameSpace(a.s,other.a.s) || Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > 4) return;
         try { other.ws.send(JSON.stringify({ t: 'shake', id: a.id, name: a.name, to: m.to })); } catch (e) {}
         return;
       }
       case 'stoke': {
         // 장작 넣기: 상태로 남기지 않고 지금 있는 사람들에게만 불꽃 연출을 알린다.
-        if (!this.allow(a, 'k', 1)) return;
+        if (spaceOf(a.s)!=='garden'||!this.allow(a, 'k', 1)) return;
         this.broadcast({ t: 'stoke', id: a.id, name: a.name }, ws);
         return;
       }
@@ -582,4 +606,5 @@ export default {
     return env.ROOMS.get(env.ROOMS.idFromName(space)).fetch(req);
   },
 };
+
 
