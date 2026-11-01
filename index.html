@@ -156,6 +156,13 @@ button:disabled{opacity:.5;cursor:default}
 
 .sky-return{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;background:#faf6ee;min-height:42px;box-shadow:0 4px 20px #0005}
 .sky-view #gardenPanel,.sky-view .visitors,.sky-view #rightMenu,.sky-view #joy,.sky-view #bowCounter{display:none}
+/* All action buttons fit one column without an inner scrolling area. */
+.poses.poses-open{top:calc(12px + env(safe-area-inset-top,0px))}
+.poses.poses-open #rightMenuBody{max-height:none;overflow:visible;flex:none}
+.poses.poses-open #poseList{gap:var(--action-gap,4px)}
+.poses.poses-open #poseList>button{height:var(--action-height,28px);min-height:0;padding:var(--action-padding,2px) 4px;font-size:var(--action-font,11px);line-height:1.15}
+.actions-open .visitors,.actions-open #gardenPanel{visibility:hidden}
+
 </style>
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
@@ -165,9 +172,9 @@ button:disabled{opacity:.5;cursor:default}
   <div id="gardenDetails" hidden>
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
-  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="leaveBtn" type="button" hidden>나가기</button></div>
+  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
-  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
+  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status" style="font-size:11px;color:var(--soft);margin-top:6px">모닥불을 불러오는 중…</div>
   </div>
 </header>
@@ -176,7 +183,7 @@ button:disabled{opacity:.5;cursor:default}
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="toast" id="toast"></div>
@@ -597,6 +604,87 @@ function setTag(s,text){
   x.beginPath();x.moveTo(l+r,tp);x.arcTo(l+w,tp,l+w,tp+h,r);x.arcTo(l+w,tp+h,l,tp+h,r);x.arcTo(l,tp+h,l,tp,r);x.arcTo(l,tp,l+w,tp,r);x.fill();
   x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';x.fillText(text,256,49);s.material.map.needsUpdate=true;
 }
+
+/* ---------- drinks at human scale (metres) ---------- */
+const DRINK_SIZE={
+  soju:{radius:.032,body:.128,shoulder:.03,neck:.045,cap:.014,color:0x348551,label:0xf3f0de},
+  beer:{radius:.035,body:.155,shoulder:.035,neck:.062,cap:.012,color:0x6e421d,label:0xe6c66f},
+  makgeolli:{radius:.043,body:.16,shoulder:.035,neck:.035,cap:.014,color:0xf1eee1,label:0x658a44},
+  cider:{radius:.033,body:.14,shoulder:.035,neck:.04,cap:.012,color:0x64b982,label:0xe8f0e7}
+};
+function makeDrinkBottle(id){
+  const spec=DRINK_SIZE[id],g=new THREE.Group();if(!spec)return g;
+  const glass=F(spec.color,{roughness:.24,transparent:id!=='makgeolli',opacity:id==='makgeolli'?1:.9}),nr=spec.radius*.43;
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(spec.radius,spec.radius*.96,spec.body,14),glass);body.position.y=spec.body/2;g.add(body);
+  const shoulder=new THREE.Mesh(new THREE.CylinderGeometry(nr,spec.radius,spec.shoulder,14),glass);shoulder.position.y=spec.body+spec.shoulder/2;g.add(shoulder);
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(nr,nr,spec.neck,12),glass);neck.position.y=spec.body+spec.shoulder+spec.neck/2;g.add(neck);
+  const cap=new THREE.Mesh(new THREE.CylinderGeometry(nr*1.12,nr*1.12,spec.cap,12),M(id==='beer'?0xd2b25c:0x356d42));cap.position.y=spec.body+spec.shoulder+spec.neck+spec.cap/2;g.add(cap);
+  const label=new THREE.Mesh(new THREE.CylinderGeometry(spec.radius*1.012,spec.radius*1.012,spec.body*.4,14,1,true),M(spec.label));label.position.y=spec.body*.51;g.add(label);
+  g.userData.height=spec.body+spec.shoulder+spec.neck+spec.cap;g.userData.radius=spec.radius;g.userData.ownedMaterials=[glass];return g;
+}
+function makeDrinkingGlass(id){
+  const g=new THREE.Group(),rice=id==='makgeolli',beer=id==='beer';
+  const radius=rice?.046:beer?.038:id==='cider'?.029:.025,height=rice?.034:beer?.12:id==='cider'?.102:.052;
+  const material=rice?F(0xc5a157,{metalness:.45,roughness:.35}):F(0xdcecf0,{transparent:true,opacity:.32,roughness:.13,side:THREE.DoubleSide,depthWrite:false});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius*(rice?.72:.82),height,14,1,!rice),material);body.position.y=height/2;g.add(body);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(radius,.002,5,18),rice?material:M(0xc9dde1));rim.rotation.x=Math.PI/2;rim.position.y=height;g.add(rim);
+  const fh=height*(rice?.62:.68),fill=new THREE.Mesh(new THREE.CylinderGeometry(radius*.87,radius*.75,fh,14),F(rice?0xe6e0c4:beer?0xdca237:0xd8ebdf,{transparent:!rice,opacity:rice?1:.65,roughness:.3}));
+  fill.position.y=fh/2+.003;g.add(fill);
+  if(beer){const foam=new THREE.Mesh(new THREE.CylinderGeometry(radius*.89,radius*.89,.009,14),M(0xf5ecd4));foam.position.y=fh+.007;g.add(foam)}
+  g.userData.height=height;g.userData.radius=radius;g.userData.ownedMaterials=[material,fill.material];return g;
+}
+
+
+/* ---------- shared random umbrella colours, automatic rain cover ---------- */
+const UMBRELLA_COLORS=[0xd75155,0x4465a1,0xe9b849,0x4e8c6d,0x8d6ab0,0xd68749,0x4a9d9b,0xdb8db5];
+let umbrellaGeometry=null,umbrellaRibGeometry=null,rainCoverOn=false;
+function umbrellaColorFor(identity){
+  let hash=2166136261;for(const char of String(identity)){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619)}
+  return UMBRELLA_COLORS[(hash>>>0)%UMBRELLA_COLORS.length];
+}
+function umbrellaMeshGeometry(){
+  if(umbrellaGeometry)return umbrellaGeometry;
+  const positions=[],colors=[],ribs=[],radius=.68,height=.2,rings=4,sectors=16;
+  const point=(r,a)=>[Math.cos(a)*r,height*(1-(r/radius)**1.65),Math.sin(a)*r];
+  for(let i=0;i<sectors;i++)for(let j=0;j<rings;j++){
+    const a=i/sectors*Math.PI*2,b=(i+1)/sectors*Math.PI*2,r0=j/rings*radius,r1=(j+1)/rings*radius,p=point(r0,a),q=point(r1,a),r=point(r1,b),t=point(r0,b),shade=i%2?.82:1;
+    for(const v of [p,q,r,p,r,t]){positions.push(...v);colors.push(shade,shade,shade)}
+  }
+  for(let i=0;i<8;i++)for(let j=0;j<rings;j++){const a=i/8*Math.PI*2;ribs.push(...point(j/rings*radius,a),...point((j+1)/rings*radius,a))}
+  umbrellaGeometry=new THREE.BufferGeometry();umbrellaGeometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));umbrellaGeometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));umbrellaGeometry.computeVertexNormals();
+  umbrellaRibGeometry=new THREE.BufferGeometry();umbrellaRibGeometry.setAttribute('position',new THREE.Float32BufferAttribute(ribs,3));return umbrellaGeometry;
+}
+function ensureUmbrella(P,identity){
+  const color=umbrellaColorFor(identity);
+  if(!P.umbrella){
+    const group=new THREE.Group(),material=F(color,{side:THREE.DoubleSide,vertexColors:true,roughness:.8,emissive:C(color),emissiveIntensity:.16});
+    const canopy=new THREE.Mesh(umbrellaMeshGeometry(),material);canopy.position.set(-.22,2.02,.37);canopy.castShadow=true;group.add(canopy);
+    const ribs=new THREE.LineSegments(umbrellaRibGeometry,new THREE.LineBasicMaterial({color:0x9aa3ab}));ribs.position.copy(canopy.position);group.add(ribs);
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.005,.005,1.16,6),M(0x89939c));pole.position.set(-.22,1.44,.37);group.add(pole);
+    const handle=new THREE.Mesh(new THREE.TorusGeometry(.035,.009,6,12,Math.PI),M(0x363b43));handle.position.set(-.185,.86,.37);handle.rotation.z=Math.PI;group.add(handle);
+    group.userData.canopy=material;group.userData.ribs=ribs.material;P.g.add(group);P.umbrella=group;
+  }
+  if(P.umbrella.userData.color!==color){P.umbrella.userData.canopy.color.copy(C(color));P.umbrella.userData.canopy.emissive.copy(C(color));P.umbrella.userData.color=color}
+  return P.umbrella;
+}
+function disposeUmbrella(P){
+  if(!P.umbrella)return;P.g.remove(P.umbrella);P.umbrella.userData.canopy.dispose();P.umbrella.userData.ribs.dispose();P.umbrella=null;
+}
+function rainSheltered(x,z){
+  const dx=x-POCHA.x,dz=z-POCHA.z,lx=Math.cos(POCHA.h)*dx-Math.sin(POCHA.h)*dz,lz=Math.sin(POCHA.h)*dx+Math.cos(POCHA.h)*dz;
+  return Math.abs(lx)<3.2&&Math.abs(lz)<2.1||TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<2.45);
+}
+function updateRainCover(weather){
+  rainCoverOn=rainCoverOn?weather.rain>.025:weather.rain>.08;
+  const apply=(P,state,key)=>{
+    const allowed=!['lie','prone','pray','bow','fuel'].includes(state),show=rainCoverOn&&allowed&&!rainSheltered(P.g.position.x,P.g.position.z);
+    if(!show){if(P.umbrella)P.umbrella.visible=false;return}
+    const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=Math.min(0,P.tag.position.y-2.25);
+  };
+  apply(me,pose,room&&room.selfId||myLook.shirt+':'+myLook.hair);
+  for(const [id,peer] of peers)apply(peer.P,peer.pose,id);
+}
+
 function makePerson(L){
   const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);rig.scale.setScalar(.9);
   const legs=[],arms=[];
@@ -610,23 +698,20 @@ function makePerson(L){
   box(.5,.7,.26,L.shirt,0,.35,0,torso);box(.51,.06,.27,L.pants,0,.73,0,rig);
   const head=new THREE.Mesh(BOX,headMats(L));head.scale.setScalar(.5);head.position.y=.95;head.castShadow=true;torso.add(head);
   if(L.hat){box(.54,.14,.54,L.shirt,0,1.23,0,torso);box(.54,.05,.22,L.shirt,0,1.18,.35,torso)}
-  const cup=new THREE.Group();box(.13,.15,.13,0xf2efe8,0,0,0,cup);box(.11,.01,.11,0x4a2c1a,0,.076,0,cup);box(.04,.08,.03,0xf2efe8,.085,0,0,cup);
+  const cup=new THREE.Group(),mug=new THREE.Mesh(new THREE.CylinderGeometry(.044,.04,.11,14),M(0xf2efe8));cup.add(mug);
+  const coffee=new THREE.Mesh(new THREE.CylinderGeometry(.037,.037,.004,14),M(0x4a2c1a));coffee.position.y=.052;cup.add(coffee);
+  const mugHandle=new THREE.Mesh(new THREE.TorusGeometry(.03,.007,6,14),M(0xf2efe8));mugHandle.position.x=.053;cup.add(mugHandle);
   cup.position.set(0,-.7,.06);arms[1].add(cup);cup.visible=false;
-  const can=new THREE.Group();const canBody=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.17,12),M(0x3f8f5a));can.add(canBody);
-  const canTop=new THREE.Mesh(new THREE.CylinderGeometry(.052,.058,.015,12),M(0xc8ccd0));canTop.position.y=.092;can.add(canTop);
-  const canBand=new THREE.Mesh(new THREE.CylinderGeometry(.061,.061,.04,12),M(0xe9e4d4));can.add(canBand);
-  can.position.set(0,-.7,.06);arms[1].add(can);can.visible=false;
-  const soda=new THREE.Group();const sodaBody=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.17,12),M(0xc8343a));soda.add(sodaBody);
-  const sodaTop=new THREE.Mesh(new THREE.CylinderGeometry(.052,.058,.015,12),M(0xc8ccd0));sodaTop.position.y=.092;soda.add(sodaTop);
-  soda.position.set(0,-.7,.06);arms[1].add(soda);soda.visible=false;
-  const shot=new THREE.Group();const glass=new THREE.Mesh(new THREE.CylinderGeometry(.045,.035,.08,10),new THREE.MeshStandardMaterial({color:C(0xdfeef0),transparent:true,opacity:.55,roughness:.1}));shot.add(glass);
-  const sojuIn=new THREE.Mesh(new THREE.CylinderGeometry(.04,.033,.05,10),M(0xf4f7f2));sojuIn.position.y=-.01;shot.add(sojuIn);
-  shot.position.set(0,-.68,.06);arms[1].add(shot);shot.visible=false;
+  const makeCan=color=>{const g=new THREE.Group();g.add(new THREE.Mesh(new THREE.CylinderGeometry(.037,.037,.135,12),M(color)));const top=new THREE.Mesh(new THREE.CylinderGeometry(.034,.036,.008,12),M(0xc8ccd0));top.position.y=.071;g.add(top);g.position.set(0,-.7,.06);arms[1].add(g);g.visible=false;return g};
+  const can=makeCan(0x3f8f5a),soda=makeCan(0xc8343a);
+  const shot=makeDrinkingGlass('soju'),riceCup=makeDrinkingGlass('makgeolli'),beerGlass=makeDrinkingGlass('beer'),sodaGlass=makeDrinkingGlass('cider');
+  for(const prop of [shot,riceCup,beerGlass,sodaGlass]){prop.position.set(0,-.71,.06);arms[1].add(prop);prop.visible=false}
+  for(const prop of [cup,can,soda,shot,riceCup,beerGlass,sodaGlass])prop.traverse(node=>{node.userData.handProp=true});
   const tag=makeTag('');tag.position.y=2.25;g.add(tag);
   scene.add(g);
   const contactMeshes=[];
-  rig.traverse(node=>{if(node.isMesh&&![cup,can,soda,shot].includes(node.parent))contactMeshes.push(node)});
-  return{g,rig,torso,legs,arms,head,cup,can,soda,shot,tag,contactMeshes,walkT:0,speed:0};
+  rig.traverse(node=>{if(node.isMesh&&!node.userData.handProp)contactMeshes.push(node)});
+  return{g,rig,torso,legs,arms,head,cup,can,soda,shot,riceCup,beerGlass,sodaGlass,tag,contactMeshes,walkT:0,speed:0};
 }
 const prayerContactBounds=new THREE.Box3();
 function posePerson(P,pose,dt,t){
@@ -648,8 +733,10 @@ function posePerson(P,pose,dt,t){
   else if(pose==='cheers'&&still){arm=[onLog?-.7:0,-2.5];armZ=[-.06,-.35];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
   else if(['coffee','beer','soda','soju','makgeolli'].includes(pose)&&still){const c=Math.max(0,Math.sin(t*.7));arm=[onLog?-.7:0,-.9-c*1.3];armZ=[-.06,-.25-c*.15];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
   else if(pose==='fuel'&&still){const c=(Math.sin(t*3.2)+1)/2;torsoLean=.55;ry=-.28;leg=[-.7,.35];arm=[-1.1-c*.7,-1.1-c*.7];armZ=[.2,-.2];tagY=1.9}
-  P.cup.visible=pose==='coffee'&&still;if(P.can)P.can.visible=(pose==='beer'||pose==='cheers'&&P.lastDrink!=='soju'&&P.lastDrink!=='soda')&&still;
-  if(P.soda)P.soda.visible=(pose==='soda'||pose==='cheers'&&P.lastDrink==='soda')&&still;if(P.shot)P.shot.visible=(pose==='soju'||pose==='makgeolli'||pose==='cheers'&&(P.lastDrink==='soju'||P.lastDrink==='makgeolli'))&&still;
+  const held=pose==='cheers'?(P.lastDrink||'soju'):pose,atPocha=seatAt(P.g.position.x,P.g.position.z)>=200;
+  P.cup.visible=held==='coffee'&&still;P.can.visible=held==='beer'&&still&&!atPocha;P.soda.visible=held==='soda'&&still&&!atPocha;
+  P.shot.visible=held==='soju'&&still;P.riceCup.visible=held==='makgeolli'&&still;P.beerGlass.visible=held==='beer'&&still&&atPocha;P.sodaGlass.visible=held==='soda'&&still&&atPocha;
+  if(P.umbrella&&P.umbrella.visible){arm[0]=-.9;armZ[0]=.25}
   if(['beer','soda','soju','makgeolli'].includes(pose))P.lastDrink=pose;
   if(still&&seatAt(P.g.position.x,P.g.position.z)>=200&&['sit','coffee','beer','soda','soju','cheers','makgeolli'].includes(pose)){ry+=.3;tagY+=.3}
   P.torso.rotation.x=L(P.torso.rotation.x,torsoLean);
@@ -851,7 +938,7 @@ function sendPresence(){
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
-function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeBubble(k,keepMessage);scene.remove(e.P.g);scene.remove(e.D.g);peers.delete(k)}
+function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);disposeBubble(k,keepMessage);scene.remove(e.P.g);scene.remove(e.D.g);peers.delete(k)}
 function onPeerList(change){
   const seen=new Set();
   for(const pr of change.peers){
@@ -911,7 +998,7 @@ if(document.fonts)document.fonts.ready.then(()=>{refreshMine();resolveNames()});
 
 function applyMyLook(look,dog,save){
   const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
-  scene.remove(me.g);scene.remove(myDogObj.g);
+  disposeUmbrella(me);scene.remove(me.g);scene.remove(myDogObj.g);
   myLook=look;myDog=dog;me=makePerson(myLook);myDogObj=makeDog(myDog);
   me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);refreshMine();restoreLastBubble('me',shownName());
   store.set('mem.look',JSON.stringify(myLook));store.set('mem.dog',JSON.stringify(myDog));
@@ -940,7 +1027,18 @@ function syncMenuSections(){
   const open=['poseList','quickPhrases','chatHistory','chatBar','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
   $('rightMenu').classList.toggle('submenu-open',open);
   $('rightMenu').classList.toggle('poses-open',!$('poseList').hidden);
+  document.body.classList.toggle('actions-open',!$('poseList').hidden);syncActionMenuSize();
 }
+function syncActionMenuSize(){
+  if($('poseList').hidden)return;
+  const menu=$('rightMenu'),count=Array.from($('poseList').children).filter(button=>!button.hidden).length;
+  const available=menu.getBoundingClientRect().height,closeHeight=$('poseToggle').getBoundingClientRect().height||28;
+  const gap=available<380?2:4,height=Math.min(32,Math.max(14,Math.floor((available-closeHeight-gap*count)/Math.max(1,count))));
+  menu.style.setProperty('--action-height',height+'px');menu.style.setProperty('--action-gap',gap+'px');menu.style.setProperty('--action-font',height<25?'10px':'11px');menu.style.setProperty('--action-padding',height<22?'0px':'2px');
+}
+addEventListener('resize',syncActionMenuSize);
+if(window.visualViewport)visualViewport.addEventListener('resize',syncActionMenuSize);
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncActionMenuSize).observe($('poseList'));
 function closePoseMenu(){setPoseMenu(false)}
 function toggleOrderMenu(open){
   if(open)closeOtherMenus('order');
@@ -1114,7 +1212,7 @@ function updatePrecipitation(dt,now,weather){
 }
 function updateEnvironment(dt,t){
   const now=serverNow(),weather=weatherFrame(now),cloud=weather.cloud;
-  updatePrecipitation(dt,now,weather);
+  updatePrecipitation(dt,now,weather);updateRainCover(weather);
   const date=new Date(now),hours=(date.getUTCHours()+9)%24+date.getUTCMinutes()/60;
   let daylight=THREE.MathUtils.smoothstep(hours,5.5,8)*(1-THREE.MathUtils.smoothstep(hours,17,19.5));if(NIGHT_ALWAYS)daylight=0;
   updateNightSky(now,weather,daylight);
@@ -1325,6 +1423,7 @@ var bubbleForExtra=bubbleForExtra||{};
 const POCHA_MENU={
   odeng:{n:'오뎅탕',k:'food'},dakbal:{n:'닭발',k:'food'},egg:{n:'계란말이',k:'food'},golbaeng:{n:'골뱅이무침',k:'food'},jeon:{n:'김치전',k:'food'},tteok:{n:'떡볶이',k:'food'},
   soju:{n:'소주',k:'drink',pose:'soju'},beer:{n:'맥주',k:'drink',pose:'beer'},makgeolli:{n:'막걸리',k:'drink',pose:'makgeolli'},cider:{n:'사이다',k:'drink',pose:'soda'}};
+const POCHA_COUNTER={top:1.045,centerZ:-.35,depth:1.0};
 const pocha={group:new THREE.Group(),items:new Map(),orders:[]};
 pocha.group.position.set(POCHA.x,0,POCHA.z);pocha.group.rotation.y=POCHA.h;scene.add(pocha.group);
 {
@@ -1349,14 +1448,13 @@ pocha.group.position.set(POCHA.x,0,POCHA.z);pocha.group.rotation.y=POCHA.h;scene
   const signMat=new THREE.MeshStandardMaterial({map:st,emissive:C(0xffe2a8),emissiveMap:st,emissiveIntensity:.55,transparent:true});pocha.fade.push(signMat);
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.2,.42),signMat);sign.position.set(0,2.72,1.97);G.add(sign);
   // counter, cooking top, bottles, stools
-  part(BOX,wood,[0,.5,-.4],[5.4,1,.55],null,G);part(BOX,counterTop,[0,1.02,-.32],[5.6,.05,.75],null,G);
+  part(BOX,wood,[0,.5,-.35],[5.4,1,.8],null,G);part(BOX,counterTop,[0,1.02,POCHA_COUNTER.centerZ],[5.6,.05,POCHA_COUNTER.depth],null,G);
   part(BOX,steel,[0,.9,-1.3],[5.2,.06,.6],null,G);part(BOX,F(0x6b5d4d),[0,.45,-1.3],[5.2,.9,.55],null,G);
   for(let i=0;i<3;i++){part(new THREE.CylinderGeometry(.32,.3,.24,14),steel,[-1.6+i*1.5,1.05,-1.3],null,null,G);
     const soup=part(new THREE.CylinderGeometry(.29,.29,.02,14),new THREE.MeshStandardMaterial({color:C(i===1?0xc8402c:0xd9a65a),emissive:C(0x40200a),emissiveIntensity:.4}),[-1.6+i*1.5,1.16,-1.3],null,null,G);soup.castShadow=false}
-  const shelfBottle=new THREE.CylinderGeometry(.045,.05,.26,8);
-  for(let i=0;i<12;i++)part(shelfBottle,F(i%3?0x3f8f5a:0x6b4a20,{roughness:.3}),[-2.6+i*.47,1.12,-1.75],null,null,G);
+  for(let i=0;i<12;i++){const bottle=makeDrinkBottle(i%3?'soju':'beer');bottle.position.set(-2.6+i*.47,.99,-1.75);G.add(bottle)}
   part(BOX,wood,[0,1.55,-1.8],[5.6,.04,.18],null,G);
-  for(let i=0;i<10;i++)part(new THREE.CylinderGeometry(.04,.045,.22,8),F(i%2?0x3f8f5a:0xe9e4d4,{roughness:.3}),[-2.4+i*.53,1.68,-1.8],null,null,G);
+  for(let i=0;i<10;i++){const bottle=makeDrinkBottle(i%2?'soju':'makgeolli');bottle.position.set(-2.4+i*.53,1.57,-1.8);G.add(bottle)}
   STOOLS.forEach(s=>{part(new THREE.CylinderGeometry(.2,.2,.07,12),s.i%2?red:blue,[s.lx,.72,.35],null,null,G);part(new THREE.CylinderGeometry(.03,.03,.7,6),steel,[s.lx,.36,.35],null,null,G);part(new THREE.CylinderGeometry(.18,.2,.03,10),steel,[s.lx,.02,.35],null,null,G)});
   // warm bulbs under the roof
   for(let i=0;i<5;i++){const b=part(new THREE.SphereGeometry(.07,8,6),new THREE.MeshStandardMaterial({color:C(0xfff3d6),emissive:C(0xffc070),emissiveIntensity:2.4}),[-2.4+i*1.2,2.45,0],null,null,G);b.castShadow=false}
@@ -1396,41 +1494,71 @@ function makeDish(id){
     case 'golbaeng':plate(0xc94a2a,new THREE.IcosahedronGeometry(.1,0));break;
     case 'jeon':plate(0xd07a3a,new THREE.CylinderGeometry(.16,.16,.03,14));break;
     case 'tteok':bowl(0xd9452b,0xd9452b);break;
-    case 'soju':{const b=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,.24,10),new THREE.MeshStandardMaterial({color:C(0x3f8f5a),roughness:.2,transparent:true,opacity:.85}));b.position.y=.12;g.add(b);const n=new THREE.Mesh(new THREE.CylinderGeometry(.02,.03,.08,8),M(0x3f8f5a));n.position.y=.28;g.add(n);break}
-    case 'beer':{const b=new THREE.Mesh(new THREE.CylinderGeometry(.055,.06,.27,10),M(0x6b3d14));b.position.y=.135;g.add(b);const n=new THREE.Mesh(new THREE.CylinderGeometry(.022,.035,.1,8),M(0x6b3d14));n.position.y=.32;g.add(n);break}
-    case 'makgeolli':{const b=new THREE.Mesh(new THREE.CylinderGeometry(.06,.065,.25,10),M(0xf3efe2));b.position.y=.125;g.add(b);const c=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.04,8),M(0x2f6b3a));c.position.y=.27;g.add(c);break}
-    case 'cider':{const b=new THREE.Mesh(new THREE.CylinderGeometry(.045,.05,.24,10),new THREE.MeshStandardMaterial({color:C(0x7fcf8f),roughness:.2,transparent:true,opacity:.85}));b.position.y=.12;g.add(b);break}
+    case 'soju':case 'beer':case 'makgeolli':case 'cider':g.add(makeDrinkBottle(id));break;
   }
+  if(m.k==='food')g.scale.setScalar(.68);
   g.traverse(o=>{if(o.isMesh)o.castShadow=true});return g;
 }
+function pochaServingLayout(orders){
+  const seats=new Map();
+  for(const order of orders){
+    if(!STOOLS[order.seat]||!POCHA_MENU[order.item])continue;
+    let row=seats.get(order.seat);if(!row){row={food:[],drink:null};seats.set(order.seat,row)}
+    if(POCHA_MENU[order.item].k==='food'){row.food.push(order);row.food=row.food.slice(-4)}else row.drink=order;
+  }
+  const result=[];
+  for(const [seat,row] of seats){
+    const st=STOOLS[seat];
+    row.food.forEach((order,i)=>result.push({order,kind:'food',x:st.lx+(row.food.length===1?0:i%2?.15:-.15),z:i<2?-.10:-.42}));
+    if(row.drink){
+      result.push({order:row.drink,kind:'bottle',x:st.lx-.13,z:-.72});
+      result.push({order:row.drink,kind:'glass',x:st.lx+.13,z:-.72});
+    }
+  }
+  return result;
+}
+function disposeServing(group){
+  const owned=new Set();
+  group.traverse(node=>{if(node.isMesh)node.geometry.dispose();for(const material of node.userData.ownedMaterials||[])owned.add(material)});
+  for(const material of owned)material.dispose();
+}
 function renderPochaOrders(){
-  for(const [k,g] of pocha.items){pocha.group.remove(g)}pocha.items.clear();
-  const per=new Map();
-  pocha.orders.slice(-48).forEach((o,idx)=>{
-    const st=STOOLS[o.seat];if(!st||!POCHA_MENU[o.item])return;
-    const n=per.get(o.seat)||0;per.set(o.seat,n+1);if(n>=4)return;
-    const d=makeDish(o.item);d.position.set(st.lx+(n%2?.17:-.17),1.045,-.12-(n>1?.28:0));pocha.group.add(d);pocha.items.set(idx,d);
+  for(const group of pocha.items.values()){pocha.group.remove(group);disposeServing(group)}pocha.items.clear();
+  pochaServingLayout(pocha.orders).forEach((entry,index)=>{
+    const dish=entry.kind==='glass'?makeDrinkingGlass(entry.order.item):makeDish(entry.order.item);
+    dish.position.set(entry.x,POCHA_COUNTER.top,entry.z);pocha.group.add(dish);pocha.items.set(index,dish);
   });
 }
 function mySeatIndex(){const s=seatAt(me.g.position.x,me.g.position.z);return s>=200?s-200:-1}
 function placeOrder(id){
-  const seat=mySeatIndex(),m=POCHA_MENU[id];if(seat<0||!m)return;
-  toggleOrderMenu(false);ownerBusy=3;ownerSay(`네~ ${m.n} 나갑니다!`);
-  if(m.pose){pose=m.pose;sendDirty=true}
-  if(room&&room.kind==='ws'&&room.connected()){room.send({t:'order',seat,item:id});return}
-  setTimeout(()=>{pocha.orders.push({seat,item:id,at:Date.now()});renderPochaOrders()},2200);
+  const seat=mySeatIndex(),menu=POCHA_MENU[id];if(seat<0||!menu)return;
+  if(room&&room.kind==='ws'){
+    if(!room.connected()){toast('다시 연결되면 주문할 수 있어요');return}
+    sendPresence();if(!room.send({t:'order',seat,item:id})){toast('주문을 보내지 못했어요');return}
+    toggleOrderMenu(false);return;
+  }
+  toggleOrderMenu(false);onFriendOrder({seat,item:id,at:Date.now(),mine:true},shownName());
 }
-function onFriendOrder(o,name){
-  if(!o||!POCHA_MENU[o.item])return;ownerBusy=3;
-  if(!o.mine)ownerSay(`네~ ${name}님 ${POCHA_MENU[o.item].n}!`);
-  setTimeout(()=>{pocha.orders.push(o);renderPochaOrders()},2200);
+function onFriendOrder(order,name,orders){
+  if(!order||!POCHA_MENU[order.item])return;ownerBusy=3;
+  const menu=POCHA_MENU[order.item];
+  ownerSay(order.mine?`네~ ${menu.n} 나갑니다!`:`네~ ${name}님 ${menu.n}!`);
+  if(order.mine&&menu.pose){pose=menu.pose;sendDirty=true}
+  if(Array.isArray(orders))setPochaOrders(orders);
+  else {
+    const same=o=>order.id?o.id===order.id:o.seat===order.seat&&o.item===order.item&&o.at===order.at&&o.by===order.by;
+    if(!pocha.orders.some(same))setPochaOrders(pocha.orders.concat(order));
+  }
 }
 function clearMySeat(){
   const seat=mySeatIndex();if(seat<0)return;
-  if(room&&room.kind==='ws'&&room.connected()){room.send({t:'clearSeat',seat});return}
-  pocha.orders=pocha.orders.filter(o=>o.seat!==seat);renderPochaOrders();toast('상을 치웠어요');
+  if(room&&room.kind==='ws'){
+    if(!room.connected()){toast('다시 연결되면 상을 치울 수 있어요');return}
+    sendPresence();room.send({t:'clearSeat',seat});return;
+  }
+  setPochaOrders(pocha.orders.filter(order=>order.seat!==seat));toast('상을 치웠어요');
 }
-function setPochaOrders(list){pocha.orders=(Array.isArray(list)?list:[]).filter(o=>o&&Number.isInteger(o.seat)&&POCHA_MENU[o.item]).slice(-48);renderPochaOrders()}
+function setPochaOrders(list){pocha.orders=(Array.isArray(list)?list:[]).filter(order=>order&&Number.isInteger(order.seat)&&STOOLS[order.seat]&&POCHA_MENU[order.item]).slice(-48);renderPochaOrders()}
 for(const [id,m] of Object.entries(POCHA_MENU)){const b=document.createElement('button');b.type='button';b.textContent=m.n;b.onclick=()=>placeOrder(id);$(m.k==='food'?'orderFood':'orderDrink').appendChild(b)}
 $('dOrder').onclick=()=>toggleOrderMenu($('orderPanel').hidden);$('orderClose').onclick=()=>toggleOrderMenu(false);$('dClear').onclick=clearMySeat;
 function enterPocha(){
@@ -1809,11 +1937,11 @@ function saveVisit(){
   if(!hasEntered||!visitToken)return;
   const p=me.g.position,message=lastMessages.get('me');
   const snapshot={v:1,token:visitToken,name:myNick,look:myLook,dog:myDog,
-    x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose,
+    x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
     practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
-  try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot))}catch(e){}
-  lastVisitSave=performance.now();
+  let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
+  lastVisitSave=performance.now();return stored;
 }
 function restoreVisit(){
   const saved=readVisit();if(!saved)return false;
@@ -1837,7 +1965,9 @@ function restoreVisit(){
       resize();
     }
   }
-  pose=['stand','sit','lie','prone','wave','coffee','beer','soda','soju','pray','bow'].includes(saved.pose)?saved.pose:'stand';
+  pose=['stand','sit','lie','prone','wave','coffee','beer','soda','soju','makgeolli','pray','bow'].includes(saved.pose)?saved.pose:'stand';
+  if(['beer','soda','soju','makgeolli'].includes(saved.lastDrink))me.lastDrink=saved.lastDrink;
+  if(typeof saved.chatDraft==='string')$('chatInput').value=saved.chatDraft.slice(0,200);
   const pr=saved.practice||{};
   if(Number.isInteger(pr.count))practice.count=Math.min(108,Math.max(practice.count,pr.count));
   practice.mode=['pray','single','auto'].includes(pr.mode)?pr.mode:'idle';
@@ -1854,6 +1984,17 @@ function restoreVisit(){
   if(saved.lastChat&&typeof saved.lastChat.text==='string')rememberLastMessage('me',myNick,saved.lastChat.text,saved.lastChat.at);
   startGardenConnection();saveVisit();return true;
 }
+function refreshGarden(){
+  const stored=saveVisit();
+  const saved=readVisit();
+  if(hasEntered&&(!stored||!saved||saved.token!==visitToken||saved.name!==myNick)){
+    toast('입장 정보를 보관하지 못했어요. 잠시 후 다시 눌러 주세요.');return;
+  }
+  $('refreshBtn').disabled=true;$('refreshBtn').textContent='불러오는 중…';
+  const url=new URL(location.href);url.searchParams.set('_refresh',String(Date.now()));
+  location.replace(url.href);
+}
+$('refreshBtn').onclick=refreshGarden;
 function leaveGarden(){
   if(cam.sky)setSkyView(false);
   if(room&&room.kind==='ws'){room.send({t:'leave'});room.close()}
@@ -1881,7 +2022,7 @@ function startGardenConnection(){
   if(!hasEntered||!myNick||room)return;
   if(!['https:','http:'].includes(location.protocol)){updateWho();return}
   // 이전 초대 링크와 브라우저별 방 설정은 더 이상 사용하지 않는다.
-  const current=new URL(location.href);current.searchParams.delete('gardenServer');
+  const current=new URL(location.href);current.searchParams.delete('gardenServer');current.searchParams.delete('_refresh');
   if(/^#r-/.test(current.hash))current.hash='';
   try{history.replaceState(null,'',current.pathname+current.search+current.hash)}catch(e){}
   const base=(location.protocol==='https:'?'wss://':'ws://')+location.host;
@@ -1953,7 +2094,7 @@ function connectRoomServer(base,code){
             const spot=PRAYER_SPOTS[api.prayerSlot];
             if(Math.hypot(me.g.position.x-spot.x,me.g.position.z-spot.z)>.05)placeAtPrayerSpot(api.prayerSlot);
           }
-          api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
+          api.selfId=you;api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
         case 'rps_state':applyRps(m.game);break;
         case 'rps_error':{
@@ -1981,8 +2122,9 @@ function connectRoomServer(base,code){
           showChat(m.id===you?'me':m.id,stripInvisible(m.name).slice(0,12)||'친구',stripInvisible(m.text).slice(0,200),m.at,m.id);break
         }
         case 'flower':sharedFlowers=(sharedFlowers||[]).concat(Number.isInteger(m.c)?m.c:0).slice(-300);renderFlowers(sharedFlowers);break;
-        case 'order':onFriendOrder(Object.assign({},m.order,{mine:m.order&&m.order.by===you}),stripInvisible(m.name).slice(0,12)||'친구');break;
+        case 'order':onFriendOrder(Object.assign({},m.order,{mine:m.order&&m.order.by===you}),stripInvisible(m.name).slice(0,12)||'친구',m.pocha);break;
         case 'pocha':setPochaOrders(m.pocha);break;
+        case 'pocha_error':toast(m.code==='slow'?'주문이 많아요. 잠시 후 다시 눌러 주세요.':m.code==='item'?'차림표에서 다시 골라 주세요.':'포차의 내 자리에 앉은 뒤 다시 눌러 주세요.');break;
         case 'cheers':onFriendCheers(m.id,stripInvisible(m.name).slice(0,12)||'친구');break;
         case 'stoke':bonfire.stoke=1;toast(`${stripInvisible(m.name).slice(0,12)||'친구'}님이 장작을 넣었어요`);break;
         case 'weather':if(['auto','clear','rain','snow'].includes(m.mode)){weatherMode=m.mode;environmentTick=99}break;

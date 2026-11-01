@@ -20,6 +20,28 @@ const activeRps = g => g.status === 'invited' || g.status === 'playing';
 
 const POSES = ['stand', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
 const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'soju', 'beer', 'makgeolli', 'cider'];
+
+const POCHA_CENTER={x:-6.3,z:-23.4};
+const POCHA_HEADING=Math.atan2(-POCHA_CENTER.x,-POCHA_CENTER.z);
+const POCHA_STOOLS=Array.from({length:8},(_,i)=>{
+  const x=-2.45+i*.7,z=.35;
+  return{x:POCHA_CENTER.x+Math.cos(POCHA_HEADING)*x+Math.sin(POCHA_HEADING)*z,z:POCHA_CENTER.z-Math.sin(POCHA_HEADING)*x+Math.cos(POCHA_HEADING)*z};
+});
+const POCHA_DRINKS=['soju','beer','makgeolli','cider'];
+function pochaSeatFor(state){
+  if(!state||!['sit','coffee','beer','soda','soju','makgeolli','cheers'].includes(state.p))return -1;
+  return POCHA_STOOLS.findIndex(seat=>Math.hypot(seat.x-state.x,seat.z-state.z)<.25);
+}
+function trimPochaOrders(orders){
+  const seats=new Map();
+  for(const order of orders){
+    if(!order||!Number.isInteger(order.seat)||!POCHA_STOOLS[order.seat]||!POCHA_ITEMS.includes(order.item))continue;
+    let row=seats.get(order.seat);if(!row){row={food:[],drink:[]};seats.set(order.seat,row)}
+    if(POCHA_DRINKS.includes(order.item))row.drink=[order];else row.food=row.food.concat(order).slice(-4);
+  }
+  return [...seats.values()].flatMap(row=>row.food.concat(row.drink)).sort((a,b)=>(a.at||0)-(b.at||0));
+}
+
 const INVISIBLE = /[\u0000-\u001f\u007f​-‏‪-‮⁠-⁤﻿]/g;
 
 const clean = (v, n) => (typeof v === 'string' ? v.replace(INVISIBLE, '').trim().slice(0, n) : '');
@@ -346,17 +368,22 @@ export class GardenRoom extends DurableObject {
         return;
       }
       case 'order': {
-        // 포장마차 주문: 자리(0~7)와 차림표 항목만 받는다. 상차림은 방에 남겨 늦게 온 사람도 본다.
-        if (!this.allow(a, 'o', 1) || !Number.isInteger(m.seat) || m.seat < 0 || m.seat > 7 || !POCHA_ITEMS.includes(m.item)) return;
-        const order = { seat: m.seat, item: m.item, at: Date.now(), by: a.id };
-        this.shared.pocha = this.shared.pocha.concat(order).slice(-48);
+        const seat=pochaSeatFor(a.s);
+        const reject=code=>ws.send(JSON.stringify({t:'pocha_error',code}));
+        if(!this.allow(a,'o',4)){reject('slow');return}
+        if(seat<0||m.seat!==seat){reject('seat');return}
+        if(!POCHA_ITEMS.includes(m.item)){reject('item');return}
+        const order = { id: crypto.randomUUID(), seat, item: m.item, at: Date.now(), by: a.id };
+        const current=this.shared.pocha.filter(row=>row.seat!==seat||row.by===a.id);
+        this.shared.pocha=trimPochaOrders(current.concat(order));
         await this.save();
-        this.broadcast({ t: 'order', order, name: a.name });
+        this.broadcast({ t: 'order', order, pocha: this.shared.pocha, name: a.name });
         return;
       }
       case 'clearSeat': {
-        if (!this.allow(a, 'x', 1) || !Number.isInteger(m.seat) || m.seat < 0 || m.seat > 7) return;
-        this.shared.pocha = this.shared.pocha.filter(o => o.seat !== m.seat);
+        const seat=pochaSeatFor(a.s);
+        if (!this.allow(a, 'x', 2) || seat<0 || m.seat!==seat) {ws.send(JSON.stringify({t:'pocha_error',code:'seat'}));return;}
+        this.shared.pocha = this.shared.pocha.filter(order => order.seat !== seat);
         await this.save();
         this.broadcast({ t: 'pocha', pocha: this.shared.pocha });
         return;
@@ -414,7 +441,14 @@ export default {
     if (url.pathname === '/health') return new Response('ok');
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{6,40})$/);
     if (!m) {
-      if (env.ASSETS) return env.ASSETS.fetch(req);
+      if (env.ASSETS) {
+        const response=await env.ASSETS.fetch(req);
+        if(url.pathname==='/'||url.pathname==='/index.html'){
+          const headers=new Headers(response.headers);headers.set('Cache-Control','no-store, max-age=0');
+          return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+        }
+        return response;
+      }
       return new Response('기억의 정원 방 서버입니다.', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
     }
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket only', { status: 426 });
