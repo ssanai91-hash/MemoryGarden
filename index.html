@@ -144,6 +144,19 @@ button:disabled{opacity:.5;cursor:default}
 .quick-phrases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:min(260px,calc(100vw - 24px));max-height:45dvh;overflow-y:auto;box-sizing:border-box;padding:6px;gap:6px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
 .quick-phrases button{min-width:0}
 .pose-row>.fold{min-width:0;white-space:nowrap;padding:6px 8px}
+/* One right-hand column for action menus and contextual buttons. */
+:root{--right-menu-width:112px;--right-menu-top:180px}
+.poses,.chat-open .poses{right:max(12px,env(safe-area-inset-right,0px));top:var(--right-menu-top);bottom:calc(12px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px) + var(--chat-clearance,0px));width:var(--right-menu-width);max-width:calc(100vw - 24px);min-height:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:6px;z-index:5;pointer-events:none}
+#rightMenuBody{display:flex;flex-direction:column;align-items:stretch;gap:6px;min-height:0;flex:0 1 auto;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:thin;pointer-events:auto}
+.poses .pose-row{display:flex;flex-direction:column;align-items:stretch;gap:6px;min-height:0;max-height:100%;flex:0 0 auto;overflow-y:auto;overscroll-behavior:contain;pointer-events:auto}
+.poses button{box-sizing:border-box;width:100%;min-width:0;flex:none;margin:0;padding:7px 8px;font-size:12px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+.poses .pose-row>.fold{min-width:0;padding:7px 8px;white-space:normal}
+.poses #poseList,.poses .quick-phrases{display:flex;flex-direction:column;align-items:stretch;flex:none;width:100%;max-height:none;min-height:0;overflow:visible;box-sizing:border-box;padding:0;gap:6px;border:0;background:none}
+.poses .table-bar{position:static;left:auto;right:auto;top:auto;bottom:auto;transform:none;width:100%;max-width:none;flex:none;display:flex;flex-direction:column;gap:6px;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.poses .ctx-btn{position:static;left:auto;right:auto;top:auto;bottom:auto;transform:none}
+.poses .ctx-btn,.poses button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.chat-history{left:12px;width:min(420px,calc(100vw - var(--right-menu-width) - 36px))}
+.order-panel{left:12px;right:auto;transform:none;width:min(360px,calc(100vw - var(--right-menu-width) - 36px));max-height:calc(100dvh - 150px - var(--keyboard-lift,0px));overflow-y:auto}
 </style>
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
@@ -178,13 +191,11 @@ button:disabled{opacity:.5;cursor:default}
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pLie" type="button" aria-pressed="false">눕기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pLie" type="button" aria-pressed="false">눕기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="hint" id="hint">조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기</div>
 <div class="toast" id="toast"></div>
-<div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div>
 <section class="order-panel" id="orderPanel" hidden aria-label="포장마차 주문"><div class="order-head"><strong>기억 포차 차림표</strong><button id="orderClose" type="button">닫기</button></div><div class="order-sec">안주</div><div class="order-grid" id="orderFood"></div><div class="order-sec">술·음료</div><div class="order-grid" id="orderDrink"></div></section>
-<button class="ctx-btn" id="ctxBtn" type="button" hidden></button>
 <section class="chat-history" id="chatHistory" aria-labelledby="chatHistoryTitle" hidden>
   <div class="chat-history-head"><strong id="chatHistoryTitle">대화 기록 · 최근 50개</strong><button id="chatHistoryClose" type="button">접기</button></div>
   <div class="chatlog" id="chatLog" role="log" aria-live="polite" aria-label="정원 대화 기록"></div>
@@ -1044,7 +1055,7 @@ function setupFold(btn,panel,key,openLabel,closedLabel,onClose){
 }
 setupFold('poseToggle','poseList','garden.ui.poses','동작 접기 ▾','동작 ▴');
 const originalPoseToggle=$('poseToggle').onclick;
-$('poseToggle').onclick=()=>{if($('poseList').hidden)toggleQuickPhrases(false);originalPoseToggle()};
+$('poseToggle').onclick=()=>{if($('poseList').hidden){toggleQuickPhrases(false);toggleChatHistory(false);$('orderPanel').hidden=true}originalPoseToggle()};
 function closePoseMenu(){$('poseList').hidden=true;$('poseToggle').setAttribute('aria-expanded','false');$('poseToggle').textContent='동작 ▴';store.set('garden.ui.poses','0')}
 function setGardenExpanded(open){
   $('gardenDetails').hidden=!open;
@@ -1376,7 +1387,7 @@ function clearMySeat(){
 }
 function setPochaOrders(list){pocha.orders=(Array.isArray(list)?list:[]).filter(o=>o&&Number.isInteger(o.seat)&&POCHA_MENU[o.item]).slice(-48);renderPochaOrders()}
 for(const [id,m] of Object.entries(POCHA_MENU)){const b=document.createElement('button');b.type='button';b.textContent=m.n;b.onclick=()=>placeOrder(id);$(m.k==='food'?'orderFood':'orderDrink').appendChild(b)}
-$('dOrder').onclick=()=>{$('orderPanel').hidden=!$('orderPanel').hidden};$('orderClose').onclick=()=>{$('orderPanel').hidden=true};$('dClear').onclick=clearMySeat;
+$('dOrder').onclick=()=>{const open=$('orderPanel').hidden;if(open){closePoseMenu();toggleQuickPhrases(false);toggleChatHistory(false)}$('orderPanel').hidden=!open};$('orderClose').onclick=()=>{$('orderPanel').hidden=true};$('dClear').onclick=clearMySeat;
 function enterPocha(){
   const taken=sp=>[...peers.values()].some(e=>Math.hypot(e.x-sp.x,e.z-sp.z)<.3);
   const free=STOOLS.filter(sp=>!taken(sp));if(!free.length){toast('포차 자리가 가득 찼어요');return}
@@ -1428,6 +1439,7 @@ function updateContext(dt){
   if(nearT||nearF){b.textContent=nearT?'테이블에 앉기':'모닥불에 앉기';b.dataset.act='sit';b.hidden=false}else b.hidden=true;
 }
 $('ctxBtn').onclick=()=>{
+  closePoseMenu();toggleQuickPhrases(false);
   const act=$('ctxBtn').dataset.act;if(act==='enter'){enterPocha();ctxTick=1;updateContext(0);return}if(act==='leave'){leavePocha();ctxTick=1;updateContext(0);return}
   if(act==='up'){const sp=me.g.position,h=me.g.rotation.y;pose='stand';const [x,z]=collide(sp.x-Math.sin(h)*.8,sp.z-Math.cos(h)*.8,.4);me.g.position.x=x;me.g.position.z=z;sendDirty=true;syncPoseButtons()}
   else setPose('sit');
@@ -1549,6 +1561,7 @@ function showChat(key,name,text,at=serverNow(),messageId=key){
   if($('chatHistory').hidden&&key!=='me')$('chatHistoryBtn').classList.add('unread');
 }
 function toggleChatHistory(open){
+  if(open){closePoseMenu();toggleQuickPhrases(false);$('orderPanel').hidden=true}
   $('chatHistory').hidden=!open;document.body.classList.toggle('chat-history-open',open);
   $('chatHistoryBtn').setAttribute('aria-expanded',String(open));
   if(open){$('chatInput').blur();$('chatHistoryBtn').classList.remove('unread');requestAnimationFrame(()=>{$('chatLog').scrollTop=$('chatLog').scrollHeight})}
@@ -1557,6 +1570,17 @@ function toggleChatHistory(open){
 $('chatHistoryBtn').onclick=()=>toggleChatHistory($('chatHistory').hidden);
 $('chatHistoryClose').onclick=()=>toggleChatHistory(false);
 $('chatHistory').addEventListener('keydown',e=>{if(e.key==='Escape')toggleChatHistory(false)});
+
+function syncRightMenuBounds(){
+  const roster=document.querySelector('.visitors');
+  const top=roster?roster.getBoundingClientRect().bottom+10:12;
+  document.documentElement.style.setProperty('--right-menu-top',Math.max(12,top)+'px');
+}
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncRightMenuBounds).observe(document.querySelector('.visitors'));
+addEventListener('resize',syncRightMenuBounds);
+if(window.visualViewport)visualViewport.addEventListener('resize',syncRightMenuBounds);
+syncRightMenuBounds();
+
 function syncChatDock(){
   const open=!$('chatBar').hidden;
   const viewport=window.visualViewport;
@@ -1569,7 +1593,7 @@ function toggleChat(open){
   $('chatBar').hidden=!open;document.body.classList.toggle('chat-open',open);
   $('chatBtn').setAttribute('aria-expanded',String(open));$('chatBtn').textContent=open?'대화 접기':'말하기';
   if(open){
-    toggleQuickPhrases(false);
+    toggleQuickPhrases(false);$('orderPanel').hidden=true;
     $('chatBtn').classList.remove('unread');
     $('poseList').hidden=true;$('poseToggle').setAttribute('aria-expanded','false');$('poseToggle').textContent='동작 ▴';store.set('garden.ui.poses','0');
     setTimeout(()=>{if($('chatBar').hidden)return;try{$('chatInput').focus()}catch(e){}syncChatDock()},30);
@@ -1600,7 +1624,7 @@ function toggleQuickPhrases(open){
   $('quickPhrases').hidden=!open;
   $('quickPhrasesBtn').setAttribute('aria-expanded',String(open));
   $('quickPhrasesBtn').setAttribute('aria-pressed',String(open));
-  if(open)closePoseMenu();
+  if(open){closePoseMenu();toggleChatHistory(false);$('orderPanel').hidden=true}
 }
 $('quickPhrasesBtn').onclick=()=>toggleQuickPhrases($('quickPhrases').hidden);
 for(const phrase of ['굿모닝','굿나잇','ㅋㅋㅋ','ㅎㅎ','뭐해?','밥은?','어디야?']){
