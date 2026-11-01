@@ -192,7 +192,7 @@ button:disabled{opacity:.5;cursor:default}
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="toast" id="toast"></div>
 <section class="order-panel" id="orderPanel" hidden aria-label="포장마차 주문"><div class="order-head"><strong>기억 포차 차림표</strong><button id="orderClose" type="button">닫기</button></div><div class="order-sec">안주</div><div class="order-grid" id="orderFood"></div><div class="order-sec">술·음료</div><div class="order-grid" id="orderDrink"></div></section>
@@ -1041,36 +1041,55 @@ $('youtubeLoadBtn').onclick=()=>{
 };
 $('youtubeCloseBtn').onclick=closeYouTube;
 $('soundBtn').onclick=()=>music.track==='banya'?showYouTube():setAudioOn(!audioOn);
-$('musicBtn').onclick=()=>{const p=$('musicPanel');p.hidden=!p.hidden;$('musicBtn').setAttribute('aria-expanded',String(!p.hidden))};
+function setMusicExpanded(open){
+  if(open)closeOtherMenus('music');
+  $('musicPanel').hidden=!open;$('musicBtn').setAttribute('aria-expanded',String(open));syncMenuSections();
+}
+$('musicBtn').onclick=()=>setMusicExpanded($('musicPanel').hidden);
 $('vol').oninput=e=>{vol=e.target.value/100;if(AC&&audioOn&&music.track!=='banya')master.gain.setTargetAtTime(vol,AC.currentTime,.1)};
 renderMusicUI();
 
 
 /* ---------- folding menus: closed by default so the garden stays visible on phones ---------- */
-function setupFold(btn,panel,key,openLabel,closedLabel,onClose){
-  const apply=open=>{$(panel).hidden=!open;$(btn).setAttribute('aria-expanded',String(open));$(btn).textContent=open?openLabel:closedLabel;if(!open&&onClose)onClose()};
-  apply(store.get(key)==='1');
-  $(btn).onclick=()=>{const open=$(panel).hidden;apply(open);store.set(key,open?'1':'0')};
+/* All expandable controls share one open menu; music belongs to the garden panel. */
+function closeOtherMenus(keep){
+  if(keep!=='poses')closePoseMenu();
+  if(keep!=='phrases')toggleQuickPhrases(false);
+  if(keep!=='history')toggleChatHistory(false,false);
+  if(keep!=='chat')toggleChat(false,false);
+  if(keep!=='order')toggleOrderMenu(false);
+  if(keep!=='music')setMusicExpanded(false);
+  if(keep!=='garden'&&keep!=='music')setGardenExpanded(false);
 }
-setupFold('poseToggle','poseList','garden.ui.poses','동작 접기 ▾','동작 ▴');
-const originalPoseToggle=$('poseToggle').onclick;
-$('poseToggle').onclick=()=>{if($('poseList').hidden){toggleQuickPhrases(false);toggleChatHistory(false);$('orderPanel').hidden=true}originalPoseToggle();syncMenuSections()};
-syncMenuSections();
+function setPoseMenu(open){
+  if(open)closeOtherMenus('poses');
+  $('poseList').hidden=!open;$('poseToggle').setAttribute('aria-expanded',String(open));
+  $('poseToggle').textContent=open?'동작 접기 ▾':'동작 ▴';
+  store.set('garden.ui.poses',open?'1':'0');syncMenuSections();
+}
+$('poseToggle').onclick=()=>setPoseMenu($('poseList').hidden);
 function syncMenuSections(){
-  $('rightMenu').classList.toggle('submenu-open',!$('poseList').hidden||!$('quickPhrases').hidden);
+  const open=['poseList','quickPhrases','chatHistory','chatBar','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
+  $('rightMenu').classList.toggle('submenu-open',open);
 }
-function closePoseMenu(){$('poseList').hidden=true;$('poseToggle').setAttribute('aria-expanded','false');$('poseToggle').textContent='동작 ▴';store.set('garden.ui.poses','0');syncMenuSections()}
+function closePoseMenu(){setPoseMenu(false)}
+function toggleOrderMenu(open){
+  if(open)closeOtherMenus('order');
+  $('orderPanel').hidden=!open;$('dOrder').setAttribute('aria-expanded',String(open));syncMenuSections();
+}
 function setGardenExpanded(open){
+  if(open)closeOtherMenus('garden');
   $('gardenDetails').hidden=!open;
   $('gardenPanel').classList.toggle('collapsed',!open);
   $('gardenToggle').setAttribute('aria-expanded',String(open));
   $('gardenToggle').textContent=open?'접기 ▴':'펼치기 ▾';
-  if(!open){$('musicPanel').hidden=true;$('musicBtn').setAttribute('aria-expanded','false')}
+  if(!open)setMusicExpanded(false);
+  store.set('garden.ui.panel',open?'1':'0');syncMenuSections();
 }
-setGardenExpanded(store.get('garden.ui.panel')==='1');
-$('gardenToggle').onclick=()=>{
-  const open=$('gardenDetails').hidden;setGardenExpanded(open);store.set('garden.ui.panel',open?'1':'0');
-};
+const initialPoseMenu=store.get('garden.ui.poses')==='1',initialGardenMenu=store.get('garden.ui.panel')==='1';
+setPoseMenu(initialPoseMenu&&!initialGardenMenu);
+setGardenExpanded(initialGardenMenu);
+$('gardenToggle').onclick=()=>setGardenExpanded($('gardenDetails').hidden);
 
 
 $('goBtn').onclick=()=>goToFriend(false);
@@ -1373,7 +1392,7 @@ function renderPochaOrders(){
 function mySeatIndex(){const s=seatAt(me.g.position.x,me.g.position.z);return s>=200?s-200:-1}
 function placeOrder(id){
   const seat=mySeatIndex(),m=POCHA_MENU[id];if(seat<0||!m)return;
-  $('orderPanel').hidden=true;ownerBusy=3;ownerSay(`네~ ${m.n} 나갑니다!`);
+  toggleOrderMenu(false);ownerBusy=3;ownerSay(`네~ ${m.n} 나갑니다!`);
   if(m.pose){pose=m.pose;sendDirty=true}
   if(room&&room.kind==='ws'&&room.connected()){room.send({t:'order',seat,item:id});return}
   setTimeout(()=>{pocha.orders.push({seat,item:id,at:Date.now()});renderPochaOrders()},2200);
@@ -1390,7 +1409,7 @@ function clearMySeat(){
 }
 function setPochaOrders(list){pocha.orders=(Array.isArray(list)?list:[]).filter(o=>o&&Number.isInteger(o.seat)&&POCHA_MENU[o.item]).slice(-48);renderPochaOrders()}
 for(const [id,m] of Object.entries(POCHA_MENU)){const b=document.createElement('button');b.type='button';b.textContent=m.n;b.onclick=()=>placeOrder(id);$(m.k==='food'?'orderFood':'orderDrink').appendChild(b)}
-$('dOrder').onclick=()=>{const open=$('orderPanel').hidden;if(open){closePoseMenu();toggleQuickPhrases(false);toggleChatHistory(false)}$('orderPanel').hidden=!open};$('orderClose').onclick=()=>{$('orderPanel').hidden=true};$('dClear').onclick=clearMySeat;
+$('dOrder').onclick=()=>toggleOrderMenu($('orderPanel').hidden);$('orderClose').onclick=()=>toggleOrderMenu(false);$('dClear').onclick=clearMySeat;
 function enterPocha(){
   const taken=sp=>[...peers.values()].some(e=>Math.hypot(e.x-sp.x,e.z-sp.z)<.3);
   const free=STOOLS.filter(sp=>!taken(sp));if(!free.length){toast('포차 자리가 가득 찼어요');return}
@@ -1402,7 +1421,7 @@ function enterPocha(){
   if(!pocha.welcomed||Date.now()-pocha.welcomed>20000){pocha.welcomed=Date.now();ownerSay('어서 오세요~ 뭐 드릴까요?')}
 }
 function leavePocha(){
-  const sp=me.g.position,h=me.g.rotation.y,st=STOOLS[mySeatIndex()];pose='stand';$('orderPanel').hidden=true;
+  const sp=me.g.position,h=me.g.rotation.y,st=STOOLS[mySeatIndex()];pose='stand';toggleOrderMenu(false);
   const out=pochaLocal(st?st.lx*.6:0,2.9);me.g.position.set(out.x,0,out.z);me.g.rotation.y=h+Math.PI;sendDirty=true;syncPoseButtons();
   cam.yaw=me.g.rotation.y+Math.PI;cam.pitch=.25;cam.dist=6;
 }
@@ -1414,7 +1433,7 @@ function seatedNow(){return seatAt(me.g.position.x,me.g.position.z)>=0&&['sit','
 function inPocha(){return seatedNow()&&seatAt(me.g.position.x,me.g.position.z)>=200}
 function syncTableBar(){
   const atTable=myTable()>=0&&seatedNow(),pc=inPocha();$('tableBar').hidden=!atTable;
-  ['dSoda','dBeer','dSoju'].forEach(id=>$(id).hidden=pc);$('dOrder').hidden=!pc;$('dClear').hidden=!pc||!pocha.orders.some(o=>o.seat===mySeatIndex());if(!pc)$('orderPanel').hidden=true;
+  ['dSoda','dBeer','dSoju'].forEach(id=>$(id).hidden=pc);$('dOrder').hidden=!pc;$('dClear').hidden=!pc||!pocha.orders.some(o=>o.seat===mySeatIndex());if(!pc)toggleOrderMenu(false);
   ['dSoda','dBeer','dSoju'].forEach((id,i)=>$(id).setAttribute('aria-pressed',String(pose===['soda','beer','soju'][i])));
 }
 function chooseDrink(d){if(!seatedNow())return;pose=pose===d?'sit':d;sendDirty=true;syncPoseButtons();syncTableBar()}
@@ -1563,12 +1582,14 @@ function showChat(key,name,text,at=serverNow(),messageId=key){
   rememberLastMessage(key,name,text,at);appendChatHistory({id:messageId,name,text,at});
   if($('chatHistory').hidden&&key!=='me')$('chatHistoryBtn').classList.add('unread');
 }
-function toggleChatHistory(open){
-  if(open){closePoseMenu();toggleQuickPhrases(false);$('orderPanel').hidden=true}
+function toggleChatHistory(open,restoreFocus=true){
+  const wasOpen=!$('chatHistory').hidden;
+  if(open)closeOtherMenus('history');
   $('chatHistory').hidden=!open;document.body.classList.toggle('chat-history-open',open);
   $('chatHistoryBtn').setAttribute('aria-expanded',String(open));
   if(open){$('chatInput').blur();$('chatHistoryBtn').classList.remove('unread');requestAnimationFrame(()=>{$('chatLog').scrollTop=$('chatLog').scrollHeight})}
-  else $('chatHistoryBtn').focus();
+  else if(wasOpen&&restoreFocus)$('chatHistoryBtn').focus();
+  syncMenuSections();
 }
 $('chatHistoryBtn').onclick=()=>toggleChatHistory($('chatHistory').hidden);
 $('chatHistoryClose').onclick=()=>toggleChatHistory(false);
@@ -1592,18 +1613,18 @@ function syncChatDock(){
   if(open)document.documentElement.style.setProperty('--chat-height',$('chatBar').offsetHeight+'px');
   document.documentElement.style.setProperty('--chat-clearance',open?($('chatBar').offsetHeight+12)+'px':'0px');
 }
-function toggleChat(open){
+function toggleChat(open,restoreFocus=true){
+  const wasOpen=!$('chatBar').hidden;
+  if(open)closeOtherMenus('chat');
   $('chatBar').hidden=!open;document.body.classList.toggle('chat-open',open);
   $('chatBtn').setAttribute('aria-expanded',String(open));$('chatBtn').textContent=open?'대화 접기':'말하기';
   if(open){
-    toggleQuickPhrases(false);$('orderPanel').hidden=true;
     $('chatBtn').classList.remove('unread');
-    closePoseMenu();
     setTimeout(()=>{if($('chatBar').hidden)return;try{$('chatInput').focus()}catch(e){}syncChatDock()},30);
-  }else{
-    $('chatInput').blur();$('chatBtn').focus();
+  }else if(wasOpen){
+    $('chatInput').blur();if(restoreFocus)$('chatBtn').focus();
   }
-  syncChatDock();
+  syncChatDock();syncMenuSections();
 }
 $('chatBtn').onclick=()=>toggleChat($('chatBar').hidden);
 $('chatClose').onclick=()=>toggleChat(false);
@@ -1624,10 +1645,10 @@ function sendChatText(value){
 }
 $('chatBar').onsubmit=e=>{e.preventDefault();if(sendChatText($('chatInput').value))$('chatInput').value=''};
 function toggleQuickPhrases(open){
+  if(open)closeOtherMenus('phrases');
   $('quickPhrases').hidden=!open;
   $('quickPhrasesBtn').setAttribute('aria-expanded',String(open));
   $('quickPhrasesBtn').setAttribute('aria-pressed',String(open));
-  if(open){closePoseMenu();toggleChatHistory(false);$('orderPanel').hidden=true}
   syncMenuSections();
 }
 $('quickPhrasesBtn').onclick=()=>toggleQuickPhrases($('quickPhrases').hidden);
