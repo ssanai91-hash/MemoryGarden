@@ -2725,7 +2725,12 @@ function sendChatText(value){
   if(!room.send({t:'chat',text})){toast('연결을 확인하고 다시 보내 주세요');return false}
   sendChatText.lastSent=now;return true;
 }
-$('chatBar').onsubmit=e=>{e.preventDefault();if(sendChatText($('chatInput').value))$('chatInput').value=''};
+$('chatBar').onsubmit=e=>{
+  e.preventDefault();
+  if(!sendChatText($('chatInput').value))return;
+  $('chatInput').value='';
+  toggleChat(false,false);
+};
 function toggleQuickPhrases(open){
   if(open)closeOtherMenus('phrases');
   $('quickPhrases').hidden=!open;
