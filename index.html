@@ -153,6 +153,8 @@ button:disabled{opacity:.5;cursor:default}
 .poses .table-bar{position:static;left:auto;right:auto;top:auto;bottom:auto;transform:none;width:100%;max-width:none;flex:none;display:flex;flex-direction:column;gap:4px;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
 .poses .context-actions{display:flex;flex-direction:column;gap:4px;flex:none;max-height:30dvh;overflow-y:auto;pointer-events:auto}
 .poses.submenu-open .context-actions{display:none}
+/* Keep only the action-menu close button while choosing a pose. */
+.poses.poses-open .pose-row>button:not(#poseToggle){display:none}
 .poses .context-actions .ctx-btn{position:static;left:auto;right:auto;top:auto;bottom:auto;transform:none}
 .poses button[aria-pressed="true"]{background:#2b2a33;color:#fff}
 .poses .ctx-btn,.poses button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -1071,6 +1073,7 @@ $('poseToggle').onclick=()=>setPoseMenu($('poseList').hidden);
 function syncMenuSections(){
   const open=['poseList','quickPhrases','chatHistory','chatBar','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
   $('rightMenu').classList.toggle('submenu-open',open);
+  $('rightMenu').classList.toggle('poses-open',!$('poseList').hidden);
 }
 function closePoseMenu(){setPoseMenu(false)}
 function toggleOrderMenu(open){
