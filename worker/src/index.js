@@ -187,11 +187,17 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === '/health') return new Response('ok');
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{6,40})$/);
-    if (!m) return new Response('기억의 정원 방 서버입니다.', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    if (!m) {
+      if (env.ASSETS) return env.ASSETS.fetch(req);
+      return new Response('기억의 정원 방 서버입니다.', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    }
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket only', { status: 426 });
-    const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const origins = env.ALLOWED_ORIGINS || (env.ASSETS ? url.origin : '');
+    const allowed = origins.split(',').map((s) => s.trim()).filter(Boolean);
     if (allowed.length && !allowed.includes(req.headers.get('Origin') || '')) return new Response('origin not allowed', { status: 403 });
-    return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(req);
+    // 통합 정원에서는 이전 링크를 열어도 모두 같은 공간으로 연결한다.
+    const space = env.ASSETS ? 'memorygarden' : m[1];
+    return env.ROOMS.get(env.ROOMS.idFromName(space)).fetch(req);
   },
 };
 

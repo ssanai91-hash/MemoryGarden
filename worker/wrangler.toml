@@ -1,5 +1,5 @@
-# 기억의 정원 방 서버 (Cloudflare Worker + Durable Object)
-# 배포: 이 폴더에서 `npx wrangler deploy`
+# 과거 분리형 방 서버 설정. 현재 운영 정원은 루트 wrangler.toml을 사용한다.
+# 통합 배포: 저장소 루트에서 `npx wrangler deploy`
 name = "memorygarden-rooms"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
