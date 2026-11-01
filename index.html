@@ -52,7 +52,6 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid
 .order-grid button{border-radius:10px;padding:8px 4px;font-size:12.5px}
 .ctx-btn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:4;background:var(--accent);color:#fff;border-color:var(--accent);
   padding:9px 18px;font-size:14px;box-shadow:0 6px 20px rgba(20,16,10,.3)}
-.pose-row{display:flex;gap:6px;justify-content:flex-end}
 #chatHistoryBtn.unread{color:#fff;background:var(--accent);border-color:var(--accent)}
 .chatbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px));width:min(520px,calc(100vw - 24px));box-sizing:border-box;z-index:6;
   background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 6px 24px rgba(40,30,20,.16);backdrop-filter:blur(8px)}
@@ -115,9 +114,6 @@ button:disabled{opacity:.5;cursor:default}
 .chatrow{align-items:center}
 .chatrow input{font-size:16px;padding:8px 10px}
 .chatrow button{flex:none;font-size:12px;padding:8px 10px}
-.chat-open .practice{display:none}
-.chat-open #joy{bottom:calc(var(--chat-height,100px) + 20px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
-.chat-open .poses{bottom:calc(var(--chat-height,100px) + 20px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
 @media(max-width:380px){.plaque-heading{gap:6px}.plaque.collapsed h1{font-size:16px}#gardenToggle{font-size:10px;padding:5px 7px}}
 /* Prayer actions share the action menu; only the active bow counter stays on screen. */
 #poseList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(260px,calc(100vw - 24px));max-height:min(340px,55dvh);overflow-y:auto;gap:6px;padding:3px;box-sizing:border-box}
@@ -127,24 +123,16 @@ button:disabled{opacity:.5;cursor:default}
 .bow-counter .count-line{margin:0;gap:6px;font-size:11px}
 .bow-counter .count-line b{font-size:15px;font-weight:700}
 .bow-counter .count-line button{font-size:10px;padding:5px 7px}
-.chat-open .bow-counter{bottom:calc(var(--chat-height,60px) + 160px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
-@media(max-width:650px){.bow-counter{bottom:calc(118px + env(safe-area-inset-bottom,0px))}.chat-open .bow-counter{bottom:calc(var(--chat-height,60px) + 118px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}}
-.quick-phrases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:min(260px,calc(100vw - 24px));max-height:45dvh;overflow-y:auto;box-sizing:border-box;padding:6px;gap:6px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
-.quick-phrases button{min-width:0}
-.pose-row>.fold{min-width:0;white-space:nowrap;padding:6px 8px}
+@media(max-width:650px){.bow-counter{bottom:calc(118px + env(safe-area-inset-bottom,0px))}}
 /* One right-hand column for action menus and contextual buttons. */
 :root{--right-menu-width:100px;--right-menu-top:180px}
-.poses,.chat-open .poses{right:max(12px,env(safe-area-inset-right,0px));top:var(--right-menu-top);bottom:calc(12px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px) + var(--chat-clearance,0px));width:var(--right-menu-width);max-width:calc(100vw - 24px);min-height:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:4px;z-index:5;pointer-events:none}
+.poses{right:max(12px,env(safe-area-inset-right,0px));top:var(--right-menu-top);bottom:calc(12px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px) + var(--chat-clearance,0px));width:var(--right-menu-width);max-width:calc(100vw - 24px);min-height:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:4px;z-index:5;pointer-events:none}
 #rightMenuBody{display:flex;flex-direction:column;align-items:stretch;gap:4px;min-height:0;max-height:min(220px,38dvh);flex:0 1 auto;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:thin;pointer-events:auto}
-.poses .pose-row{display:flex;flex-direction:column;align-items:stretch;gap:4px;min-height:0;max-height:100%;flex:0 0 auto;overflow-y:auto;overscroll-behavior:contain;pointer-events:auto}
 .poses button{box-sizing:border-box;width:100%;min-width:0;min-height:28px;flex:none;margin:0;padding:5px 7px;font-size:11px;line-height:1.2;white-space:normal;overflow-wrap:anywhere;background:rgba(250,246,238,.98);backdrop-filter:none;box-shadow:0 2px 7px rgba(40,30,20,.12)}
-.poses .pose-row>.fold{min-width:0;padding:5px 7px;white-space:normal}
-.poses #poseList,.poses #firePlayList,.poses .quick-phrases{display:flex;flex-direction:column;align-items:stretch;flex:none;width:100%;max-height:none;min-height:0;overflow:visible;box-sizing:border-box;padding:0;gap:4px;border:0;background:none}
+.poses #poseList,.poses #firePlayList{display:flex;flex-direction:column;align-items:stretch;flex:none;width:100%;max-height:none;min-height:0;overflow:visible;box-sizing:border-box;padding:0;gap:4px;border:0;background:none}
 .poses .table-bar{position:static;left:auto;right:auto;top:auto;bottom:auto;transform:none;width:100%;max-width:none;flex:none;display:flex;flex-direction:column;gap:4px;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
 .poses .context-actions{display:flex;flex-direction:column;gap:4px;flex:none;max-height:30dvh;overflow-y:auto;pointer-events:auto}
 .poses.submenu-open .context-actions{display:none}
-/* Keep only the action-menu close button while choosing a pose. */
-.poses.poses-open .pose-row>button:not(#poseToggle){display:none}
 .poses .context-actions .ctx-btn{position:static;left:auto;right:auto;top:auto;bottom:auto;transform:none}
 .poses button[aria-pressed="true"]{background:#2b2a33;color:#fff}
 .poses .ctx-btn,.poses button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -232,6 +220,20 @@ button:disabled{opacity:.5;cursor:default}
 #homeInstallOnce{font-size:12px;color:var(--soft)}
 .home-install-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-top:16px}
 .home-install-actions button{min-height:40px;border-radius:10px;font-size:12px;padding:7px 8px}
+
+/* Approved mobile layout: persistent bottom conversation dock and adjacent controls. */
+.chatbar{left:0;right:0;bottom:var(--keyboard-lift,0px);transform:none;width:100%;padding:10px max(12px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));border:0;border-top:1px solid var(--line);border-radius:0;background:#faf6ee;backdrop-filter:none;box-shadow:none}
+.chatrow{display:grid;grid-template-columns:minmax(0,1fr) 66px;gap:8px;align-items:center;width:100%;max-width:720px;margin:0 auto}
+.chatrow input{box-sizing:border-box;width:100%;height:42px;margin:0;padding:9px 12px;font-size:16px;line-height:1.3;border-radius:12px}
+.chatrow button{box-sizing:border-box;width:100%;height:42px;margin:0;padding:8px;font-size:13px;line-height:1.2;border-radius:12px;white-space:nowrap}
+.dock-actions{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 8px);display:grid;grid-template-columns:100px 90px;gap:8px;z-index:6}
+.dock-actions button{box-sizing:border-box;width:100%;height:34px;min-width:0;margin:0;padding:6px 9px;font-size:12px;line-height:1.2;white-space:nowrap;color:var(--ink);background:#faf6ee;border-radius:999px;box-shadow:0 2px 7px #281e201f}
+.chat-docked #joy{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 14px)}
+.chat-docked .poses{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 52px)}
+.chat-docked .bow-counter{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 110px)}
+.chat-docked .chat-history{left:max(12px,env(safe-area-inset-left,0px));width:min(420px,calc(100vw - 24px));bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 50px)}
+.sky-view #chatBar,.sky-view #dockActions,.rps-open #chatBar,.rps-open #dockActions,.visit-ended #chatBar,.visit-ended #dockActions,body.board-open #chatBar,body.board-open #dockActions{display:none}
+@media(max-width:650px){.chat-docked #joy{width:78px;height:78px}}
 
 /* Selected welcome design: exact artwork from the approved first concept. */
 #welcome{place-items:start center;padding:clamp(64px,11.5dvh,96px) 0 20px!important;background:rgba(25,24,31,.38);overscroll-behavior:contain}
@@ -426,17 +428,18 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subDrink" aria-expanded="false" aria-controls="subDrink">마시기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 접기</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subDrink" class="action-sub" role="group" aria-label="마시기" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button class="sub-back" type="button" data-back="subDrink">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subDrink" aria-expanded="false" aria-controls="subDrink">마시기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 접기</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subDrink" class="action-sub" role="group" aria-label="마시기" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button class="sub-back" type="button" data-back="subDrink">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
+<div class="dock-actions" id="dockActions" role="group" aria-label="대화 목록과 동작" hidden><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="toast" id="toast"></div>
 <section class="order-panel" id="orderPanel" hidden aria-label="포장마차 주문"><div class="order-head"><strong>기억 포차 차림표</strong><button id="orderClose" type="button">닫기</button></div><div class="order-sec">안주</div><div class="order-grid" id="orderFood"></div><div class="order-sec">술·음료</div><div class="order-grid" id="orderDrink"></div></section>
 <section class="chat-history" id="chatHistory" aria-labelledby="chatHistoryTitle" hidden>
-  <div class="chat-history-head"><strong id="chatHistoryTitle">대화 기록 · 최근 50개</strong><button id="chatHistoryClose" type="button">접기</button></div>
+  <div class="chat-history-head"><strong id="chatHistoryTitle">대화 목록 · 최근 50개</strong><button id="chatHistoryClose" type="button">접기</button></div>
   <div class="chatlog" id="chatLog" role="log" aria-live="polite" aria-label="정원 대화 기록"></div>
 </section>
 <form class="chatbar" id="chatBar" hidden autocomplete="off">
-  <div class="chatrow"><input id="chatInput" type="text" maxlength="200" placeholder="정원에 한마디" enterkeyhint="send" aria-label="보낼 말"><button class="primary" type="submit">보내기</button><button id="chatClose" type="button" aria-label="대화창 접기">접기</button></div>
+  <div class="chatrow"><input id="chatInput" type="text" maxlength="200" placeholder="정원에 한마디" enterkeyhint="send" aria-label="보낼 말"><button class="primary" id="chatSend" type="submit" disabled>보내기</button></div>
 </form>
 <div class="welcome" id="welcome">
   <form class="welcome-card" id="nameForm" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" autocomplete="off">
@@ -1571,7 +1574,7 @@ function onPeerList(change){
 function updateWho(){
   const n=peers.size,connected=room&&room.connected();
   $('goBtn').hidden=!connected||n===0;
-  $('chatBtn').hidden=!room;$('leaveBtn').hidden=!hasEntered;$('quickPhrasesBtn').hidden=!hasEntered;
+  $('leaveBtn').hidden=!hasEntered;syncChatDock();
   $('whoText').textContent=!hasEntered?'이름을 확인하고 들어와 주세요':!room?'지금은 혼자 산책 중이에요':!connected?room.status():n===0?'지금은 나 혼자예요 · 친구를 불러 보세요':'지금 '+(n+1)+'명이 함께 있어요';
   $('dot').classList.toggle('off',!connected);renderVisitors();
 }
@@ -1841,9 +1844,8 @@ function silenceMusicOnExit(){
 function closeOtherMenus(keep){
   if(keep!=='board'&&gardenBoard.isOpen())gardenBoard.close();
   if(keep!=='poses')closePoseMenu();
-  if(keep!=='phrases')toggleQuickPhrases(false);
   if(keep!=='history')toggleChatHistory(false,false);
-  if(keep!=='chat')toggleChat(false,false);
+  if(keep!=='chat')blurChatInput();
   if(keep!=='order')toggleOrderMenu(false);
   if(keep!=='music')setMusicExpanded(false);
   if(keep!=='garden'&&keep!=='music')setGardenExpanded(false);
@@ -1859,7 +1861,7 @@ function setPoseMenu(open){
 }
 $('poseToggle').onclick=()=>setPoseMenu(!actionMenuOpen());
 function syncMenuSections(){
-  const open=['poseList',...ACTION_SUBS,'quickPhrases','chatHistory','chatBar','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
+  const open=['poseList',...ACTION_SUBS,'chatHistory','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
   $('rightMenu').classList.toggle('submenu-open',open);
   $('rightMenu').classList.toggle('poses-open',actionMenuOpen());
   document.body.classList.toggle('actions-open',actionMenuOpen());syncActionMenuSize();if(typeof markActionCategories==='function')markActionCategories();
@@ -1868,8 +1870,8 @@ function syncActionMenuSize(){
   if(!actionMenuOpen())return;
   const list=$('poseList').hidden?$(ACTION_SUBS.find(id=>!$(id).hidden)||'poseList'):$('poseList');
   const menu=$('rightMenu'),count=Array.from(list.children).filter(button=>!button.hidden).length;
-  const available=menu.getBoundingClientRect().height,closeHeight=$('poseToggle').getBoundingClientRect().height||28;
-  const gap=available<380?2:4,height=Math.min(32,Math.max(14,Math.floor((available-closeHeight-gap*count)/Math.max(1,count))));
+  const available=menu.getBoundingClientRect().height;
+  const gap=available<380?2:4,height=Math.min(32,Math.max(14,Math.floor((available-gap*Math.max(0,count-1))/Math.max(1,count))));
   menu.style.setProperty('--action-height',height+'px');menu.style.setProperty('--action-gap',gap+'px');menu.style.setProperty('--action-font',height<25?'10px':'11px');menu.style.setProperty('--action-padding',height<22?'0px':'2px');
 }
 addEventListener('resize',syncActionMenuSize);
@@ -2677,7 +2679,7 @@ function updateContext(dt){
   if(nearT||nearF){b.textContent=nearT?'테이블에 앉기':'모닥불에 앉기';b.dataset.act='sit';b.hidden=false}else b.hidden=true;
 }
 $('ctxBtn').onclick=()=>{
-  closePoseMenu();toggleQuickPhrases(false);
+  closePoseMenu();
   const act=$('ctxBtn').dataset.act;if(act==='board'){gardenBoard.open();return}if(act==='enter'){enterPocha();ctxTick=1;updateContext(0);return}if(act==='leave'){leavePocha();ctxTick=1;updateContext(0);return}
   if(act==='up'){const sp=me.g.position,h=me.g.rotation.y;pose='stand';const [x,z]=collide(sp.x-Math.sin(h)*.8,sp.z-Math.cos(h)*.8,.4);me.g.position.x=x;me.g.position.z=z;sendDirty=true;syncPoseButtons()}
   else setPose('sit');
@@ -2860,35 +2862,32 @@ if(window.visualViewport)visualViewport.addEventListener('resize',syncRightMenuB
 syncRightMenuBounds();
 
 function syncChatDock(){
-  const open=!$('chatBar').hidden;
-  const viewport=window.visualViewport;
-  const keyboardLift=open&&viewport?Math.max(0,innerHeight-viewport.height-viewport.offsetTop):0;
+  const entered=hasEntered&&!visitEnded,bar=$('chatBar'),viewport=window.visualViewport;
+  bar.hidden=!entered;$('dockActions').hidden=!entered;
+  $('chatSend').disabled=!entered||!room||!room.connected();
+  document.body.classList.toggle('chat-docked',entered);
+  const height=entered?bar.offsetHeight:0;
+  const keyboardLift=height&&viewport?Math.max(0,innerHeight-viewport.height-viewport.offsetTop):0;
   document.documentElement.style.setProperty('--keyboard-lift',keyboardLift+'px');
-  if(open)document.documentElement.style.setProperty('--chat-height',$('chatBar').offsetHeight+'px');
-  document.documentElement.style.setProperty('--chat-clearance',open?($('chatBar').offsetHeight+12)+'px':'0px');
+  document.documentElement.style.setProperty('--chat-height',height+'px');
+  document.documentElement.style.setProperty('--chat-clearance',height?height+12+'px':'0px');
+  syncActionMenuSize();
 }
-function toggleChat(open,restoreFocus=true){
-  const wasOpen=!$('chatBar').hidden;
-  if(open)closeOtherMenus('chat');
-  $('chatBar').hidden=!open;document.body.classList.toggle('chat-open',open);
-  $('chatBtn').setAttribute('aria-expanded',String(open));$('chatBtn').textContent=open?'대화 접기':'말하기';
-  if(open){
-    $('chatBtn').classList.remove('unread');
-    setTimeout(()=>{if($('chatBar').hidden)return;try{$('chatInput').focus()}catch(e){}syncChatDock()},30);
-  }else if(wasOpen){
-    $('chatInput').blur();if(restoreFocus)$('chatBtn').focus();
-  }
-  syncChatDock();syncMenuSections();
-}
-$('chatBtn').onclick=()=>toggleChat($('chatBar').hidden);
-$('chatClose').onclick=()=>toggleChat(false);
-$('chatBar').addEventListener('keydown',e=>{if(e.key==='Escape')toggleChat(false)});
+function blurChatInput(){$('chatInput').blur();syncChatDock()}
+$('chatInput').addEventListener('focus',()=>{
+  closeOtherMenus('chat');
+  target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
+  Object.keys(keys).forEach(key=>delete keys[key]);me.speed=0;syncChatDock();
+});
+$('chatInput').addEventListener('blur',syncChatDock);
+$('chatBar').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();blurChatInput()}});
 if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncChatDock).observe($('chatBar'));
 if(window.visualViewport){
   visualViewport.addEventListener('resize',syncChatDock);
   visualViewport.addEventListener('scroll',syncChatDock);
 }
 addEventListener('resize',syncChatDock);
+syncChatDock();
 function sendChatText(value){
   const text=stripInvisible(value).slice(0,200);if(!text)return false;
   if(!hasEntered||!room||!room.connected()){toast('정원에 다시 연결되면 보낼 수 있어요');return false}
@@ -2901,25 +2900,8 @@ $('chatBar').onsubmit=e=>{
   e.preventDefault();
   if(!sendChatText($('chatInput').value))return;
   $('chatInput').value='';
-  toggleChat(false,false);
+  blurChatInput();saveVisit();
 };
-function toggleQuickPhrases(open){
-  if(open)closeOtherMenus('phrases');
-  $('quickPhrases').hidden=!open;
-  $('quickPhrasesBtn').setAttribute('aria-expanded',String(open));
-  $('quickPhrasesBtn').setAttribute('aria-pressed',String(open));
-  syncMenuSections();
-}
-$('quickPhrasesBtn').onclick=()=>toggleQuickPhrases($('quickPhrases').hidden);
-for(const phrase of ['굿모닝','굿나잇','ㅋㅋㅋ','ㅎㅎ','뭐해?','밥은?','어디야?']){
-  const button=document.createElement('button');button.type='button';button.textContent=phrase;
-  button.onclick=()=>{if(sendChatText(phrase))toggleQuickPhrases(false)};
-  $('quickPhrases').appendChild(button);
-}
-$('quickPhrases').addEventListener('keydown',e=>{if(e.key==='Escape'){toggleQuickPhrases(false);$('quickPhrasesBtn').focus()}});
-
-
-
 
 /* ---------- nearby, private rock-paper-scissors ---------- */
 const RPS_NEAR=4,RPS_HANDS={scissors:'✌️ 가위',rock:'✊ 바위',paper:'✋ 보'};
@@ -3119,7 +3101,7 @@ function leaveGarden(closeWindow=true,notifyServer=true){
   rpsGame=null;rpsPending=null;rpsDismissed=null;renderRps();
   for(const key of [...peers.keys()])removePeer(key);
   disposeBubble('me');me.bubble=null;pendingHello=[];autoJoined=false;userMoved=false;
-  endPractice(false);closePoseMenu();toggleChat(false);toggleChatHistory(false);toggleQuickPhrases(false);
+  endPractice(false);closePoseMenu();blurChatInput();toggleChatHistory(false);
   Object.keys(lastSent).forEach(key=>delete lastSent[key]);
   $('chatLog').textContent='';historyKeys.clear();sharedFlowers=null;renderFlowers(localFlowers);
   showExitScreen();updateWho();
