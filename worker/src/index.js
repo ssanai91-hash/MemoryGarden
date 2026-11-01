@@ -7,11 +7,10 @@ import { DurableObject } from 'cloudflare:workers';
 const WORLD_R = 90;
 const MAX_PEERS = 16;
 const VISIT_AWAY_MS=5*60*1000,VISIT_MEMORY_MS=24*60*60*1000;
-const TRACKS=['dawn','wind','bowl','melody','banya'];
+const TRACKS=['dawn','wind','bowl','melody'];
 const LISTENING_TRACKS=['bluehour','rainwood','starlight'];
 const spaceOf=s=>s&&s.space==='listening'?'listening':'garden';
 const sameSpace=(a,b)=>spaceOf(a)===spaceOf(b);
-const validVideo=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{11}$/.test(v);
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
 const BOARD_PAGE_SIZE=6,BOARD_MAX_NOTES=500,BOARD_MAX_TEXT=600;
 const boardText=v=>typeof v==='string'?v.replace(/\r\n?/g,'\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]/g,'').trim():'';
@@ -95,7 +94,7 @@ export class GardenRoom extends DurableObject {
         flowers: [], music:{track:null,startedAt:0,videoId:null}, weather: 'auto', chat: [],
       };
       if (!Array.isArray(this.shared.pocha)) this.shared.pocha = [];
-      if(!this.shared.music){this.shared.music={track:null,startedAt:0,videoId:null};await ctx.storage.put('shared',this.shared)}
+      if(!this.shared.music||!TRACKS.includes(this.shared.music.track)&&this.shared.music.track!==null){this.shared.music={track:null,startedAt:0,videoId:null};await ctx.storage.put('shared',this.shared)}
       this.listeningAudio=(await ctx.storage.get('listeningAudio'))||{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0};
       this.rps = (await ctx.storage.get('rpsGames')) || [];
       this.visits=(await ctx.storage.get('visits'))||{};
@@ -488,7 +487,7 @@ export class GardenRoom extends DurableObject {
         if (!this.allow(a, 'm', 1)) return;
         if (m.track !== null && !TRACKS.includes(m.track)) return;
         const track = m.track;
-        this.shared.music = { track, startedAt: Date.now(), videoId: track === 'banya' && validVideo(m.videoId) ? m.videoId : null, by: a.id };
+        this.shared.music = { track, startedAt: Date.now(), videoId: null, by: a.id };
         await this.save();
         this.broadcast({ t: 'music', music: this.shared.music, name: a.name });
         return;

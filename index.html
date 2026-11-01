@@ -203,12 +203,6 @@ button:disabled{opacity:.5;cursor:default}
 .vol input{width:100%;accent-color:var(--accent)}
 .music-sound{background:var(--accent);color:#fff;border-color:var(--accent)}
 .music-sound.on{background:var(--paper);color:var(--ink);border-color:var(--line)}
-.youtube-card{position:fixed;top:65px;right:16px;width:min(360px,calc(100vw - 32px));z-index:4;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px;box-sizing:border-box;box-shadow:0 6px 24px #281e2030}
-.youtube-card .row{margin:0 0 8px;align-items:center;justify-content:space-between}.youtube-card a{color:var(--accent);font-size:12px}
-.youtube-card iframe{display:block;width:100%;height:205px;border:0;border-radius:8px}
-.youtube-card p{font-size:11px;color:var(--soft);margin:7px 0 0}
-.youtube-source{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}
-.youtube-source a{color:var(--accent);font-size:12px}
 .poses #firePlayList{display:flex;flex-direction:column;gap:var(--action-gap,4px);width:100%;flex:none}
 .poses.poses-open #firePlayList>button{height:var(--action-height,28px);min-height:0;padding:var(--action-padding,2px) 4px;font-size:var(--action-font,11px);line-height:1.15}
 .poses .action-sub{display:flex;flex-direction:column;align-items:stretch;gap:var(--action-gap,4px);width:100%;flex:none}
@@ -383,10 +377,6 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
     <div class="mhead" id="musicNote">고른 곡은 지금 정원에 있는 모두에게 같은 박자로 들려요</div>
     <div class="tracks" id="tracks"></div>
     <button class="music-sound" id="soundBtn" type="button" hidden>소리 켜기</button>
-    <div class="youtube-source">
-      <label for="youtubeUrl">반야심경 유튜브 링크<input id="youtubeUrl" type="text" inputmode="url" placeholder="https://youtu.be/…" autocomplete="off"></label>
-      <div class="row"><button id="youtubeLoadBtn" type="button">이 영상 듣기</button><a href="https://www.youtube.com/results?search_query=반야심경+독송" target="_blank" rel="noopener noreferrer">반야심경 찾기 ↗</a></div>
-    </div>
     <label class="vol" id="synthVolume" for="vol">내 볼륨<input id="vol" type="range" min="0" max="100" value="70"></label>
   </div>
   </div>
@@ -490,10 +480,6 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 })();
 </script>
 
-<aside class="youtube-card" id="youtubeCard" aria-label="반야심경 유튜브 플레이어" hidden>
-  <div class="row"><a id="youtubeOriginal" target="_blank" rel="noopener noreferrer">YouTube에서 열기 ↗</a><button id="youtubeCloseBtn" type="button">닫기 · 정지</button></div>
-  <div id="youtubeMount"></div><p>영상의 ▶를 눌러 들어보세요. 볼륨과 일시정지는 영상에서 조절합니다.</p>
-</aside>
 <aside class="visitors" aria-label="들어온 친구"><div class="visitors-title"><span>들어온 친구</span><button id="visitorToggle" class="visitor-toggle" type="button" aria-expanded="true" aria-controls="visitorNames">접기 ▴</button></div><div id="visitorNames" class="visitor-names" aria-live="polite"></div></aside>
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
@@ -1321,7 +1307,7 @@ function enterListening(fromHistory=false,restored=null){
   if(!hasEntered||visitEnded||worldSpace==='listening')return;
   if(room&&room.connected()&&!room.listeningVersion){toast('음악방 서버가 아직 준비되지 않았어요. 최신 버전으로 반영해 주세요.');return}
   const back=restored&&restored.roomReturn;listening.returnPoint=back&&[back.x,back.z,back.h].every(Number.isFinite)?back:{x:me.g.position.x,z:me.g.position.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist}};
-  closeOtherMenus('listening');endCalm(true);endPractice(false);if(cam.sky)setSkyView(false,true);closeYouTube();
+  closeOtherMenus('listening');endCalm(true);endPractice(false);if(cam.sky)setSkyView(false,true);
   worldSpace='listening';makeListeningScene();document.body.classList.add('listening-room');
   me.g.position.set(4.45,0,4.45);me.g.rotation.y=Math.PI;myDogObj.g.position.set(3.5,0,4.4);pose='stand';cam.yaw=0;cam.pitch=.22;cam.dist=4.8;
   syncListeningActors();listening.scene.add(marker);stopListeningMovement();syncPoseButtons();resetQualitySampling();ensureListeningAudio();syncListeningSound();renderListeningUI();
@@ -1375,8 +1361,8 @@ function syncListeningSound(){
   const a=listening.audio;if(a){const audible=worldSpace==='listening'&&listening.state.power&&!listening.muted&&!document.hidden&&!visitEnded&&hasEntered;a.gain.gain.setTargetAtTime(audible?listening.volume:0,a.ac.currentTime,.12);if(audible)a.ac.resume().catch(()=>{})}
   if(worldSpace==='listening'){
     if(skyMusic.ac)skyMusic.master.gain.setTargetAtTime(0,skyMusic.ac.currentTime,.12);
-    if(AC)master.gain.setTargetAtTime(0,AC.currentTime,.12);closeYouTube();
-  }else{$('soundToggle').setAttribute('aria-pressed',String(skyMusic.on));$('soundToggle').setAttribute('aria-label',skyMusic.on?'배경음 끄기':'배경음 켜기');$('soundToggle').title=skyMusic.on?'배경음 끄기':'배경음 켜기';syncSkyMusicOutput();if(AC&&audioOn)master.gain.setTargetAtTime(music.track&&music.track!=='banya'?vol:0,AC.currentTime,.3);if(music.track==='banya'&&hasEntered)showYouTube()}
+    if(AC)master.gain.setTargetAtTime(0,AC.currentTime,.12);
+  }else{$('soundToggle').setAttribute('aria-pressed',String(skyMusic.on));$('soundToggle').setAttribute('aria-label',skyMusic.on?'배경음 끄기':'배경음 켜기');$('soundToggle').title=skyMusic.on?'배경음 끄기':'배경음 켜기';syncSkyMusicOutput();if(AC&&audioOn)master.gain.setTargetAtTime(music.track?vol:0,AC.currentTime,.3)}
 }
 function scheduleListeningAudio(){
   const a=listening.audio;if(!a||a.ac.state!=='running'||worldSpace!=='listening'||!listening.state.power||listening.muted||document.hidden||visitEnded||!hasEntered)return;
@@ -2734,10 +2720,7 @@ function silenceSkyMusic(){
 
 
 /* ---------- temple ambience: synthesised live, same beat for everyone ---------- */
-const DEFAULT_BANYA_VIDEO='bTizqvC5X9o';
-const validVideoId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{11}$/.test(id);
 const TRACKS=[
-  {id:'banya',name:'반야심경 · YouTube',desc:'영인스님 독송 · 영상에서 재생을 눌러 주세요'},
   {id:'dawn',name:'새벽 예불',desc:'목탁과 범종, 낮은 울림'},
   {id:'wind',name:'산사의 바람',desc:'처마 끝 풍경과 바람 소리'},
   {id:'bowl',name:'싱잉볼 명상',desc:'길게 퍼지는 그릇 소리'},
@@ -2812,14 +2795,13 @@ let musicScheduleTimer=setInterval(schedule,250);
 function setAudioOn(on){
   if(on&&(visitEnded||!hasEntered))return;
   if(on&&!initAudio()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
-  audioOn=on;if(AC){if(on)AC.resume();master.gain.setTargetAtTime(on&&music.track!=='banya'?vol:0,AC.currentTime,.3);
+  audioOn=on;if(AC){if(on)AC.resume();master.gain.setTargetAtTime(on?vol:0,AC.currentTime,.3);
     stopBed();sched.clear();if(on&&music.track)startBed(music.track)}
   if(worldSpace==='listening')syncListeningSound();renderMusicUI();
 }
 function applyMusic(m){
-  const changed=m.track!==music.track||m.startedAt!==music.startedAt||m.videoId!==music.videoId;music=m;
-  if(changed){if(m.track==='banya')showYouTube();else closeYouTube()}
-  if(AC)master.gain.setTargetAtTime(audioOn&&music.track!=='banya'?vol:0,AC.currentTime,.2);
+  const changed=m.track!==music.track||m.startedAt!==music.startedAt;music=m;
+  if(AC)master.gain.setTargetAtTime(audioOn?vol:0,AC.currentTime,.2);
   if(changed&&AC&&audioOn){stopBed();sched.clear();if(music.track)startBed(music.track)}
   syncSkyMusicOutput();if(worldSpace==='listening')syncListeningSound();renderMusicUI();
 }
@@ -2829,67 +2811,37 @@ function renderMusicUI(){
   const tr=TRACKS.find(x=>x.id===music.track);
   const bgmLabel=!tr&&skyMusic.on&&bgm.scene?BGM_NAMES[bgm.scene]:'';
   $('nowPlaying').hidden=!tr&&!bgmLabel;$('nowPlaying').textContent=tr?`♪ 함께 듣는 중 · ${tr.name}`:bgmLabel?`♪ 배경음 · ${bgmLabel}`:'';
-  $('soundBtn').hidden=!tr;$('soundBtn').textContent=music.track==='banya'?'반야심경 열기':audioOn?'소리 끄기':'소리 켜기';$('soundBtn').classList.toggle('on',music.track!=='banya'&&audioOn);
-  $('synthVolume').hidden=music.track==='banya';$('youtubeLoadBtn').disabled=!canPickMusic;$('youtubeUrl').disabled=!canPickMusic;
-  $('musicNote').textContent=music.track==='banya'?'유튜브 영상의 재생 버튼을 눌러 주세요 · 재생 위치는 각자 조절해요':db?(canPickMusic?'고른 곡을 함께 들어요 · 각자 소리 켜기를 눌러 주세요':'음악은 정원 주인이 골라요 · 볼륨은 내 마음대로'):'정원에서 듣고 싶은 음악을 골라보세요';
+  $('soundBtn').hidden=!tr;$('soundBtn').textContent=audioOn?'소리 끄기':'소리 켜기';$('soundBtn').classList.toggle('on',audioOn);
+  $('synthVolume').hidden=false;
+  $('musicNote').textContent=db?(canPickMusic?'고른 곡을 함께 들어요 · 각자 소리 켜기를 눌러 주세요':'음악은 정원 주인이 골라요 · 볼륨은 내 마음대로'):'정원에서 듣고 싶은 음악을 골라보세요';
   const box=$('tracks');box.textContent='';
   [...TRACKS,{id:null,name:'음악 끄기',desc:'모두에게 조용한 정원'}].forEach(x=>{
     const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed',String(music.track===x.id));b.disabled=!canPickMusic;
     const n=document.createElement('span');n.textContent=x.name;const d=document.createElement('small');d.textContent=x.desc;b.append(n,d);
     b.onclick=()=>pickTrack(x.id);box.appendChild(b)});
 }
-async function pickTrack(id,videoId){
+async function pickTrack(id){
   if(visitEnded||!hasEntered)return;
   if(!canPickMusic||id&&!TRACKS.some(x=>x.id===id))return;
   const m={track:id,startedAt:Date.now()};
-  if(id==='banya')m.videoId=validVideoId(videoId)?videoId:validVideoId(store.get('garden.banyaVideo'))?store.get('garden.banyaVideo'):DEFAULT_BANYA_VIDEO;
-  if(id&&id!=='banya'&&!audioOn)setAudioOn(true);
-  if(room&&room.kind==='ws'){if(!room.connected()){toast('정원에 다시 연결되면 골라 주세요');return}room.send({t:'music',track:id,videoId:m.videoId||null});return}
+  if(id&&!audioOn)setAudioOn(true);
+  if(room&&room.kind==='ws'){if(!room.connected()){toast('정원에 다시 연결되면 골라 주세요');return}room.send({t:'music',track:id});return}
   if(db&&canPickMusic){try{await db.doc('memorial/music').set(m)}catch(e){toast('음악을 바꾸지 못했어요. 잠시 뒤 다시 눌러 주세요');return}}
-  applyMusic(m);if(id)toast(id==='banya'?'영상의 재생 버튼을 눌러 반야심경을 들어보세요':`${TRACKS.find(x=>x.id===id).name}을 골랐어요`);
+  applyMusic(m);if(id)toast(`${TRACKS.find(x=>x.id===id).name}을 골랐어요`);
 }
-function closeYouTube(){ $('youtubeMount').textContent='';$('youtubeCard').hidden=true }
-function showYouTube(){
-  if(worldSpace==='listening')return;
-  const id=validVideoId(music.videoId)?music.videoId:DEFAULT_BANYA_VIDEO;
-  const frame=document.createElement('iframe');frame.title='반야심경 · YouTube';
-  frame.src='https://www.youtube.com/embed/'+id+'?playsinline=1&loop=1&playlist='+id+'&rel=0';
-  frame.allow='encrypted-media; picture-in-picture; fullscreen';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';
-  $('youtubeMount').textContent='';$('youtubeMount').appendChild(frame);
-  $('youtubeOriginal').href='https://www.youtube.com/watch?v='+id;
-  $('youtubeUrl').value='https://youtu.be/'+id;store.set('garden.banyaVideo',id);$('youtubeCard').hidden=false;
-}
-function youtubeIdFromUrl(value){
-  try{
-    const u=new URL(value.trim()),host=u.hostname.toLowerCase().replace(/^www\./,'');
-    if(u.protocol!=='https:'&&u.protocol!=='http:')return null;
-    let id=null;
-    if(host==='youtu.be')id=u.pathname.split('/')[1];
-    else if(['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host))
-      id=u.pathname==='/watch'?u.searchParams.get('v'):['embed','shorts','live'].includes(u.pathname.split('/')[1])?u.pathname.split('/')[2]:null;
-    return validVideoId(id)?id:null;
-  }catch(e){return null}
-}
-$('youtubeUrl').value='https://youtu.be/'+(validVideoId(store.get('garden.banyaVideo'))?store.get('garden.banyaVideo'):DEFAULT_BANYA_VIDEO);
-$('youtubeLoadBtn').onclick=()=>{
-  const id=youtubeIdFromUrl($('youtubeUrl').value);
-  if(!id){toast('유튜브 영상의 공유 링크를 붙여 넣어 주세요');return}
-  pickTrack('banya',id);
-};
-$('youtubeCloseBtn').onclick=closeYouTube;
-$('soundBtn').onclick=()=>music.track==='banya'?showYouTube():setAudioOn(!audioOn);
+$('soundBtn').onclick=()=>setAudioOn(!audioOn);
 function setMusicExpanded(open){
   if(open)closeOtherMenus('music');
   $('musicPanel').hidden=!open;$('musicBtn').setAttribute('aria-expanded',String(open));syncMenuSections();
 }
 $('musicBtn').onclick=()=>worldSpace==='listening'?openListeningAudio():setMusicExpanded($('musicPanel').hidden);
-$('vol').oninput=e=>{vol=e.target.value/100;if(AC&&audioOn&&music.track!=='banya')master.gain.setTargetAtTime(vol,AC.currentTime,.1)};
+$('vol').oninput=e=>{vol=e.target.value/100;if(AC&&audioOn)master.gain.setTargetAtTime(vol,AC.currentTime,.1)};
 renderMusicUI();
 
 
 function silenceMusicOnExit(){
   silenceListeningNotes();if(listening.audio){listening.audio.ac.close().catch(()=>{});listening.audio=null}
-  setAudioOn(false);closeYouTube();
+  setAudioOn(false);
   if(musicScheduleTimer){clearInterval(musicScheduleTimer);musicScheduleTimer=null}
   const previous=AC;AC=null;master=null;bus=null;noiseBuf=null;bed=[];sched.clear();
   if(previous)previous.close().catch(()=>{});
@@ -4323,7 +4275,7 @@ function connectRoomServer(base,code){
     if(!sh)return;
     if(sh.fireplay)applyFirePlay(sh.fireplay);
     if(Array.isArray(sh.flowers)){sharedFlowers=sh.flowers.filter(Number.isInteger).slice(-300);renderFlowers(sharedFlowers)}
-    if(sh.music){const ok=TRACKS.some(x=>x.id===sh.music.track);applyMusic({track:ok?sh.music.track:null,startedAt:Number.isFinite(sh.music.startedAt)?sh.music.startedAt:0,videoId:validVideoId(sh.music.videoId)?sh.music.videoId:DEFAULT_BANYA_VIDEO})}
+    if(sh.music){const ok=TRACKS.some(x=>x.id===sh.music.track);applyMusic({track:ok?sh.music.track:null,startedAt:Number.isFinite(sh.music.startedAt)?sh.music.startedAt:0})}
     if(['auto','clear','rain','snow'].includes(sh.weather)){weatherMode=sh.weather;environmentTick=99}
     setPochaOrders(sh.pocha);
     $('chatLog').textContent='';historyKeys.clear();
@@ -4381,7 +4333,7 @@ function connectRoomServer(base,code){
         }
         case 'board_page':case 'board_note':case 'board_posted':case 'board_confirmed':case 'board_error':case 'board_changed':gardenBoard.receive(m);break;
         case 'flower':sharedFlowers=(sharedFlowers||[]).concat(Number.isInteger(m.c)?m.c:0).slice(-300);renderFlowers(sharedFlowers);break;
-        case 'music':{const mu=m.music||{},ok=TRACKS.some(x=>x.id===mu.track);applyMusic({track:ok?mu.track:null,startedAt:mu.startedAt||serverNow(),videoId:validVideoId(mu.videoId)?mu.videoId:DEFAULT_BANYA_VIDEO});
+        case 'music':{const mu=m.music||{},ok=TRACKS.some(x=>x.id===mu.track);applyMusic({track:ok?mu.track:null,startedAt:mu.startedAt||serverNow()});
           if(mu.by!==you)toast(ok?(stripInvisible(m.name).slice(0,12)||'친구')+'님이 '+TRACKS.find(x=>x.id===mu.track).name+'을 틀었어요':'음악을 껐어요');break}
         case 'order':onFriendOrder(Object.assign({},m.order,{mine:m.order&&m.order.by===you}),stripInvisible(m.name).slice(0,12)||'친구',m.pocha);break;
         case 'pocha':setPochaOrders(m.pocha);break;
