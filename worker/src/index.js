@@ -21,7 +21,7 @@ const RPS_CHOICES = ['scissors', 'rock', 'paper'];
 const RPS_BEATS = { scissors: 'paper', rock: 'scissors', paper: 'rock' };
 const activeRps = g => g.status === 'invited' || g.status === 'playing';
 
-const POSES = ['stand', 'standing_pray', 'pray2', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
+const POSES = ['stand', 'standing_pray', 'pray2', 'shake', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
 const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'soju', 'beer', 'makgeolli', 'cider'];
 
 const POCHA_CENTER={x:-6.3,z:-23.4};
@@ -495,6 +495,14 @@ export class GardenRoom extends DurableObject {
         if(m.kind==='aurora')effect.auroraUntil=now+10000;
         else effect.fireworks={startedAt:now,seed:crypto.getRandomValues(new Uint32Array(1))[0]};
         this.shared.fireplay=effect;await this.save();this.broadcast({t:'fireplay',effect,name:a.name});return;
+      }
+      case 'shake': {
+        // 악수: 가까이(4m) 있는 상대에게만 알린다. 상대 화면에서 마주 보고 손을 맞잡는다.
+        if (!this.allow(a, 'shake', 1)) return;
+        const other = this.readyPeers().find(p => p.a.id === m.to);
+        if (!other || other.a.away || Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > 4) return;
+        try { other.ws.send(JSON.stringify({ t: 'shake', id: a.id, name: a.name, to: m.to })); } catch (e) {}
+        return;
       }
       case 'stoke': {
         // 장작 넣기: 상태로 남기지 않고 지금 있는 사람들에게만 불꽃 연출을 알린다.
