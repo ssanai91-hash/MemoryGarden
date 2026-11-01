@@ -120,6 +120,16 @@ button:disabled{opacity:.5;cursor:default}
 .chat-open #joy{bottom:calc(var(--chat-height,100px) + 20px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
 .chat-open .poses{bottom:calc(var(--chat-height,100px) + 20px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
 @media(max-width:380px){.plaque-heading{gap:6px}.plaque.collapsed h1{font-size:16px}#gardenToggle{font-size:10px;padding:5px 7px}}
+/* Prayer actions share the action menu; only the active bow counter stays on screen. */
+#poseList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(260px,calc(100vw - 24px));max-height:min(340px,55dvh);overflow-y:auto;gap:6px;padding:3px;box-sizing:border-box}
+#poseList button{min-width:0;white-space:normal}
+.poses{bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+.bow-counter{position:fixed;left:12px;bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:4;max-width:calc(100vw - 24px);box-sizing:border-box;padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--paper);backdrop-filter:blur(6px)}
+.bow-counter .count-line{margin:0;gap:6px;font-size:11px}
+.bow-counter .count-line b{font-size:15px;font-weight:700}
+.bow-counter .count-line button{font-size:10px;padding:5px 7px}
+.chat-open .bow-counter{bottom:calc(var(--chat-height,60px) + 160px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
+@media(max-width:650px){.bow-counter{bottom:calc(118px + env(safe-area-inset-bottom,0px))}.chat-open .bow-counter{bottom:calc(var(--chat-height,60px) + 118px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}}
 </style>
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
@@ -151,15 +161,10 @@ button:disabled{opacity:.5;cursor:default}
   <div id="youtubeMount"></div><p>영상의 ▶를 눌러 들어보세요. 볼륨과 일시정지는 영상에서 조절합니다.</p>
 </aside>
 <aside class="visitors" aria-label="들어온 친구"><div class="visitors-title">들어온 친구</div><div id="visitorNames" class="visitor-names" aria-live="polite"></div></aside>
-<section class="practice" aria-label="기도와 108배">
-  <div class="eyebrow">마음을 모으는 시간</div>
-  <div class="practice-title"><strong>부처님 앞에서</strong><span id="practiceStatus" role="status">편안히 머물러 보세요</span></div>
-  <div class="row"><button class="primary" id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 시작</button></div>
-  <div class="count-line"><span><b id="bowCount">0</b> / 108 배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button><button id="resetBtn" type="button">횟수 초기화</button></div>
-  <progress id="bowProgress" max="108" value="0" aria-label="108배 진행"></progress>
-  <div class="practice-note">화면 속 인물이 절합니다 · 이동하면 멈춥니다</div>
+<section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
+  <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses"><div id="poseList" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses"><div id="poseList" hidden><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="hint" id="hint">조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기</div>
 <div class="toast" id="toast"></div>
@@ -635,7 +640,7 @@ function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 
 refreshMine();
 let pose='stand',sendDirty=true;
 function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',coffee:'pCoffee'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
-function setPose(p){const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;syncPoseButtons();sendDirty=true}
+function setPose(p){const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;syncPoseButtons();sendDirty=true;closePoseMenu()}
 $('pWave').onclick=()=>setPose('wave');$('pCoffee').onclick=()=>setPose('coffee');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');
 
 /* ---------- input ---------- */
@@ -908,6 +913,7 @@ function setupFold(btn,panel,key,openLabel,closedLabel,onClose){
   $(btn).onclick=()=>{const open=$(panel).hidden;apply(open);store.set(key,open?'1':'0')};
 }
 setupFold('poseToggle','poseList','garden.ui.poses','동작 접기 ▾','동작 ▴');
+function closePoseMenu(){$('poseList').hidden=true;$('poseToggle').setAttribute('aria-expanded','false');$('poseToggle').textContent='동작 ▴';store.set('garden.ui.poses','0')}
 function setGardenExpanded(open){
   $('gardenDetails').hidden=!open;
   $('gardenPanel').classList.toggle('collapsed',!open);
@@ -938,13 +944,13 @@ function bowFrame(p){
   return{lean:0,drop:0,reach:0,knee:0};
 }
 function practiceUI(){
-  $('bowCount').textContent=practice.count;$('bowProgress').value=practice.count;
+  $('bowCount').textContent=practice.count;$('bowCounter').hidden=!['auto','single'].includes(practice.mode);
+  $('resetBtn').hidden=practice.count===0;
   $('pauseBtn').hidden=!['auto','single'].includes(practice.mode);$('pauseBtn').textContent=practice.paused?'이어 하기':'잠시 멈춤';
   $('finishBtn').hidden=practice.mode==='idle';$('prayBtn').setAttribute('aria-pressed',String(practice.mode==='pray'));
   $('prayBtn').textContent=practice.mode==='pray'?'기도 마치기':'합장 기도';
-  $('autoBowBtn').textContent=practice.count>=108?'108배 완료':practice.count?'108배 이어 하기':'108배 시작';
+  $('autoBowBtn').textContent=practice.count>=108?'108배 완료':practice.count?'108배 이어 하기':'108배 하기';
   $('autoBowBtn').disabled=practice.count>=108;$('bowBtn').disabled=practice.count>=108;
-  $('practiceStatus').textContent=practice.paused?'잠시 쉬어가세요':practice.mode==='pray'?'고요히 마음을 모읍니다':practice.mode==='auto'?'한 배, 한 배 천천히':practice.mode==='single'?'마음을 담아 한 배':practice.count>=108?'108배를 마쳤습니다':'편안히 머물러 보세요';
 }
 function endPractice(notify=true){practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
 function placeAtPrayerSpot(slot){
@@ -969,10 +975,10 @@ function localPrayerSlot(){
   return nearest>=0?nearest:0;
 }
 function startPractice(mode){
-  if(mode==='pray'&&practice.mode==='pray'){endPractice();return}
+  if(mode==='pray'&&practice.mode==='pray'){endPractice();closePoseMenu();return}
   if(mode!=='pray'&&practice.count>=108)return;
   placeAtPrayerSpot(localPrayerSlot());
-  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;
+  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();
 }
 $('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
 $('pauseBtn').onclick=()=>{practice.paused=!practice.paused;practiceUI()};$('finishBtn').onclick=()=>endPractice();
