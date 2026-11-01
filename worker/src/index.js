@@ -60,6 +60,8 @@ function cleanLook(l) {
   o.hs = l.hs === 1 ? 1 : 0;
   o.hat = !!l.hat;
   if (['male', 'female'].includes(l.gender)) { o.gender = l.gender; o.hs = l.gender === 'female' ? 1 : 0; }
+  const small = (v, max) => Number.isInteger(v) && v >= 0 && v <= max ? v : 0;
+  o.st = small(l.st, 4); o.gl = small(l.gl, 3); o.fh = o.gender === 'male' ? small(l.fh, 2) : 0; o.sk = o.gender === 'female' && !!l.sk;
   return o;
 }
 function cleanDog(d) {
