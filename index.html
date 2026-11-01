@@ -1,6 +1,8 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>기억의 정원</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<!-- 방 서버 주소. worker/를 배포한 뒤 wss://memorygarden-rooms.<계정>.workers.dev 처럼 적는다. 비우면 혼자 걷는다. -->
+<meta name="garden-room-server" content="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
 <style>
@@ -37,6 +39,20 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid
 .poses button{background:var(--paper);backdrop-filter:blur(6px);min-width:84px;box-shadow:0 4px 14px rgba(40,30,20,.12)}
 .poses button[aria-pressed="true"]{background:var(--ink);color:#fff}
 #poseList{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.pose-row{display:flex;gap:6px;justify-content:flex-end}
+#chatBtn.unread{color:#fff;background:var(--accent);border-color:var(--accent)}
+.chatbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(200px + env(safe-area-inset-bottom,0px));width:min(380px,calc(100vw - 24px));box-sizing:border-box;z-index:6;
+  background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 6px 24px rgba(40,30,20,.16);backdrop-filter:blur(8px)}
+.chatlog{display:grid;gap:3px;max-height:96px;overflow-y:auto;font-size:12.5px;margin-bottom:6px}
+.chatlog:empty{display:none}
+.chatlog b{font-weight:700;margin-right:5px;color:var(--accent)}
+.chatrow{display:flex;gap:6px}
+.chatrow input{flex:1;min-width:0;font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink)}
+.welcome{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(30,28,36,.38);padding:16px}
+.welcome-card{width:min(340px,100%);box-sizing:border-box;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 12px 40px rgba(20,16,10,.25);display:grid;gap:10px}
+.welcome-card h2{font-family:var(--display);font-size:21px;margin:0}
+.welcome-card p{margin:0;font-size:12.5px;color:var(--soft);line-height:1.5}
+.welcome-card input{font:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
 .fold{margin-top:8px;font-size:12px;padding:5px 11px;color:var(--soft)}.poses .fold{margin-top:0;color:var(--ink)}
 .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px);text-align:center;
   background:rgba(43,42,51,.72);color:#f6f1e7;font-size:12.5px;padding:7px 12px;border-radius:14px;pointer-events:none;transition:opacity .6s}
@@ -89,7 +105,7 @@ button:disabled{opacity:.5;cursor:default}
   <button class="fold" id="moreBtn" type="button" aria-expanded="false" aria-controls="plaqueMore">메뉴 펼치기 ▾</button>
   <div id="plaqueMore" hidden>
   <label class="weather-label">날씨 <select id="weatherSelect" aria-label="정원 날씨"><option value="auto">자동 순환</option><option value="clear">맑음</option><option value="rain">비</option><option value="snow">눈</option></select></label>
-  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="campfireBtn" type="button" disabled>모닥불 보기</button><button id="fireMotionBtn" type="button" aria-pressed="false" disabled>불꽃 멈춤</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
+  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="campfireBtn" type="button" disabled>모닥불 보기</button><button id="fireMotionBtn" type="button" aria-pressed="false" disabled>불꽃 멈춤</button><button id="rerollBtn" type="button">새 강아지</button><button id="nameBtn" type="button">이름 바꾸기</button><button id="inviteBtn" type="button" hidden>친구 초대</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   <div class="now" id="nowPlaying" hidden></div>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status" style="font-size:11px;color:var(--soft);margin-top:6px">모닥불을 불러오는 중…</div>
   </div>
@@ -116,10 +132,23 @@ button:disabled{opacity:.5;cursor:default}
   <progress id="bowProgress" max="108" value="0" aria-label="108배 진행"></progress>
   <div class="practice-note">화면 속 인물이 절합니다 · 이동하면 멈춥니다</div>
 </section>
-<div class="poses"><div id="poseList" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button></div><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div>
+<div class="poses"><div id="poseList" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button></div><div class="pose-row"><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="hint" id="hint">조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기</div>
 <div class="toast" id="toast"></div>
+<form class="chatbar" id="chatBar" hidden autocomplete="off">
+  <div class="chatlog" id="chatLog" aria-live="polite"></div>
+  <div class="chatrow"><input id="chatInput" type="text" maxlength="200" placeholder="정원에 한마디" enterkeyhint="send" aria-label="보낼 말"><button class="primary" type="submit">보내기</button></div>
+</form>
+<div class="welcome" id="welcome" hidden>
+  <form class="welcome-card" id="nameForm" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" autocomplete="off">
+    <div class="eyebrow">기억의 정원</div>
+    <h2 id="welcomeTitle">정원에서 불릴 이름</h2>
+    <p>친구들 머리 위에 보이는 이름이에요. 나중에 메뉴에서 바꿀 수 있어요.</p>
+    <input id="nameInput" type="text" maxlength="12" placeholder="예: 숭열" aria-label="이름" autocomplete="nickname">
+    <div class="row"><button class="primary" type="submit">들어가기</button><button id="nameSkip" type="button">나중에</button></div>
+  </form>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -527,8 +556,11 @@ let me=makePerson(myLook),myDogObj=makeDog(myDog);
 me.g.position.set(0,0,13.5);me.g.rotation.y=Math.PI;
 myDogObj.g.position.set(me.g.position.x+1,0,me.g.position.z);
 let myName='나';
+const stripInvisible=v=>String(v||'').replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]/g,'').trim();
+let myNick=stripInvisible(store.get('garden.name')).slice(0,12);
+const shownName=()=>myNick||myName;
 function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${BREEDS[d.b].k})`}
-function refreshMine(){setTag(me.tag,`${myName} · ${dogLabel(myDog)}`);$('mine').textContent=`함께 걷는 강아지: ${dogLabel(myDog)}`}
+function refreshMine(){setTag(me.tag,`${shownName()} · ${dogLabel(myDog)}`);$('mine').textContent=`함께 걷는 강아지: ${dogLabel(myDog)}`}
 refreshMine();
 let pose='stand',sendDirty=true;
 function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',coffee:'pCoffee'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
@@ -581,7 +613,7 @@ function goToFriend(auto){
 const lastSent={};
 function sendPresence(){
   if(!room)return;const p=me.g.position;
-  const patch={x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,look:myLook,dog:myDog,uid:myId};
+  const patch={x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,look:myLook,dog:myDog,uid:myId,nick:myNick||null};
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
@@ -603,6 +635,8 @@ function onPeerList(change){
       peers.set(pr.peer,e);pendingHello.push(pr.peer);
     }
     e.x=Math.max(-60,Math.min(60,s.x));e.z=Math.max(-60,Math.min(60,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
+    e.nick=typeof s.nick==='string'?stripInvisible(s.nick).slice(0,12):'';
+    if(s.say&&typeof s.say.text==='string'&&Number.isFinite(s.say.at)&&s.say.at!==e.sayAt){const fresh=e.sayAt!==undefined||Math.abs(serverNow()-s.say.at)<15000;e.sayAt=s.say.at;if(fresh)showChat(pr.peer,e.nick||e.nm||'친구',stripInvisible(s.say.text).slice(0,200))}
     e.pose=['stand','sit','lie','wave','pray','bow','coffee'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
   }
   for(const k of[...peers.keys()])if(!seen.has(k))removePeer(k);
@@ -612,12 +646,13 @@ function onPeerList(change){
 function updateWho(){
   const n=peers.size;
   $('goBtn').hidden=!room||n===0;
-  $('whoText').textContent=!room?'혼자 산책 중':n===0?'지금은 나 혼자예요':`지금 ${n+1}명이 함께 있어요`;
+  $('chatBtn').hidden=!room;$('inviteBtn').hidden=!(room&&room.kind==='ws');
+  $('whoText').textContent=!room?'혼자 산책 중':room.kind==='ws'&&!room.connected()?'정원에 연결하는 중…':n===0?'지금은 나 혼자예요 · 친구를 초대해 보세요':`지금 ${n+1}명이 함께 있어요`;
 }
 async function resolveNames(){
   const ids=[...peers.values()].map(e=>e.by).filter(Boolean);
   let ps={};if(userNS&&ids.length){try{ps=await userNS.profiles(ids)}catch(e){}}
-  for(const e of peers.values()){const nm=(e.by&&ps[e.by]&&ps[e.by].name)||'친구';e.nm=nm;
+  for(const e of peers.values()){const nm=e.nick||(e.by&&ps[e.by]&&ps[e.by].name)||'친구';e.nm=nm;
     setTag(e.P.tag,e.dog?`${nm} · ${dogLabel(e.dog)}`:nm)}
   const hello=pendingHello.filter(k=>peers.has(k));pendingHello=[];
   if(hello.length)toast(hello.length===1?`${peers.get(hello[0]).nm}님이 정원에 들어왔어요`:`친구 ${hello.length}명이 정원에 있어요`);
@@ -739,7 +774,7 @@ function startBed(id){
 }
 function schedule(){
   if(!AC||!audioOn||!music.track||!VOICES[music.track])return;
-  const ti=TRACKS.findIndex(x=>x.id===music.track),pos=(Date.now()-music.startedAt)/1000,ahead=1.2;
+  const ti=TRACKS.findIndex(x=>x.id===music.track),pos=(serverNow()-music.startedAt)/1000,ahead=1.2;
   VOICES[music.track].forEach((v,vi)=>{
     for(let k=Math.max(0,Math.floor(pos/v.p));k<=Math.floor((pos+ahead)/v.p);k++){
       const evT=k*v.p,key=vi+':'+k;if(evT<pos||sched.has(key))continue;sched.set(key,evT);
@@ -780,6 +815,7 @@ async function pickTrack(id,videoId){
   const m={track:id,startedAt:Date.now()};
   if(id==='banya')m.videoId=validVideoId(videoId)?videoId:validVideoId(store.get('garden.banyaVideo'))?store.get('garden.banyaVideo'):DEFAULT_BANYA_VIDEO;
   if(id&&id!=='banya'&&!audioOn)setAudioOn(true);
+  if(room&&room.kind==='ws'){if(!room.connected()){toast('정원에 다시 연결되면 골라 주세요');return}room.send({t:'music',track:id,videoId:m.videoId||null});return}
   if(db&&canPickMusic){try{await db.doc('memorial/music').set(m)}catch(e){toast('음악을 바꾸지 못했어요. 잠시 뒤 다시 눌러 주세요');return}}
   applyMusic(m);if(id)toast(id==='banya'?'영상의 재생 버튼을 눌러 반야심경을 들어보세요':`${TRACKS.find(x=>x.id===id).name}을 골랐어요`);
 }
@@ -830,6 +866,7 @@ $('goBtn').onclick=()=>goToFriend(false);
 $('rerollBtn').onclick=()=>{let d=randDog();while(d.b===myDog.b)d=randDog();applyMyLook(randLook(),d,true);toast(`${dogLabel(myDog)}와 함께 걸어요`)};
 $('flowerBtn').onclick=async()=>{
   const c=Math.floor(Math.random()*petalCols.length);
+  if(room&&room.kind==='ws'&&room.connected()){room.send({t:'flower',c});toast('꽃을 놓았어요');return}
   if(db&&sharedFlowers){try{await db.collection('flowers').add({at:Date.now(),c});toast('꽃을 놓았어요');return}catch(e){}}
   localFlowers.push(c);localFlowers=localFlowers.slice(-300);store.set('mem.flowerList',JSON.stringify(localFlowers));renderFlowers(localFlowers);toast(`꽃 ${localFlowers.length}송이`);
 };
@@ -884,10 +921,10 @@ const weatherNames={clear:'맑음',rain:'비',snow:'눈'},weatherCycle=['clear',
 const weatherMat=new THREE.PointsMaterial({color:0xc6d7e6,size:.07,transparent:true,opacity:0,depthWrite:false});
 const weatherPositions=new Float32Array(720*3);for(let i=0;i<720;i++){weatherPositions[i*3]=(Math.random()-.5)*42;weatherPositions[i*3+1]=Math.random()*20;weatherPositions[i*3+2]=(Math.random()-.5)*42}
 const weatherGeo=new THREE.BufferGeometry();weatherGeo.setAttribute('position',new THREE.BufferAttribute(weatherPositions,3));const precipitation=new THREE.Points(weatherGeo,weatherMat);scene.add(precipitation);
-$('weatherSelect').onchange=()=>{weatherMode=$('weatherSelect').value;weatherTime=0;environmentTick=99};
+$('weatherSelect').onchange=()=>{weatherMode=$('weatherSelect').value;weatherTime=0;environmentTick=99;if(room&&room.kind==='ws')room.send({t:'weather',mode:weatherMode})};
 const seoulTime=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
 function updateEnvironment(dt,t){
-  weatherTime+=dt;if(weatherMode==='auto'&&weatherTime>=90){weatherTime=0;weatherIndex=(weatherIndex+1)%3;environmentTick=99}
+  weatherTime+=dt;if(weatherMode==='auto'){const idx=Math.floor(serverNow()/90000)%3;if(idx!==weatherIndex){weatherIndex=idx;environmentTick=99}}
   const weather=weatherMode==='auto'?weatherCycle[weatherIndex]:weatherMode;
   weatherStrength+=((weather==='clear'?0:1)-weatherStrength)*Math.min(1,dt*.7);
   weatherMat.opacity=weatherStrength*.65;weatherMat.size=weather==='snow'?.115:.045;precipitation.visible=weatherStrength>.01;
@@ -944,6 +981,123 @@ $('campfireBtn').onclick=()=>{
 };
 $('fireMotionBtn').onclick=()=>{if(!fireState.loaded)return;firePlaying=!firePlaying;if(fireMixer)fireMixer.timeScale=firePlaying?1:0;$('fireMotionBtn').textContent=firePlaying?'불꽃 멈춤':'불꽃 움직임';$('fireMotionBtn').setAttribute('aria-pressed',String(!firePlaying))};
 function updateCampfire(dt){if(!fireState.loaded)return;if(firePlaying)fireTime+=dt;if(fireMixer)fireMixer.update(dt);fireLight.intensity=.52+(firePlaying?Math.sin(fireTime*8)*.06+Math.sin(fireTime*13)*.025:0)}
+
+
+/* ---------- shared clock: room server time when connected ---------- */
+function serverNow(){return Date.now()+(room&&room.clockOffset||0)}
+
+/* ---------- name on entry ---------- */
+function openNameDialog(){$('nameInput').value=myNick;$('welcome').hidden=false;setTimeout(()=>{try{$('nameInput').focus()}catch(e){}},50)}
+function closeNameDialog(){$('welcome').hidden=true}
+$('nameForm').onsubmit=e=>{e.preventDefault();const v=stripInvisible($('nameInput').value).slice(0,12);if(!v){$('nameInput').focus();return}
+  myNick=v;store.set('garden.name',v);refreshMine();sendDirty=true;if(room&&room.kind==='ws')room.profile();closeNameDialog();toast(`${v}님, 어서 오세요`)};
+$('nameSkip').onclick=()=>{store.set('garden.nameAsked','1');closeNameDialog()};
+$('nameBtn').onclick=openNameDialog;
+if(!myNick&&store.get('garden.nameAsked')!=='1')openNameDialog();
+
+/* ---------- chat: a short line over your head, recent lines in the bar ---------- */
+const bubbles=new Map();
+function bubbleFor(key){if(key==='me')return me;const e=peers.get(key);return e?e.P:null}
+function showBubble(key,text){
+  const P=bubbleFor(key);if(!P)return;
+  let b=bubbles.get(key);if(b&&b.parent!==P.g){b.parent&&b.parent.remove(b);b=null}
+  if(!b){const c=document.createElement('canvas');c.width=640;c.height=200;const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
+    b=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true,toneMapped:false}));b.scale.set(3,.94,1);b.renderOrder=11;b.userData.c=c;bubbles.set(key,b)}
+  const c=b.userData.c,x=c.getContext('2d');x.clearRect(0,0,640,200);x.font='34px "Gowun Dodum", sans-serif';
+  const words=[...text],lines=[];let line='';for(const ch of words){if(x.measureText(line+ch).width>560){lines.push(line);line='';if(lines.length===2)break}line+=ch}
+  if(lines.length<2&&line)lines.push(line);else if(lines.length===2&&words.length>lines.join('').length)lines[1]=lines[1].slice(0,-1)+'…';
+  const w=Math.min(620,Math.max(...lines.map(l=>x.measureText(l).width))+48),h=lines.length*44+30,l=320-w/2,tp=150-h;
+  x.fillStyle='rgba(255,252,244,.96)';x.strokeStyle='rgba(60,52,40,.25)';x.lineWidth=2;
+  x.beginPath();x.moveTo(l+22,tp);x.arcTo(l+w,tp,l+w,tp+h,22);x.arcTo(l+w,tp+h,l,tp+h,22);x.lineTo(338,tp+h);x.lineTo(320,tp+h+24);x.lineTo(302,tp+h);x.arcTo(l,tp+h,l,tp,22);x.arcTo(l,tp,l+w,tp,22);x.closePath();x.fill();x.stroke();
+  x.fillStyle='#2b2a33';x.textAlign='center';x.textBaseline='middle';lines.forEach((ln,i)=>x.fillText(ln,320,tp+37+i*44));
+  b.material.map.needsUpdate=true;b.position.y=2.95;P.g.add(b);clearTimeout(b.userData.timer);b.userData.timer=setTimeout(()=>P.g.remove(b),7000);
+}
+function showChat(key,name,text){
+  showBubble(key,text);
+  const row=document.createElement('div'),n=document.createElement('b');n.textContent=name;row.append(n,document.createTextNode(text));
+  const log=$('chatLog');log.appendChild(row);while(log.children.length>30)log.removeChild(log.firstChild);log.scrollTop=log.scrollHeight;
+  if($('chatBar').hidden&&key!=='me')$('chatBtn').classList.add('unread');
+}
+function toggleChat(open){$('chatBar').hidden=!open;$('chatBtn').setAttribute('aria-expanded',String(open));$('chatBtn').textContent=open?'닫기':'말하기';
+  if(open){$('chatBtn').classList.remove('unread');setTimeout(()=>{try{$('chatInput').focus()}catch(e){}},30)}}
+$('chatBtn').onclick=()=>toggleChat($('chatBar').hidden);
+$('chatBar').onsubmit=e=>{e.preventDefault();const text=stripInvisible($('chatInput').value).slice(0,200);if(!text||!room)return;
+  if(room.kind==='ws'){if(!room.connected()){toast('정원에 다시 연결되면 보낼 수 있어요');return}room.send({t:'chat',text})}
+  else{room.presence({say:{text,at:serverNow()}}).catch(()=>{});showChat('me',shownName(),text)}
+  $('chatInput').value='';};
+
+/* ---------- room server (Cloudflare Worker + Durable Object) ---------- */
+const ROOM_SERVER=(document.querySelector('meta[name="garden-room-server"]')||{}).content||'';
+function roomCode(){
+  const m=/^#r-([a-z0-9]{10})$/.exec(location.hash);if(m){store.set('garden.room',m[1]);return m[1]}
+  let c=store.get('garden.room');if(!/^[a-z0-9]{10}$/.test(c||'')){const a=new Uint8Array(10);crypto.getRandomValues(a);c=[...a].map(v=>'abcdefghijkmnpqrstuvwxyz23456789'[v%32]).join('');store.set('garden.room',c)}
+  try{history.replaceState(null,'',location.pathname+location.search+'#r-'+c)}catch(e){}
+  return c;
+}
+function connectRoomServer(base,code){
+  const peersById=new Map(),connL=[],peerL=[];let ws=null,connected=false,you=null,retry=0,stop=false,emitQueued=false,local={},sentState='',pingTimer=null;
+  const api={kind:'ws',code,clockOffset:0,
+    connected:()=>connected,
+    send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))},
+    onPeers(fn){peerL.push(fn);return()=>{}},onConnection(fn){connL.push(fn);fn(connected);return()=>{}},
+    presence(patch){Object.assign(local,patch);
+      const st={x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp},k=JSON.stringify(st);
+      if(k!==sentState&&Number.isFinite(st.x)){sentState=k;api.send({t:'state',s:st})}
+      if('look' in patch||'dog' in patch||'nick' in patch)api.profile();
+      return Promise.resolve()},
+    profile(){api.send({t:'profile',name:shownName()==='나'?'친구':shownName(),look:myLook,dog:myDog})}};
+  function emit(){if(emitQueued)return;emitQueued=true;requestAnimationFrame(()=>{emitQueued=false;
+    const list=[...peersById.values()].map(p=>({peer:p.id,sameTab:false,kind:'viewer',by:null,guest:false,presence:Object.assign({},p.s||{},{look:p.look,dog:p.dog,nick:p.name})}));
+    peerL.forEach(fn=>fn({peers:list}))})}
+  function setConn(c){connected=c;connL.forEach(fn=>fn(c));updateWho()}
+  function applyShared(sh){
+    if(!sh)return;
+    if(Array.isArray(sh.flowers)){sharedFlowers=sh.flowers.filter(Number.isInteger).slice(-300);renderFlowers(sharedFlowers)}
+    if(sh.music){const ok=TRACKS.some(x=>x.id===sh.music.track);applyMusic({track:ok?sh.music.track:null,startedAt:Number.isFinite(sh.music.startedAt)?sh.music.startedAt:0,videoId:validVideoId(sh.music.videoId)?sh.music.videoId:DEFAULT_BANYA_VIDEO})}
+    if(['auto','clear','rain','snow'].includes(sh.weather)){weatherMode=sh.weather;$('weatherSelect').value=sh.weather;environmentTick=99}
+    $('chatLog').textContent='';(sh.chat||[]).slice(-12).forEach(c=>{const row=document.createElement('div'),n=document.createElement('b');n.textContent=stripInvisible(c.name).slice(0,12)||'친구';row.append(n,document.createTextNode(stripInvisible(c.text).slice(0,200)));$('chatLog').appendChild(row)});
+  }
+  function open(){
+    try{ws=new WebSocket(base.replace(/\/+$/,'')+'/room/'+code)}catch(e){schedule();return}
+    ws.onopen=()=>{retry=0;const p=me.g.position;
+      ws.send(JSON.stringify({t:'hello',name:shownName()==='나'?'친구':shownName(),look:myLook,dog:myDog,s:{x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:0}}));
+      clearInterval(pingTimer);pingTimer=setInterval(()=>api.send({t:'ping',c:Date.now()}),20000)};
+    ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch(e){return}
+      switch(m.t){
+        case 'welcome':you=m.you;api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
+          setConn(true);applyShared(m.shared);sentState='';sendDirty=true;emit();api.send({t:'ping',c:Date.now()});break;
+        case 'join':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,m.peer);emit()}break;
+        case 'state':{const p=peersById.get(m.id);if(p){p.s=m.s;emit()}break}
+        case 'profile':{const p=peersById.get(m.id);if(p){p.name=m.name;p.look=m.look;p.dog=m.dog;emit()}break}
+        case 'leave':peersById.delete(m.id);emit();break;
+        case 'chat':showChat(m.id===you?'me':m.id,stripInvisible(m.name).slice(0,12)||'친구',stripInvisible(m.text).slice(0,200));break;
+        case 'flower':sharedFlowers=(sharedFlowers||[]).concat(Number.isInteger(m.c)?m.c:0).slice(-300);renderFlowers(sharedFlowers);break;
+        case 'music':{const mu=m.music||{},ok=TRACKS.some(x=>x.id===mu.track);applyMusic({track:ok?mu.track:null,startedAt:mu.startedAt||serverNow(),videoId:validVideoId(mu.videoId)?mu.videoId:DEFAULT_BANYA_VIDEO});
+          if(mu.by!==you)toast(ok?`${stripInvisible(m.name).slice(0,12)||'친구'}님이 ${TRACKS.find(x=>x.id===mu.track).name}을 틀었어요`:'음악을 껐어요');break}
+        case 'weather':if(['auto','clear','rain','snow'].includes(m.mode)){weatherMode=m.mode;$('weatherSelect').value=m.mode;weatherTime=0;environmentTick=99}break;
+        case 'pong':if(Number.isFinite(m.s)&&Number.isFinite(m.c)){const rtt=Date.now()-m.c;if(rtt<3000)api.clockOffset=m.s-(m.c+rtt/2)}break;
+        case 'full':stop=true;toast(`이 정원은 가득 찼어요 (최대 ${m.max||16}명)`);break;
+      }};
+    ws.onclose=()=>{clearInterval(pingTimer);const was=connected;peersById.clear();emit();if(was)setConn(false);if(!stop)schedule()};
+    ws.onerror=()=>{};
+  }
+  function schedule(){const wait=Math.min(15000,1000*Math.pow(2,retry++));setTimeout(open,wait)}
+  open();return api;
+}
+function shareInvite(){
+  if(!(room&&room.kind==='ws'))return;
+  const link=location.origin+location.pathname+'#r-'+room.code;
+  const copied=()=>toast('초대 링크를 복사했어요. 카톡에 붙여 넣어 보내세요');
+  const fallback=()=>{try{navigator.clipboard.writeText(link).then(copied,()=>window.prompt('이 링크를 복사해서 보내 주세요',link))}catch(e){window.prompt('이 링크를 복사해서 보내 주세요',link)}};
+  if(navigator.share)navigator.share({title:'기억의 정원',text:'정원에서 같이 산책해요',url:link}).catch(err=>{if(!err||err.name!=='AbortError')fallback()});
+  else fallback();
+}
+$('inviteBtn').onclick=shareInvite;
+if(!window.claude&&ROOM_SERVER&&/^wss?:\/\//.test(ROOM_SERVER)){
+  room=connectRoomServer(ROOM_SERVER,roomCode());
+  room.onPeers(onPeerList);room.onConnection(c=>$('dot').classList.toggle('off',!c));
+  canPickMusic=true;renderMusicUI();updateWho();
+}
 
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.8?72:55;camera.updateProjectionMatrix()}

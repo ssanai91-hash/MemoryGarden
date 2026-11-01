@@ -1,0 +1,18 @@
+# 기억의 정원 방 서버 (Cloudflare Worker + Durable Object)
+# 배포: 이 폴더에서 `npx wrangler deploy`
+name = "memorygarden-rooms"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "GardenRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GardenRoom"]
+
+[vars]
+# 정원 사이트 주소만 접속을 허용하려면 쉼표로 적는다. 비우면 모든 출처 허용.
+# 예: "https://memorygarden.pages.dev,https://garden.example.com"
+ALLOWED_ORIGINS = ""
