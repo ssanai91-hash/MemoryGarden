@@ -55,7 +55,7 @@ export class GardenRoom extends DurableObject {
   }
 
   readyPeers() {
-    return this.ctx.getWebSockets().map((ws) => ({ ws, a: ws.deserializeAttachment() })).filter((p) => p.a && p.a.ready);
+    return this.ctx.getWebSockets().map((ws) => ({ ws, a: ws.deserializeAttachment() })).filter((p) => p.ws.readyState === 1 && p.a && p.a.ready);
   }
   peerInfo(a) {
     return { id: a.id, name: a.name, look: a.look, dog: a.dog, s: a.s };
@@ -169,7 +169,12 @@ export class GardenRoom extends DurableObject {
 
   async webSocketClose(ws) {
     const a = ws.deserializeAttachment();
-    if (a && a.ready) this.broadcast({ t: 'leave', id: a.id }, ws);
+    if (a && a.ready) {
+      a.ready = false;
+      ws.serializeAttachment(a);
+      this.broadcast({ t: 'leave', id: a.id }, ws);
+    }
+    if (a) for (const key of this.rate.keys()) if (key.startsWith(a.id + ':')) this.rate.delete(key);
     try { ws.close(1000, 'bye'); } catch (e) { /* already closed */ }
   }
   async webSocketError(ws) {
@@ -189,3 +194,4 @@ export default {
     return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(req);
   },
 };
+

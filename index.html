@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>기억의 정원</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<!-- 방 서버 주소. worker/를 배포한 뒤 wss://memorygarden-rooms.<계정>.workers.dev 처럼 적는다. 비우면 혼자 걷는다. -->
+<!-- 기본 방 서버 주소. 비어 있으면 화면의 '함께 걷기'에서 연결할 수 있다. -->
 <meta name="garden-room-server" content="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
@@ -53,6 +53,12 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid
 .welcome-card h2{font-family:var(--display);font-size:21px;margin:0}
 .welcome-card p{margin:0;font-size:12.5px;color:var(--soft);line-height:1.5}
 .welcome-card input{font:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.room-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.room-card{width:min(420px,100%);max-height:calc(100dvh - 48px);overflow-y:auto}
+.room-card label{display:grid;gap:5px;font-size:12px;color:var(--soft)}
+.room-card input{box-sizing:border-box;width:100%;min-width:0;font-size:14px}
+.room-card .room-message{color:var(--ink);font-size:13px;line-height:1.5}
+.room-card input[readonly]{background:#f3f0e8}
 .fold{margin-top:8px;font-size:12px;padding:5px 11px;color:var(--soft)}.poses .fold{margin-top:0;color:var(--ink)}
 .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px);text-align:center;
   background:rgba(43,42,51,.72);color:#f6f1e7;font-size:12.5px;padding:7px 12px;border-radius:14px;pointer-events:none;transition:opacity .6s}
@@ -101,11 +107,12 @@ button:disabled{opacity:.5;cursor:default}
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
   <h1>기억의 정원</h1><div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText">혼자 산책 중</span></div>
+  <div class="room-actions"><button id="roomBtn" type="button">함께 걷기</button><button id="inviteBtn" type="button" hidden>친구 초대</button></div>
   <div class="environment"><span id="seoulClock">한국 시각</span><span id="skyLabel"></span></div>
   <button class="fold" id="moreBtn" type="button" aria-expanded="false" aria-controls="plaqueMore">메뉴 펼치기 ▾</button>
   <div id="plaqueMore" hidden>
   <label class="weather-label">날씨 <select id="weatherSelect" aria-label="정원 날씨"><option value="auto">자동 순환</option><option value="clear">맑음</option><option value="rain">비</option><option value="snow">눈</option></select></label>
-  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="campfireBtn" type="button" disabled>모닥불 보기</button><button id="fireMotionBtn" type="button" aria-pressed="false" disabled>불꽃 멈춤</button><button id="rerollBtn" type="button">새 강아지</button><button id="nameBtn" type="button">이름 바꾸기</button><button id="inviteBtn" type="button" hidden>친구 초대</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
+  <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="campfireBtn" type="button" disabled>모닥불 보기</button><button id="fireMotionBtn" type="button" aria-pressed="false" disabled>불꽃 멈춤</button><button id="rerollBtn" type="button">새 강아지</button><button id="nameBtn" type="button">이름 바꾸기</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   <div class="now" id="nowPlaying" hidden></div>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status" style="font-size:11px;color:var(--soft);margin-top:6px">모닥불을 불러오는 중…</div>
   </div>
@@ -147,6 +154,21 @@ button:disabled{opacity:.5;cursor:default}
     <p>친구들 머리 위에 보이는 이름이에요. 나중에 메뉴에서 바꿀 수 있어요.</p>
     <input id="nameInput" type="text" maxlength="12" placeholder="예: 숭열" aria-label="이름" autocomplete="nickname">
     <div class="row"><button class="primary" type="submit">들어가기</button><button id="nameSkip" type="button">나중에</button></div>
+  </form>
+</div>
+
+<div class="welcome" id="roomDialog" hidden>
+  <form class="welcome-card room-card" id="roomForm" role="dialog" aria-modal="true" aria-labelledby="roomTitle" autocomplete="off">
+    <div class="row"><h2 id="roomTitle">친구와 함께 걷기</h2><button id="roomClose" type="button">닫기</button></div>
+    <p class="room-message" id="roomStatus" role="status">방 서버를 연결하면 같은 링크로 들어온 친구와 만날 수 있어요.</p>
+    <label for="roomServerInput">방 서버 주소<input id="roomServerInput" type="text" inputmode="url" placeholder="https://memorygarden-rooms.계정.workers.dev" spellcheck="false" autocapitalize="none"></label>
+    <p>정원을 여는 사람이 처음 한 번 연결해 주세요. 친구에게는 서버 주소가 포함된 초대 링크를 보내면 돼요.</p>
+    <label for="roomCodeInput">현재 방 코드<input id="roomCodeInput" type="text" readonly></label>
+    <div class="row"><button class="primary" id="roomConnect" type="submit">연결하기</button><button id="roomDisconnect" type="button" hidden>연결 끊기</button></div>
+    <div id="roomInviteFields" hidden>
+      <label for="roomInviteInput">친구에게 보낼 초대 링크<input id="roomInviteInput" type="text" readonly></label>
+      <div class="row"><button id="roomShare" type="button">친구 초대</button></div>
+    </div>
   </form>
 </div>
 
@@ -599,6 +621,7 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();cam.dist=Math.max(2.5,Mat
 
 /* ---------- friends (room presence) ---------- */
 let room=null,userNS=null,db=null,assets=null,myId=null;
+let activeRoomServer='',roomSettingsMessage='';
 const peers=new Map();
 let pendingHello=[],userMoved=false,autoJoined=false;
 function goToFriend(auto){
@@ -644,10 +667,14 @@ function onPeerList(change){
   updateWho();resolveNames();
 }
 function updateWho(){
-  const n=peers.size;
+  const n=peers.size,wsRoom=room&&room.kind==='ws',connected=wsRoom&&room.connected();
   $('goBtn').hidden=!room||n===0;
-  $('chatBtn').hidden=!room;$('inviteBtn').hidden=!(room&&room.kind==='ws');
-  $('whoText').textContent=!room?'혼자 산책 중':room.kind==='ws'&&!room.connected()?'정원에 연결하는 중…':n===0?'지금은 나 혼자예요 · 친구를 초대해 보세요':`지금 ${n+1}명이 함께 있어요`;
+  $('chatBtn').hidden=!room;$('inviteBtn').hidden=!connected;
+  $('roomBtn').hidden=!!window.claude;
+  $('roomBtn').textContent=connected?'방 연결 설정':'함께 걷기';
+  $('whoText').textContent=!room?'혼자 산책 중':wsRoom&&!connected?room.status():n===0?'지금은 나 혼자예요 · 친구를 초대해 보세요':`지금 ${n+1}명이 함께 있어요`;
+  if(wsRoom)$('dot').classList.toggle('off',!connected);
+  renderRoomSettings();
 }
 async function resolveNames(){
   const ids=[...peers.values()].map(e=>e.by).filter(Boolean);
@@ -1028,28 +1055,94 @@ $('chatBar').onsubmit=e=>{e.preventDefault();const text=stripInvisible($('chatIn
 
 /* ---------- room server (Cloudflare Worker + Durable Object) ---------- */
 const ROOM_SERVER=(document.querySelector('meta[name="garden-room-server"]')||{}).content||'';
+function normalizeRoomServer(value){
+  try{
+    const u=new URL(String(value||'').trim());
+    if(u.username||u.password||u.search||u.hash||!/^\/?$/.test(u.pathname))return '';
+    if(u.protocol==='https:')u.protocol='wss:';
+    if(u.protocol==='http:')u.protocol='ws:';
+    if(!['wss:','ws:'].includes(u.protocol))return '';
+    if(u.protocol==='ws:'&&(!['localhost','127.0.0.1','[::1]'].includes(u.hostname)||location.protocol==='https:'))return '';
+    return u.origin;
+  }catch(e){return ''}
+}
 function roomCode(){
-  const m=/^#r-([a-z0-9]{10})$/.exec(location.hash);if(m){store.set('garden.room',m[1]);return m[1]}
-  let c=store.get('garden.room');if(!/^[a-z0-9]{10}$/.test(c||'')){const a=new Uint8Array(10);crypto.getRandomValues(a);c=[...a].map(v=>'abcdefghijkmnpqrstuvwxyz23456789'[v%32]).join('');store.set('garden.room',c)}
+  const m=/^#r-([a-z0-9-]{6,40})$/.exec(location.hash);if(m){store.set('garden.room',m[1]);return m[1]}
+  let c=store.get('garden.room');
+  if(!/^[a-z0-9-]{6,40}$/.test(c||'')){
+    const alphabet='abcdefghijkmnpqrstuvwxyz23456789',a=new Uint8Array(10);
+    crypto.getRandomValues(a);c=[...a].map(v=>alphabet[v%alphabet.length]).join('');store.set('garden.room',c);
+  }
   try{history.replaceState(null,'',location.pathname+location.search+'#r-'+c)}catch(e){}
   return c;
 }
+function invitationLink(){
+  if(!(room&&room.kind==='ws')||!activeRoomServer)return '';
+  const u=new URL(location.href);u.searchParams.set('gardenServer',activeRoomServer);u.hash='r-'+room.code;return u.href;
+}
+function renderRoomSettings(){
+  const wsRoom=room&&room.kind==='ws',connected=wsRoom&&room.connected();
+  $('roomStatus').textContent=roomSettingsMessage||(wsRoom?connected?'같은 초대 링크로 들어오면 이 정원에서 만나요. 현재 '+(peers.size+1)+'명 / 최대 16명':room.status():'방 서버를 연결하면 같은 링크로 들어온 친구와 만날 수 있어요.');
+  $('roomCodeInput').value=wsRoom?room.code:store.get('garden.room')||'연결하면 만들어져요';
+  $('roomDisconnect').hidden=!wsRoom;$('roomConnect').textContent=wsRoom?'다시 연결':'연결하기';
+  $('roomInviteFields').hidden=!connected;$('roomInviteInput').value=connected?invitationLink():'';
+}
+function openRoomSettings(message){
+  roomSettingsMessage=message||'';
+  $('roomServerInput').value=activeRoomServer||normalizeRoomServer(ROOM_SERVER)||normalizeRoomServer(store.get('garden.roomServer'));
+  renderRoomSettings();$('roomDialog').hidden=false;setTimeout(()=>{$('roomServerInput').focus()},30);
+}
+function closeRoomSettings(){$('roomDialog').hidden=true;roomSettingsMessage='';$('roomBtn').focus()}
+$('roomBtn').onclick=()=>openRoomSettings();$('roomClose').onclick=closeRoomSettings;
+$('roomDialog').addEventListener('keydown',e=>{if(e.key==='Escape')closeRoomSettings()});
+$('roomInviteInput').onclick=e=>e.target.select();
+function startRoomConnection(base){
+  if(window.claude)return;
+  if(!['https:','http:'].includes(location.protocol)){openRoomSettings('함께 걷기는 내려받은 파일 대신 배포된 정원 웹주소에서 열어 주세요.');return}
+  if(room&&room.kind==='ws')room.close();
+  onPeerList({peers:[]});roomSettingsMessage='';activeRoomServer=base;store.set('garden.roomServer',base);
+  const u=new URL(location.href);u.searchParams.set('gardenServer',base);
+  try{history.replaceState(null,'',u.pathname+u.search+u.hash)}catch(e){}
+  room=connectRoomServer(base,roomCode());room.onPeers(onPeerList);room.onConnection(()=>updateWho());
+  canPickMusic=true;renderMusicUI();updateWho();
+}
+$('roomForm').onsubmit=e=>{
+  e.preventDefault();const base=normalizeRoomServer($('roomServerInput').value);
+  if(!base){roomSettingsMessage='배포한 방 서버의 https://…workers.dev 주소를 입력해 주세요. 경로와 방 코드는 넣지 않아도 돼요.';renderRoomSettings();$('roomServerInput').focus();return}
+  $('roomServerInput').value=base;startRoomConnection(base);
+};
+$('roomDisconnect').onclick=()=>{
+  if(room&&room.kind==='ws')room.close();
+  room=null;activeRoomServer='';store.set('garden.roomServer','');
+  const u=new URL(location.href);u.searchParams.delete('gardenServer');
+  try{history.replaceState(null,'',u.pathname+u.search+u.hash)}catch(e){}
+  onPeerList({peers:[]});sharedFlowers=null;renderFlowers(localFlowers);toggleChat(false);
+  $('dot').classList.add('off');roomSettingsMessage='연결을 끊었어요. 지금은 혼자 산책 중이에요.';updateWho();
+};
 function connectRoomServer(base,code){
-  const peersById=new Map(),connL=[],peerL=[];let ws=null,connected=false,you=null,retry=0,stop=false,emitQueued=false,local={},sentState='',pingTimer=null;
+  const peersById=new Map(),connL=[],peerL=[];
+  let ws=null,connected=false,you=null,retry=0,stop=false,emitQueued=false,local={},sentState='';
+  let pingTimer=null,retryTimer=null,handshakeTimer=null,lastReceived=0,connectionStatus='정원에 연결하는 중…';
   const api={kind:'ws',code,clockOffset:0,
-    connected:()=>connected,
-    send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))},
-    onPeers(fn){peerL.push(fn);return()=>{}},onConnection(fn){connL.push(fn);fn(connected);return()=>{}},
+    connected:()=>connected,status:()=>connectionStatus,
+    send(o){if(!stop&&ws&&ws.readyState===1){try{ws.send(JSON.stringify(o));return true}catch(e){}}return false},
+    onPeers(fn){peerL.push(fn)},onConnection(fn){connL.push(fn);fn(connected)},
     presence(patch){Object.assign(local,patch);
       const st={x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp},k=JSON.stringify(st);
-      if(k!==sentState&&Number.isFinite(st.x)){sentState=k;api.send({t:'state',s:st})}
-      if('look' in patch||'dog' in patch||'nick' in patch)api.profile();
+      if(k!==sentState&&Number.isFinite(st.x)&&connected&&api.send({t:'state',s:st}))sentState=k;
+      if(connected&&('look' in patch||'dog' in patch||'nick' in patch))api.profile();
       return Promise.resolve()},
-    profile(){api.send({t:'profile',name:shownName()==='나'?'친구':shownName(),look:myLook,dog:myDog})}};
-  function emit(){if(emitQueued)return;emitQueued=true;requestAnimationFrame(()=>{emitQueued=false;
+    profile(){if(connected)api.send({t:'profile',name:shownName()==='나'?'친구':shownName(),look:myLook,dog:myDog})},
+    close(){
+      stop=true;clearTimeout(retryTimer);clearTimeout(handshakeTimer);clearInterval(pingTimer);
+      removeEventListener('online',wake);document.removeEventListener('visibilitychange',wake);
+      const socket=ws;ws=null;if(socket)try{socket.close(1000,'left garden')}catch(e){}
+      peersById.clear();setConn(false,'정원 연결을 종료했어요');
+    }};
+  function emit(){if(emitQueued||stop)return;emitQueued=true;requestAnimationFrame(()=>{emitQueued=false;if(stop)return;
     const list=[...peersById.values()].map(p=>({peer:p.id,sameTab:false,kind:'viewer',by:null,guest:false,presence:Object.assign({},p.s||{},{look:p.look,dog:p.dog,nick:p.name})}));
     peerL.forEach(fn=>fn({peers:list}))})}
-  function setConn(c){connected=c;connL.forEach(fn=>fn(c));updateWho()}
+  function setConn(c,message){connected=c;if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
   function applyShared(sh){
     if(!sh)return;
     if(Array.isArray(sh.flowers)){sharedFlowers=sh.flowers.filter(Number.isInteger).slice(-300);renderFlowers(sharedFlowers)}
@@ -1057,15 +1150,28 @@ function connectRoomServer(base,code){
     if(['auto','clear','rain','snow'].includes(sh.weather)){weatherMode=sh.weather;$('weatherSelect').value=sh.weather;environmentTick=99}
     $('chatLog').textContent='';(sh.chat||[]).slice(-12).forEach(c=>{const row=document.createElement('div'),n=document.createElement('b');n.textContent=stripInvisible(c.name).slice(0,12)||'친구';row.append(n,document.createTextNode(stripInvisible(c.text).slice(0,200)));$('chatLog').appendChild(row)});
   }
+  function disconnected(message){
+    clearTimeout(handshakeTimer);clearInterval(pingTimer);
+    const socket=ws;ws=null;if(socket)try{socket.close()}catch(e){}
+    peersById.clear();emit();setConn(false,message);if(!stop)schedule();
+  }
   function open(){
-    try{ws=new WebSocket(base.replace(/\/+$/,'')+'/room/'+code)}catch(e){schedule();return}
-    ws.onopen=()=>{retry=0;const p=me.g.position;
-      ws.send(JSON.stringify({t:'hello',name:shownName()==='나'?'친구':shownName(),look:myLook,dog:myDog,s:{x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:0}}));
-      clearInterval(pingTimer);pingTimer=setInterval(()=>api.send({t:'ping',c:Date.now()}),20000)};
-    ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch(e){return}
+    if(stop)return;
+    clearTimeout(retryTimer);retryTimer=null;
+    if(navigator.onLine===false){setConn(false,'인터넷 연결을 기다리는 중…');schedule();return}
+    setConn(false,retry?'정원에 다시 연결하는 중…':'정원에 연결하는 중…');
+    let socket;try{socket=new WebSocket(base+'/room/'+code);ws=socket}catch(e){disconnected('방 서버에 연결하지 못했어요 · 함께 걷기에서 주소를 확인해 주세요');return}
+    handshakeTimer=setTimeout(()=>{if(ws===socket&&!connected)disconnected('방 서버가 응답하지 않아요 · 함께 걷기에서 주소를 확인해 주세요')},12000);
+    socket.onopen=()=>{if(stop||ws!==socket)return;const p=me.g.position;lastReceived=Date.now();
+      api.send({t:'hello',name:shownName()==='나'?'친구':shownName(),look:myLook,dog:myDog,s:{x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0}});
+      clearInterval(pingTimer);pingTimer=setInterval(()=>{
+        if(Date.now()-lastReceived>60000){disconnected('연결이 끊어졌어요 · 다시 연결하는 중…');return}
+        api.send({t:'ping',c:Date.now()});
+      },20000)};
+    socket.onmessage=ev=>{if(stop||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
-        case 'welcome':you=m.you;api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
-          setConn(true);applyShared(m.shared);sentState='';sendDirty=true;emit();api.send({t:'ping',c:Date.now()});break;
+        case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
+          applyShared(m.shared);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
         case 'join':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,m.peer);emit()}break;
         case 'state':{const p=peersById.get(m.id);if(p){p.s=m.s;emit()}break}
         case 'profile':{const p=peersById.get(m.id);if(p){p.name=m.name;p.look=m.look;p.dog=m.dog;emit()}break}
@@ -1073,30 +1179,40 @@ function connectRoomServer(base,code){
         case 'chat':showChat(m.id===you?'me':m.id,stripInvisible(m.name).slice(0,12)||'친구',stripInvisible(m.text).slice(0,200));break;
         case 'flower':sharedFlowers=(sharedFlowers||[]).concat(Number.isInteger(m.c)?m.c:0).slice(-300);renderFlowers(sharedFlowers);break;
         case 'music':{const mu=m.music||{},ok=TRACKS.some(x=>x.id===mu.track);applyMusic({track:ok?mu.track:null,startedAt:mu.startedAt||serverNow(),videoId:validVideoId(mu.videoId)?mu.videoId:DEFAULT_BANYA_VIDEO});
-          if(mu.by!==you)toast(ok?`${stripInvisible(m.name).slice(0,12)||'친구'}님이 ${TRACKS.find(x=>x.id===mu.track).name}을 틀었어요`:'음악을 껐어요');break}
+          if(mu.by!==you)toast(ok?(stripInvisible(m.name).slice(0,12)||'친구')+'님이 '+TRACKS.find(x=>x.id===mu.track).name+'을 틀었어요':'음악을 껐어요');break}
         case 'weather':if(['auto','clear','rain','snow'].includes(m.mode)){weatherMode=m.mode;$('weatherSelect').value=m.mode;weatherTime=0;environmentTick=99}break;
-        case 'pong':if(Number.isFinite(m.s)&&Number.isFinite(m.c)){const rtt=Date.now()-m.c;if(rtt<3000)api.clockOffset=m.s-(m.c+rtt/2)}break;
-        case 'full':stop=true;toast(`이 정원은 가득 찼어요 (최대 ${m.max||16}명)`);break;
+        case 'pong':if(Number.isFinite(m.s)&&Number.isFinite(m.c)){const rtt=Date.now()-m.c;if(rtt>=0&&rtt<3000)api.clockOffset=m.s-(m.c+rtt/2)}break;
+        case 'full':stop=true;clearTimeout(retryTimer);disconnected('이 정원은 가득 찼어요 (최대 '+(m.max||16)+'명)');toast(connectionStatus);break;
       }};
-    ws.onclose=()=>{clearInterval(pingTimer);const was=connected;peersById.clear();emit();if(was)setConn(false);if(!stop)schedule()};
-    ws.onerror=()=>{};
+    socket.onclose=()=>{if(ws!==socket||stop)return;disconnected('방 서버에 연결하지 못했어요 · 함께 걷기에서 주소와 서버 배포를 확인해 주세요')};
+    socket.onerror=()=>{};
   }
-  function schedule(){const wait=Math.min(15000,1000*Math.pow(2,retry++));setTimeout(open,wait)}
+  function schedule(){if(stop||retryTimer)return;const wait=Math.min(15000,1000*Math.pow(2,retry++));retryTimer=setTimeout(()=>{retryTimer=null;open()},wait)}
+  function wake(){
+    if(stop||document.hidden||navigator.onLine===false)return;
+    if(connected&&Date.now()-lastReceived<=60000){api.send({t:'ping',c:Date.now()});return}
+    if(ws&&!connected)return;
+    if(ws)disconnected('정원에 다시 연결하는 중…');
+    clearTimeout(retryTimer);retryTimer=null;open();
+  }
+  addEventListener('online',wake);document.addEventListener('visibilitychange',wake);
   open();return api;
 }
 function shareInvite(){
-  if(!(room&&room.kind==='ws'))return;
-  const link=location.origin+location.pathname+'#r-'+room.code;
-  const copied=()=>toast('초대 링크를 복사했어요. 카톡에 붙여 넣어 보내세요');
-  const fallback=()=>{try{navigator.clipboard.writeText(link).then(copied,()=>window.prompt('이 링크를 복사해서 보내 주세요',link))}catch(e){window.prompt('이 링크를 복사해서 보내 주세요',link)}};
+  if(!(room&&room.kind==='ws'&&room.connected())){openRoomSettings('방 서버에 연결한 뒤 친구를 초대할 수 있어요.');return}
+  const link=invitationLink(),copied=()=>toast('초대 링크를 복사했어요. 카톡에 붙여 넣어 보내세요');
+  const manual=()=>{openRoomSettings('아래 초대 링크를 길게 누르거나 선택해서 복사해 주세요.');$('roomInviteInput').focus();$('roomInviteInput').select()};
+  const fallback=()=>{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(link).then(copied,manual);else manual()};
   if(navigator.share)navigator.share({title:'기억의 정원',text:'정원에서 같이 산책해요',url:link}).catch(err=>{if(!err||err.name!=='AbortError')fallback()});
   else fallback();
 }
-$('inviteBtn').onclick=shareInvite;
-if(!window.claude&&ROOM_SERVER&&/^wss?:\/\//.test(ROOM_SERVER)){
-  room=connectRoomServer(ROOM_SERVER,roomCode());
-  room.onPeers(onPeerList);room.onConnection(c=>$('dot').classList.toggle('off',!c));
-  canPickMusic=true;renderMusicUI();updateWho();
+$('inviteBtn').onclick=shareInvite;$('roomShare').onclick=shareInvite;
+if(!window.claude){
+  const invitedValue=new URL(location.href).searchParams.get('gardenServer');
+  const base=invitedValue!==null?normalizeRoomServer(invitedValue):normalizeRoomServer(ROOM_SERVER)||normalizeRoomServer(store.get('garden.roomServer'));
+  if(base)startRoomConnection(base);
+  else if(invitedValue!==null)openRoomSettings('초대 링크의 방 서버 주소를 확인해 주세요. 친구에게 새 초대 링크를 받아도 돼요.');
+  else updateWho();
 }
 
 /* ---------- loop ---------- */
@@ -1159,3 +1275,4 @@ requestAnimationFrame(tick);
 </script>
 
 </body></html>
+
