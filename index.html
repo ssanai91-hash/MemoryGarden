@@ -1112,8 +1112,8 @@ function showBubble(key,name,text){
   if(b.userData.signature!==signature){
     b.userData.signature=signature;
     const c=b.userData.c,x=c.getContext('2d');
-    const nameFont='bold 22px "Gowun Dodum", sans-serif',textFont='26px "Gowun Dodum", sans-serif';
-    const maxTextWidth=340,padding=16,lineHeight=32,tailHeight=10,unitsPerPixel=.0043;
+    const nameFont='bold 33px "Gowun Dodum", sans-serif',textFont='39px "Gowun Dodum", sans-serif';
+    const maxTextWidth=340,padding=16,lineHeight=48,tailHeight=10,unitsPerPixel=.0043;
     x.font=textFont;
     const wrapped=[];let line='';
     for(const ch of [...text]){
@@ -1129,8 +1129,8 @@ function showBubble(key,name,text){
     }
     const textWidth=Math.max(0,...lines.map(ln=>x.measureText(ln).width));
     x.font=nameFont;
-    const contentWidth=Math.min(maxTextWidth,Math.max(40,textWidth,x.measureText(name).width));
-    const width=Math.ceil(contentWidth+padding*2+4),bodyHeight=50+lines.length*lineHeight,height=bodyHeight+tailHeight+4;
+    const contentWidth=Math.max(40,textWidth,x.measureText(name).width);
+    const width=Math.ceil(contentWidth+padding*2+4),bodyHeight=75+lines.length*lineHeight,height=bodyHeight+tailHeight+4;
     c.width=width;c.height=height;
     const l=2,tp=2,w=width-4,h=bodyHeight,cx=width/2,r=14;
     x.fillStyle='rgba(255,252,244,.96)';x.strokeStyle='rgba(60,52,40,.25)';x.lineWidth=1.5;
@@ -1138,9 +1138,9 @@ function showBubble(key,name,text){
     x.lineTo(cx+9,tp+h);x.lineTo(cx,tp+h+tailHeight);x.lineTo(cx-9,tp+h);
     x.arcTo(l,tp+h,l,tp,r);x.arcTo(l,tp,l+w,tp,r);x.closePath();x.fill();x.stroke();
     x.textAlign='center';x.textBaseline='middle';x.fillStyle='#a36a37';x.font=nameFont;
-    x.fillText(name,cx,25,maxTextWidth);
+    x.fillText(name,cx,38);
     x.fillStyle='#2b2a33';x.font=textFont;
-    lines.forEach((ln,i)=>x.fillText(ln,cx,56+i*lineHeight));
+    lines.forEach((ln,i)=>x.fillText(ln,cx,84+i*lineHeight));
     b.material.map.needsUpdate=true;
     // 글자 크기는 유지하고, 실제 내용이 차지하는 가로·세로만 줄이거나 늘린다.
     b.scale.set(width*unitsPerPixel,height*unitsPerPixel,1);
