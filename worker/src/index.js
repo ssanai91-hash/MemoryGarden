@@ -12,6 +12,13 @@ const PRAYER_SPOTS=CENTERPIECE==='campfire'
   :Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
 const TRACKS = ['dawn', 'wind', 'bowl', 'melody', 'banya'];
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
+
+const RPS_DISTANCE = 4, RPS_BREAK_DISTANCE = 6;
+const RPS_INVITE_MS = 15000, RPS_RETAIN_MS = 30000;
+const RPS_CHOICES = ['scissors', 'rock', 'paper'];
+const RPS_BEATS = { scissors: 'paper', rock: 'scissors', paper: 'rock' };
+const activeRps = g => g.status === 'invited' || g.status === 'playing';
+
 const POSES = ['stand', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
 const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'soju', 'beer', 'makgeolli', 'cider'];
 const INVISIBLE = /[\u0000-\u001f\u007f​-‏‪-‮⁠-⁤﻿]/g;
@@ -46,11 +53,15 @@ export class GardenRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.rate = new Map();
+    this.rps = [];
     ctx.blockConcurrencyWhile(async () => {
       this.shared = (await ctx.storage.get('shared')) || {
         flowers: [], music: { track: null, startedAt: 0, videoId: null }, weather: 'auto', chat: [],
       };
       if (!Array.isArray(this.shared.pocha)) this.shared.pocha = [];
+      this.rps = (await ctx.storage.get('rpsGames')) || [];
+      // Preserve a pending alarm when waking from hibernation.
+      if (this.rps.length && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
     });
   }
 
@@ -109,6 +120,133 @@ export class GardenRoom extends DurableObject {
     await this.ctx.storage.put('shared', this.shared);
   }
 
+
+  // Game state is private to its two players. Choices never appear in shared or peer data.
+  rpsFor(id) {
+    return this.rps.find(g => activeRps(g) && g.players.includes(id))
+      || [...this.rps].reverse().find(g => g.players.includes(id)) || null;
+  }
+  rpsView(game, id) {
+    if (!game || !game.players.includes(id)) return null;
+    const index = game.players.indexOf(id), other = game.players[1 - index];
+    return {
+      id: game.id, status: game.status, inviter: index === 0,
+      opponent: { id: other, name: game.names[1 - index] },
+      expiresAt: game.expiresAt, startAt: game.startAt || 0, deadline: game.deadline || 0,
+      choice: game.choices[id] || null,
+      opponentChoice: game.status === 'result' ? game.choices[other] : null,
+      result: game.status === 'result' ? (game.winner === null ? 'draw' : game.winner === id ? 'win' : 'lose') : null,
+      reason: game.reason || null,
+    };
+  }
+  sendRps(game) {
+    for (const { ws, a } of this.readyPeers()) {
+      if (game.players.includes(a.id)) {
+        try { ws.send(JSON.stringify({ t: 'rps_state', game: this.rpsView(game, a.id) })); } catch (e) {}
+      }
+    }
+  }
+  async armRpsAlarm() {
+    const next = this.rps.length ? Math.min(...this.rps.map(g => g.expiresAt)) : null;
+    if (next !== null) await this.ctx.storage.setAlarm(Math.max(Date.now() + 1, next));
+    else await this.ctx.storage.deleteAlarm();
+  }
+  async saveRps() {
+    await this.ctx.storage.put('rpsGames', this.rps);
+    await this.armRpsAlarm();
+  }
+  finishRps(game, reason, now = Date.now()) {
+    game.status = reason ? 'cancelled' : 'result';
+    game.reason = reason || null;
+    game.expiresAt = now + RPS_RETAIN_MS;
+    if (!reason) {
+      const [a, b] = game.players, left = game.choices[a], right = game.choices[b];
+      game.winner = left === right ? null : RPS_BEATS[left] === right ? a : b;
+    }
+  }
+  async advanceRps(now = Date.now()) {
+    const changed = [];
+    for (const game of this.rps) {
+      if (activeRps(game) && now >= game.expiresAt) {
+        const reason = game.status === 'invited' ? 'timeout'
+          : game.players.every(id => RPS_CHOICES.includes(game.choices[id])) ? null : 'no_choice';
+        this.finishRps(game, reason, now); changed.push(game);
+      }
+    }
+    const count = this.rps.length;
+    this.rps = this.rps.filter(g => activeRps(g) || g.expiresAt > now);
+    if (changed.length || count !== this.rps.length) await this.saveRps();
+    for (const game of changed) this.sendRps(game);
+  }
+  async alarm() {
+    await this.advanceRps();
+    await this.armRpsAlarm();
+  }
+  async cancelRpsFor(id, reason) {
+    const games = this.rps.filter(g => activeRps(g) && g.players.includes(id));
+    if (!games.length) return;
+    await this.advanceRps();
+    const cancelled = games.filter(activeRps);
+    for (const game of cancelled) this.finishRps(game, reason);
+    if (cancelled.length) await this.saveRps();
+    for (const game of cancelled) this.sendRps(game);
+  }
+  async checkRpsDistance(id) {
+    const game = this.rps.find(g => activeRps(g) && g.players.includes(id));
+    if (!game) return;
+    const peers = this.readyPeers(), pair = game.players.map(player => peers.find(p => p.a.id === player));
+    if (pair.some(p => !p)) return this.cancelRpsFor(id, 'disconnected');
+    if (Math.hypot(pair[0].a.s.x - pair[1].a.s.x, pair[0].a.s.z - pair[1].a.s.z) > RPS_BREAK_DISTANCE)
+      await this.cancelRpsFor(id, 'away');
+  }
+  async handleRps(ws, a, m) {
+    const error = code => { try { ws.send(JSON.stringify({ t: 'rps_error', code })); } catch (e) {} };
+    if (!this.allow(a, 'rps', 5)) { error('slow'); return; }
+    await this.advanceRps();
+    const now = Date.now();
+    if (m.t === 'rps_sync') {
+      ws.send(JSON.stringify({ t: 'rps_state', game: this.rpsView(this.rpsFor(a.id), a.id) }));
+      return;
+    }
+    if (m.t === 'rps_invite') {
+      if (!this.allow(a, 'rpsi', 1)) { error('slow'); return; }
+      if (typeof m.peer !== 'string' || m.peer === a.id) { error('peer'); return; }
+      const other = this.readyPeers().find(p => p.a.id === m.peer);
+      if (!other) { error('offline'); return; }
+      if (this.rps.some(g => activeRps(g) && (g.players.includes(a.id) || g.players.includes(other.a.id)))) { error('busy'); return; }
+      if (Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > RPS_DISTANCE) { error('far'); return; }
+      // Keep at most one completed match per player; a new invitation always takes priority.
+      this.rps = this.rps.filter(g => !g.players.includes(a.id) && !g.players.includes(other.a.id));
+      const game = { id: crypto.randomUUID(), players: [a.id, other.a.id], names: [a.name, other.a.name],
+        status: 'invited', createdAt: now, expiresAt: now + RPS_INVITE_MS, choices: {} };
+      this.rps.push(game); await this.saveRps(); this.sendRps(game); return;
+    }
+    const game = this.rps.find(g => g.id === m.game && g.players.includes(a.id));
+    if (!game || !activeRps(game)) { error('ended'); return; }
+    if (m.t === 'rps_reply') {
+      if (game.status !== 'invited' || game.players[1] !== a.id || typeof m.accept !== 'boolean') { error('reply'); return; }
+      if (!m.accept) this.finishRps(game, 'declined', now);
+      else {
+        const other = this.readyPeers().find(p => p.a.id === game.players[0]);
+        if (!other) this.finishRps(game, 'disconnected', now);
+        else if (Math.hypot(a.s.x - other.a.s.x, a.s.z - other.a.s.z) > RPS_DISTANCE) this.finishRps(game, 'away', now);
+        else {
+          game.status = 'playing';game.startAt = now + 800;game.deadline = game.startAt + 3000;game.expiresAt = game.deadline;
+        }
+      }
+      await this.saveRps();this.sendRps(game);return;
+    }
+    if (m.t === 'rps_cancel') {
+      this.finishRps(game, 'cancelled', now);await this.saveRps();this.sendRps(game);return;
+    }
+    if (m.t === 'rps_choose') {
+      if (game.status !== 'playing' || now >= game.deadline || !RPS_CHOICES.includes(m.choice)) { error('choice'); return; }
+      if (game.choices[a.id]) { error('locked'); return; }
+      game.choices[a.id] = m.choice;
+      await this.saveRps();this.sendRps(game);
+    }
+  }
+
   async webSocketMessage(ws, raw) {
     if (typeof raw !== 'string' || raw.length > 4096) return;
     let m;
@@ -146,12 +284,14 @@ export class GardenRoom extends DurableObject {
       a.ready = true;
       a.handshaking = false;
       ws.serializeAttachment(a);
+      await this.advanceRps();
       const peers = this.readyPeers().filter((p) => p.a.id !== a.id).map((p) => this.peerInfo(p.a));
-      ws.send(JSON.stringify({ t: 'welcome', you: a.id, prayerSlot: a.prayerSlot, now: Date.now(), max: MAX_PEERS, peers, shared: this.shared }));
+      ws.send(JSON.stringify({ t: 'welcome', you: a.id, prayerSlot: a.prayerSlot, now: Date.now(), max: MAX_PEERS, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: 'join', peer: this.peerInfo(a) }, ws);
       return;
     }
     if (!a.ready) return;
+    if (['rps_invite', 'rps_reply', 'rps_cancel', 'rps_choose', 'rps_sync'].includes(m.t)) return this.handleRps(ws, a, m);
 
     switch (m.t) {
       case 'leave': {
@@ -170,6 +310,7 @@ export class GardenRoom extends DurableObject {
           ws.send(JSON.stringify({ t: 'prayer_place', slot: a.prayerSlot }));
         }
         this.broadcast({ t: 'state', id: a.id, s: a.s }, ws);
+        await this.checkRpsDistance(a.id);
         return;
       }
       case 'profile': {
@@ -258,7 +399,10 @@ export class GardenRoom extends DurableObject {
     if (a && a.ready) {
       a.ready = false;
       ws.serializeAttachment(a);
-      if (!this.readyPeers().some(p => p.a.id === a.id)) this.broadcast({ t: 'leave', id: a.id }, ws);
+      if (!this.readyPeers().some(p => p.a.id === a.id)) {
+        this.broadcast({ t: 'leave', id: a.id }, ws);
+        await this.cancelRpsFor(a.id, 'disconnected');
+      }
     }
     if (a && !this.readyPeers().some(p => p.a.id === a.id)) {
       for (const key of this.rate.keys()) if (key.startsWith(a.id + ':')) this.rate.delete(key);

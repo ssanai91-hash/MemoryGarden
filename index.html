@@ -160,6 +160,19 @@ button:disabled{opacity:.5;cursor:default}
 .poses .ctx-btn,.poses button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .chat-history{left:12px;width:min(420px,calc(100vw - var(--right-menu-width) - 36px))}
 .order-panel{left:12px;right:auto;transform:none;width:min(360px,calc(100vw - var(--right-menu-width) - 36px));max-height:calc(100dvh - 150px - var(--keyboard-lift,0px));overflow-y:auto}
+/* A compact private match card; garden controls return when it closes. */
+.rps-panel{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9;box-sizing:border-box;width:min(330px,calc(100vw - 28px));max-height:calc(100dvh - 40px);overflow-y:auto;padding:16px;border:1px solid var(--line);border-radius:18px;background:#faf6ee;box-shadow:0 10px 36px #20180e40;text-align:center}
+.rps-panel h2{font-family:var(--display);font-size:19px;margin:0 0 8px}
+.rps-panel p{font-size:13px;line-height:1.5;margin:7px 0;overflow-wrap:anywhere}
+.rps-count{font-size:44px;font-weight:700;line-height:1.2;color:var(--accent);margin:10px 0;font-variant-numeric:tabular-nums}
+.rps-choices,.rps-actions{display:flex;justify-content:center;gap:7px;margin-top:10px}
+.rps-choices button{flex:1;min-width:0;min-height:62px;border-radius:13px;font-size:15px;padding:9px 5px}
+.rps-choices button span{display:block;font-size:25px;line-height:1.2;margin-bottom:5px}
+.rps-actions button{min-height:40px;flex:1;min-width:0}
+.rps-reveal{padding:11px 7px;border-radius:12px;background:#eee6d8;white-space:pre-line}
+.rps-open #rightMenu,.rps-open #gardenPanel{visibility:hidden}
+@media(max-height:520px){.rps-panel{bottom:8px;padding:10px}.rps-count{font-size:32px;margin:5px 0}}
+
 </style>
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
@@ -194,7 +207,7 @@ button:disabled{opacity:.5;cursor:default}
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="toast" id="toast"></div>
 <section class="order-panel" id="orderPanel" hidden aria-label="포장마차 주문"><div class="order-head"><strong>기억 포차 차림표</strong><button id="orderClose" type="button">닫기</button></div><div class="order-sec">안주</div><div class="order-grid" id="orderFood"></div><div class="order-sec">술·음료</div><div class="order-grid" id="orderDrink"></div></section>
@@ -223,6 +236,26 @@ button:disabled{opacity:.5;cursor:default}
     <div class="row"><button class="primary" id="shareCopy" type="button">주소 복사</button></div>
   </section>
 </div>
+
+<section class="rps-panel" id="rpsPanel" role="dialog" aria-labelledby="rpsTitle" hidden>
+  <h2 id="rpsTitle" aria-live="polite" aria-atomic="true">가위바위보</h2>
+  <p id="rpsOpponent"></p>
+  <div class="rps-count" id="rpsCount" aria-live="polite" aria-atomic="true" hidden></div>
+  <p id="rpsStatus" role="status"></p>
+  <div class="rps-choices" id="rpsChoices" role="group" aria-label="낼 손 선택" hidden>
+    <button id="rpsScissors" type="button" data-rps="scissors" aria-pressed="false"><span aria-hidden="true">✌️</span>가위</button>
+    <button id="rpsRock" type="button" data-rps="rock" aria-pressed="false"><span aria-hidden="true">✊</span>바위</button>
+    <button id="rpsPaper" type="button" data-rps="paper" aria-pressed="false"><span aria-hidden="true">✋</span>보</button>
+  </div>
+  <p class="rps-reveal" id="rpsReveal" hidden></p>
+  <div class="rps-actions">
+    <button class="primary" id="rpsAccept" type="button" hidden>수락</button>
+    <button id="rpsDecline" type="button" hidden>거절</button>
+    <button id="rpsCancel" type="button" hidden>신청 취소</button>
+    <button class="primary" id="rpsRematch" type="button" hidden>한 판 더</button>
+    <button id="rpsClose" type="button" hidden>닫기</button>
+  </div>
+</section>
 
 <script>
 try{
@@ -1782,6 +1815,110 @@ $('quickPhrases').addEventListener('keydown',e=>{if(e.key==='Escape'){toggleQuic
 
 
 
+
+/* ---------- nearby, private rock-paper-scissors ---------- */
+const RPS_NEAR=4,RPS_HANDS={scissors:'✌️ 가위',rock:'✊ 바위',paper:'✋ 보'};
+const RPS_CANCEL_TEXT={
+  declined:'상대가 신청을 거절했어요.',timeout:'응답 시간이 지나 신청이 취소됐어요.',
+  no_choice:'시간 안에 두 사람 모두 선택하지 않아 취소됐어요.',
+  disconnected:'친구가 나가거나 연결이 끊겨 취소됐어요.',away:'서로 멀어져 게임이 취소됐어요.',
+  cancelled:'가위바위보가 취소됐어요.'
+};
+let rpsGame=null,rpsPending=null,rpsPendingAt=0,rpsTick=0,rpsLastSync=0,rpsDismissed=null;
+function rpsActive(){return rpsGame&&['invited','playing'].includes(rpsGame.status)}
+function rpsText(id,text){if($(id).textContent!==text)$(id).textContent=text}
+function nearestRpsPeer(){
+  let nearest=null,distance=RPS_NEAR;
+  for(const [id,peer] of peers){
+    const d=Math.hypot(peer.x-me.g.position.x,peer.z-me.g.position.z);
+    if(d<=distance){distance=d;nearest={id,name:peer.nick||peer.nm||'친구'}}
+  }
+  return nearest;
+}
+function updateRpsInvite(){
+  const button=$('rpsInviteBtn'),peer=hasEntered&&room&&room.connected()&&!rpsActive()?nearestRpsPeer():null;
+  button.hidden=!peer;button.disabled=!!rpsPending;
+  button.dataset.peer=peer?peer.id:'';
+  if(peer)rpsText('rpsInviteBtn',peer.name+'님과 가위바위보');
+}
+function sendRps(message,pending){
+  if(!hasEntered||!room||!room.connected()){toast('정원에 다시 연결되면 할 수 있어요');return false}
+  if(rpsPending)return false;
+  if(!room.send(message)){toast('연결을 확인해 주세요');return false}
+  rpsPending=pending;rpsPendingAt=Date.now();renderRps();updateRpsInvite();return true;
+}
+function inviteRps(peer){
+  if(!peer)return;
+  // Flush our latest position before the server checks proximity.
+  sendPresence();sendRps({t:'rps_invite',peer},'invite');
+}
+function applyRps(game){
+  const awaitingChoice=rpsPending==='choice'&&rpsGame&&game&&rpsGame.id===game.id&&game.status==='playing'&&!game.choice;
+  if(!awaitingChoice)rpsPending=null;
+  if(!game){rpsGame=null;renderRps();updateRpsInvite();return}
+  if(typeof game.id!=='string'||!['invited','playing','result','cancelled'].includes(game.status)||!game.opponent)return;
+  if(game.id===rpsDismissed&&!['invited','playing'].includes(game.status))return;
+  const previous=rpsGame,opening=!previous||previous.id!==game.id,phaseChanged=opening||previous.status!==game.status;
+  rpsGame=game;
+  if(opening){rpsLastSync=0;closeOtherMenus('game')}
+  if(game.status==='playing'&&(!previous||previous.status!=='playing'||previous.id!==game.id)){
+    target=null;pendingStoke=false;marker.visible=false;move={x:0,y:0};knob.style.transform='';
+    Object.keys(keys).forEach(key=>delete keys[key]);
+    if(practice.mode!=='idle')endPractice(false);
+  }
+  renderRps();updateRpsInvite();
+  if(phaseChanged)requestAnimationFrame(()=>{if(!rpsGame||rpsGame.id!==game.id)return;const id=game.status==='invited'?(game.inviter?'rpsCancel':'rpsAccept'):game.status==='playing'?'rpsScissors':'rpsClose';$(id).focus()});
+}
+function renderRps(){
+  const game=rpsGame,panel=$('rpsPanel');
+  panel.hidden=!game;document.body.classList.toggle('rps-open',!!game);
+  if(!game)return;
+  const connected=!!(room&&room.connected()),now=serverNow(),invited=game.status==='invited',playing=game.status==='playing',result=game.status==='result';
+  const incoming=invited&&!game.inviter,ended=!invited&&!playing,remaining=Math.max(0,Math.ceil((game.expiresAt-now)/1000));
+  rpsText('rpsOpponent',stripInvisible(game.opponent.name).slice(0,12)+'님과 한 판');
+  rpsText('rpsTitle',result?({win:'이겼어요! 🎉',lose:'졌어요!',draw:'무승부!'}[game.result]||'결과'):game.status==='cancelled'?'게임 취소':'가위바위보');
+  $('rpsCount').hidden=!playing;
+  if(playing)rpsText('rpsCount',now<game.startAt?'준비':now>=game.deadline?'공개 중…':String(Math.min(3,Math.ceil((game.deadline-now)/1000))));
+  let status=invited?(incoming?'가위바위보 신청이 왔어요. 수락할까요?':'상대가 수락하기를 기다려요.')+' ('+remaining+'초)'
+    :playing?(now>=game.deadline?'서버에서 결과를 확인하고 있어요.':game.choice?RPS_HANDS[game.choice]+' 선택 완료! 상대의 선택은 공개할 때 보여요.':rpsPending==='choice'?'선택을 보내고 있어요…':'3·2·1 안에 선택하세요. 한 번 고르면 바꿀 수 없어요.')
+    :game.status==='cancelled'?(RPS_CANCEL_TEXT[game.reason]||'게임이 취소됐어요.'):'다시 도전해 볼까요?';
+  if(!connected&&!ended)status='연결을 기다리는 중이에요. 다시 연결되면 상태를 확인해요.';
+  rpsText('rpsStatus',status);
+  $('rpsChoices').hidden=!playing;$('rpsReveal').hidden=!result;
+  if(result)rpsText('rpsReveal','나: '+(RPS_HANDS[game.choice]||'—')+'\n'+stripInvisible(game.opponent.name).slice(0,12)+': '+(RPS_HANDS[game.opponentChoice]||'—'));
+  for(const button of $('rpsChoices').querySelectorAll('button')){
+    button.disabled=!connected||!!rpsPending||!!game.choice||now>=game.deadline;
+    button.setAttribute('aria-pressed',String(button.dataset.rps===game.choice));
+  }
+  $('rpsAccept').hidden=!incoming;$('rpsDecline').hidden=!incoming;
+  $('rpsAccept').disabled=$('rpsDecline').disabled=!connected||!!rpsPending||remaining===0;
+  $('rpsCancel').hidden=!(playing||invited&&game.inviter);$('rpsCancel').disabled=!connected||!!rpsPending;
+  rpsText('rpsCancel',playing?'게임 취소':'신청 취소');
+  $('rpsRematch').hidden=!result;
+  const other=peers.get(game.opponent.id),near=other&&Math.hypot(other.x-me.g.position.x,other.z-me.g.position.z)<=RPS_NEAR;
+  $('rpsRematch').disabled=!connected||!!rpsPending||!near;$('rpsClose').hidden=!ended;
+}
+function dismissRps(){
+  if(rpsActive())return;
+  if(rpsGame)rpsDismissed=rpsGame.id;
+  rpsGame=null;rpsPending=null;renderRps();updateRpsInvite();
+  if(!$('rpsInviteBtn').hidden)$('rpsInviteBtn').focus();else $('poseToggle').focus();
+}
+function updateRps(dt){
+  rpsTick+=dt;if(rpsTick<.1)return;rpsTick=0;
+  if(rpsPending&&Date.now()-rpsPendingAt>7000){rpsPending=null;toast('응답이 지연돼요. 연결을 확인해 주세요.');if(room&&room.connected())room.send({t:'rps_sync'})}
+  if(rpsActive()&&serverNow()>=rpsGame.expiresAt&&room&&room.connected()&&Date.now()-rpsLastSync>1000){rpsLastSync=Date.now();room.send({t:'rps_sync'})}
+  renderRps();updateRpsInvite();
+}
+$('rpsInviteBtn').onclick=()=>inviteRps($('rpsInviteBtn').dataset.peer);
+$('rpsAccept').onclick=()=>{if(rpsGame)sendRps({t:'rps_reply',game:rpsGame.id,accept:true},'reply')};
+$('rpsDecline').onclick=()=>{if(rpsGame)sendRps({t:'rps_reply',game:rpsGame.id,accept:false},'reply')};
+$('rpsCancel').onclick=()=>{if(rpsGame)sendRps({t:'rps_cancel',game:rpsGame.id},'cancel')};
+$('rpsRematch').onclick=()=>{if(rpsGame)inviteRps(rpsGame.opponent.id)};
+$('rpsClose').onclick=dismissRps;
+for(const button of $('rpsChoices').querySelectorAll('button'))button.onclick=()=>{if(rpsGame&&!rpsGame.choice&&serverNow()<rpsGame.deadline)sendRps({t:'rps_choose',game:rpsGame.id,choice:button.dataset.rps},'choice')};
+$('rpsPanel').addEventListener('keydown',event=>{if(event.key==='Escape'&&!rpsActive())dismissRps()});
+
 /* ---------- one tab visit: survives reload, ends on explicit leave ---------- */
 const VISIT_KEY='garden.visit.v1';
 function newVisitToken(){
@@ -1839,6 +1976,7 @@ function restoreVisit(){
 }
 function leaveGarden(){
   if(room&&room.kind==='ws'){room.send({t:'leave'});room.close()}
+  rpsGame=null;rpsPending=null;rpsDismissed=null;renderRps();
   room=null;hasEntered=false;visitToken='';clearVisit();
   for(const key of [...peers.keys()])removePeer(key);
   disposeBubble('me');me.bubble=null;me.tag.visible=true;
@@ -1867,7 +2005,7 @@ function startGardenConnection(){
   try{history.replaceState(null,'',current.pathname+current.search+current.hash)}catch(e){}
   const base=(location.protocol==='https:'?'wss://':'ws://')+location.host;
   room=connectRoomServer(base,GARDEN_SPACE);
-  room.onPeers(onPeerList);room.onConnection(()=>updateWho());
+  room.onPeers(onPeerList);room.onConnection(()=>{updateWho();renderRps();updateRpsInvite()});
   canPickMusic=true;renderMusicUI();updateWho();
 }
 function connectRoomServer(base,code){
@@ -1936,7 +2074,14 @@ function connectRoomServer(base,code){
             if(Math.hypot(me.g.position.x-spot.x,me.g.position.z-spot.z)>.05)placeAtPrayerSpot(api.prayerSlot);
           }
           api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,p));
-          applyShared(m.shared);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
+          applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
+        case 'rps_state':applyRps(m.game);break;
+        case 'rps_error':{
+          rpsPending=null;
+          const messages={busy:'이미 다른 친구와 게임 중이에요.',far:'친구에게 조금 더 가까이 가 주세요.',offline:'친구가 정원을 나갔어요.',slow:'잠시 후 다시 신청해 주세요.',locked:'이미 선택을 마쳤어요.',ended:'이미 끝난 게임이에요.',peer:'가까운 친구를 골라 주세요.',reply:'신청 상태가 바뀌었어요.',choice:'선택 시간이 끝났거나 잘못된 선택이에요.'};
+          toast(messages[m.code]||'게임 상태를 다시 확인해 주세요.');renderRps();updateRpsInvite();
+          if(m.code==='ended'||m.code==='locked')api.send({t:'rps_sync'});break;
+        }
         case 'replaced':api.close();setConn(false,'다른 창에서 정원을 이어서 열었어요');break;
         case 'prayer_place':{
           if(Number.isInteger(m.slot)&&PRAYER_SPOTS[m.slot]){
@@ -2068,6 +2213,7 @@ function tick(){
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
+  if(rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
   if(mag>0&&pose!=='stand'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
@@ -2077,7 +2223,7 @@ function tick(){
   updatePractice(dt);
   posePerson(me,pose,dt,t);
   updateEnvironment(dt,t);
-  updateCampfire(dt);updateBonfire(dt,t);updateContext(dt);updateOwner(dt,t);
+  updateCampfire(dt);updateBonfire(dt,t);updateContext(dt);updateOwner(dt,t);updateRps(dt);
   if(pendingStoke&&!target&&Math.hypot(me.g.position.x,me.g.position.z)<4)doStoke();
   if(inPocha()){const st=STOOLS[mySeatIndex()],o=pochaLocal(st&&st.lx>0?3.7:-3.7,2.3);updateDog(myDogObj,o.x,o.z,POCHA.h,'sit',false,dt,t)}
   else updateDog(myDogObj,me.g.position.x,me.g.position.z,me.g.rotation.y,pose,me.speed>.3,dt,t);
