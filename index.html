@@ -251,8 +251,8 @@ function box(w,h,d,color,x,y,z,parent){const m=new THREE.Mesh(BOX,typeof color==
 // 불상 정원으로 되돌리려면 'buddha'로 바꾸고 worker/src/index.js의 CENTERPIECE도 같은 값으로 바꾼다.
 const CENTERPIECE='campfire';
 const NIGHT_ALWAYS=CENTERPIECE==='campfire';
-// 편의점 파라솔 테이블 3개(의자 4개씩). 나무·덤불·바위는 이 자리를 비운다.
-const TABLE_SPOTS=[0.95,2.6,4.4].map((a,i)=>({x:Math.round(Math.sin(a)*1420)/100,z:Math.round(Math.cos(a)*1420)/100,i}));
+// 큰 파라솔 테이블 2개(의자 4개씩, 말풍선이 겹치지 않게 넓게). 나무·덤불·바위는 이 자리를 비운다.
+const TABLE_SPOTS=[0.95,4.4].map((a,i)=>({x:Math.round(Math.sin(a)*1420)/100,z:Math.round(Math.cos(a)*1420)/100,i}));
 const nearTable=(x,z,r)=>TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<r);
 /* ---------- shared helpers for the garden ---------- */
 const dummy=new THREE.Object3D();
@@ -354,7 +354,7 @@ const clouds=[];
   for(let i=0;i<170;i++){
     const a=rnd()*Math.PI*2,r=13+rnd()*45,x=Math.cos(a)*r,z=Math.sin(a)*r;
     if(r>15.3&&r<21.3)continue;if(z>6&&z<32&&Math.abs(x)<14)continue;
-    if(Math.hypot(x-POND.x,z-POND.z)<POND.r+3)continue;if(nearTable(x,z,4))continue;
+    if(Math.hypot(x-POND.x,z-POND.z)<POND.r+3)continue;if(nearTable(x,z,5.6))continue;
     tree(x,z,.85+rnd()*.65);
   }
   [[-12.5,-8],[12.5,-9],[-8,-13],[8,-13.5]].forEach(([x,z])=>tree(x,z,1.2));
@@ -366,13 +366,13 @@ const clouds=[];
     for(let j=0;j<3;j++){bushes.push({x:x+(rnd()-.5)*s,y:.35*s,z:z+(rnd()-.5)*s,sx:(.55+rnd()*.35)*s,sy:(.45+rnd()*.25)*s,ry:rnd()*3,c:base.clone().offsetHSL(0,0,(rnd()-.5)*.06)})}
     for(let j=0;j<6;j++){const a=rnd()*Math.PI*2,r=rnd()*.7*s;blooms.push({x:x+Math.cos(a)*r,y:(.55+rnd()*.25)*s,z:z+Math.sin(a)*r,sx:.09,c:C([0xffffff,0xfff4d6,0xf6d36b,0xf4c2cf][Math.floor(rnd()*4)])})}}
   const nearFire=(x,z)=>Math.hypot(x+6,z-13)<3;
-  for(let i=0;i<40;i++){const a=rnd()*Math.PI*2;if(Math.cos(a)>.92)continue;const r=12+rnd()*2.4,bx=Math.sin(a)*r,bz=Math.cos(a)*r;if(nearFire(bx,bz)||nearTable(bx,bz,3))continue;bush(bx,bz,.9+rnd()*.6)}
+  for(let i=0;i<40;i++){const a=rnd()*Math.PI*2;if(Math.cos(a)>.92)continue;const r=12+rnd()*2.4,bx=Math.sin(a)*r,bz=Math.cos(a)*r;if(nearFire(bx,bz)||nearTable(bx,bz,4.6))continue;bush(bx,bz,.9+rnd()*.6)}
   for(let i=0;i<60;i++){const a=rnd()*Math.PI*2,r=21.5+rnd()*30,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x-POND.x,z-POND.z)<POND.r+1.5)continue;bush(x,z,.8+rnd()*.7)}
   instanced(new THREE.IcosahedronGeometry(1,1),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),bushes);
   instanced(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),blooms,false);
 
   const rocks=[];
-  for(let i=0;i<55;i++){const a=rnd()*Math.PI*2,r=12.5+rnd()*40,x=Math.cos(a)*r,z=Math.sin(a)*r;if(r>15.6&&r<20.8)continue;if(Math.abs(x)<9&&z>8&&z<30)continue;if(nearFire(x,z)||nearTable(x,z,3.2))continue;if(Math.hypot(x-POND.x,z-POND.z)<POND.r+1.4)continue;
+  for(let i=0;i<55;i++){const a=rnd()*Math.PI*2,r=12.5+rnd()*40,x=Math.cos(a)*r,z=Math.sin(a)*r;if(r>15.6&&r<20.8)continue;if(Math.abs(x)<9&&z>8&&z<30)continue;if(nearFire(x,z)||nearTable(x,z,4.8))continue;if(Math.hypot(x-POND.x,z-POND.z)<POND.r+1.4)continue;
     const s=.5+rnd()*1.1;rocks.push({x,y:s*.35,z,sx:s*1.3,sy:s*.8,sz:s,ry:rnd()*3,c:C([0x9b988b,0xaaa697,0x8e8b7f][i%3])});if(s>.9)obstacles.push({x,z,r:s})}
   instanced(new THREE.DodecahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),rocks);
 }
@@ -493,7 +493,7 @@ function prayerSpotAt(x,z){
 function prayerSurfaceAt(x,z){return CENTERPIECE==='buddha'&&prayerSpotAt(x,z)>=0?PRAYER_MAT_TOP:.035}
 /* ---------- log benches around the fire: 8 logs, 16 seats ---------- */
 const FIRE_SEATS=Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;return{x:Math.sin(a)*4.75,z:Math.cos(a)*4.75,a}});
-const CHAIR_SEATS=[];TABLE_SPOTS.forEach(t=>{for(let k=0;k<4;k++){const a=k*Math.PI/2+Math.PI/4;CHAIR_SEATS.push({x:t.x+Math.sin(a)*.9,z:t.z+Math.cos(a)*.9,table:t.i,h:a+Math.PI})}});
+const CHAIR_SEATS=[];TABLE_SPOTS.forEach(t=>{for(let k=0;k<4;k++){const a=k*Math.PI/2+Math.PI/4;CHAIR_SEATS.push({x:t.x+Math.sin(a)*2,z:t.z+Math.cos(a)*2,table:t.i,h:a+Math.PI,k})}});
 function seatAt(x,z){
   const f=CENTERPIECE==='campfire'?FIRE_SEATS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.3):-1;if(f>=0)return f;
   const c=CHAIR_SEATS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.3);return c>=0?100+c:-1;
@@ -503,21 +503,21 @@ function tableAt(x,z){const s=seatAt(x,z);return s>=100?CHAIR_SEATS[s-100].table
   const parasolTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=16;const x=c.getContext('2d');
     for(let i=0;i<8;i++){x.fillStyle=i%2?'#f4f1ea':'#d8453a';x.fillRect(i*32,0,32,16)}const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t})();
   const plastic=F(0x3f8a5c,{roughness:.6}),white=F(0xeeeeea,{roughness:.6}),pole=F(0xb9bcbf,{roughness:.4,metalness:.4});
-  const topGeo=new THREE.CylinderGeometry(.55,.55,.04,20),legGeo=new THREE.CylinderGeometry(.025,.025,.7,6),canopy=new THREE.ConeGeometry(1.45,.55,8,1,true);
+  const topGeo=new THREE.CylinderGeometry(1.35,1.35,.05,28),legGeo=new THREE.CylinderGeometry(.03,.03,.7,6),canopy=new THREE.ConeGeometry(2.5,.8,8,1,true);
   TABLE_SPOTS.forEach(t=>{
     const g=new THREE.Group();g.position.set(t.x,0,t.z);scene.add(g);
     part(topGeo,plastic,[0,.72,0],null,null,g);
-    for(let k=0;k<4;k++){const a=k*Math.PI/2;part(legGeo,plastic,[Math.sin(a)*.38,.36,Math.cos(a)*.38],null,[Math.cos(a)*.12,0,-Math.sin(a)*.12],g)}
-    part(new THREE.CylinderGeometry(.025,.025,2.25,6),pole,[0,1.12,0],null,null,g);
-    const c=part(canopy,new THREE.MeshStandardMaterial({map:parasolTex,side:THREE.DoubleSide,roughness:.8,flatShading:true}),[0,2.35,0],null,null,g);c.receiveShadow=false;
-    const bulb=part(new THREE.SphereGeometry(.07,8,6),new THREE.MeshStandardMaterial({color:C(0xfff3d6),emissive:C(0xffd28a),emissiveIntensity:2}),[0,2.02,0],null,null,g);bulb.castShadow=false;
-    const lamp=new THREE.PointLight(0xffcf8a,.8,7,2);lamp.position.set(0,1.95,0);g.add(lamp);
+    for(let k=0;k<4;k++){const a=k*Math.PI/2;part(legGeo,plastic,[Math.sin(a)*.95,.36,Math.cos(a)*.95],null,[Math.cos(a)*.1,0,-Math.sin(a)*.1],g)}
+    part(new THREE.CylinderGeometry(.035,.035,2.75,6),pole,[0,1.37,0],null,null,g);
+    const c=part(canopy,new THREE.MeshStandardMaterial({map:parasolTex,side:THREE.DoubleSide,roughness:.8,flatShading:true}),[0,2.85,0],null,null,g);c.receiveShadow=false;
+    const bulb=part(new THREE.SphereGeometry(.07,8,6),new THREE.MeshStandardMaterial({color:C(0xfff3d6),emissive:C(0xffd28a),emissiveIntensity:2}),[0,2.4,0],null,null,g);bulb.castShadow=false;
+    const lamp=new THREE.PointLight(0xffcf8a,1,9,2);lamp.position.set(0,2.3,0);g.add(lamp);
     for(let k=0;k<4;k++){
       const sp=CHAIR_SEATS[t.i*4+k],ch=new THREE.Group();ch.position.set(sp.x-t.x,0,sp.z-t.z);ch.rotation.y=sp.h;g.add(ch);
       part(BOX,white,[0,.44,0],[.46,.05,.44],null,ch);part(BOX,white,[0,.72,-.22],[.46,.5,.05],[-.12,0,0],ch);
       for(const sx of[-1,1])for(const sz of[-1,1])part(legGeo,white,[sx*.2,.22,sz*.19],[1,.63,1],null,ch);
     }
-    obstacles.push({x:t.x,z:t.z,r:.62});
+    obstacles.push({x:t.x,z:t.z,r:1.45});
   });
 }
 if(CENTERPIECE==='campfire'){
@@ -638,7 +638,7 @@ function posePerson(P,pose,dt,t){
     if(Number.isFinite(lowest)&&lowest<surface+.012)P.rig.position.y+=surface+.012-lowest;
   }
   P.tag.position.y=L(P.tag.position.y,tagY);
-  if(P.bubble)P.bubble.position.y=P.tag.position.y+.15+P.bubble.scale.y/2;
+  if(P.bubble)P.bubble.userData.baseY=P.tag.position.y+.15+P.bubble.scale.y/2;
 }
 
 /* ---------- blocky dogs ---------- */
@@ -1276,7 +1276,7 @@ function updateContext(dt){
   const b=$('ctxBtn'),x=me.g.position.x,z=me.g.position.z;
   if(seatedNow()){b.textContent='일어나기';b.dataset.act='up';b.hidden=false;return}
   if(pose!=='stand'&&pose!=='wave'){b.hidden=true;return}
-  const nearT=TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<3.2),nearF=CENTERPIECE==='campfire'&&Math.hypot(x,z)<8;
+  const nearT=TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<4.6),nearF=CENTERPIECE==='campfire'&&Math.hypot(x,z)<8;
   if(nearT||nearF){b.textContent=nearT?'테이블에 앉기':'모닥불에 앉기';b.dataset.act='sit';b.hidden=false}else b.hidden=true;
 }
 $('ctxBtn').onclick=()=>{
@@ -1380,7 +1380,7 @@ function showBubble(key,name,text){
     // 글자 크기는 유지하고, 실제 내용이 차지하는 가로·세로만 줄이거나 늘린다.
     b.scale.set(width*unitsPerPixel,height*unitsPerPixel,1);
   }
-  b.position.y=P.tag.position.y+.15+b.scale.y/2;
+  b.userData.baseY=P.tag.position.y+.15+b.scale.y/2;b.position.y=b.userData.baseY+(b.userData.lift||0);
 }
 function appendChatHistory(message){
   const text=stripInvisible(message.text).slice(0,200);if(!text)return;
@@ -1694,6 +1694,34 @@ $('shareLink').onclick=e=>e.target.select();
 $('shareDialog').addEventListener('keydown',e=>{if(e.key==='Escape')closeShareDialog()});
 if(!restoreVisit()){openNameDialog();updateWho()}
 
+
+/* ---------- speech bubbles never cover each other: farther ones rise above nearer ones on screen ---------- */
+const _bv=new THREE.Vector3();
+function layoutBubbles(dt){
+  const list=[];
+  for(const b of bubbles.values()){
+    if(!b.parent||!b.parent.parent||b.userData.baseY===undefined)continue;
+    const g=b.parent;_bv.set(g.position.x,g.position.y+b.userData.baseY,g.position.z);
+    const dist=_bv.distanceTo(camera.position);list.push({b,g,dist,base:b.userData.baseY});
+  }
+  list.sort((a,b)=>a.dist-b.dist);
+  const placed=[],tanH=Math.tan(THREE.MathUtils.degToRad(camera.fov)/2);
+  for(const it of list){
+    const hh=(it.b.scale.y/2)/(Math.max(.5,it.dist)*tanH),hw=hh*(it.b.scale.x/it.b.scale.y)/camera.aspect;
+    let lift=0,rect=null;
+    for(let step=0;step<18;step++){
+      _bv.set(it.g.position.x,it.g.position.y+it.base+lift,it.g.position.z).project(camera);
+      rect={x0:_bv.x-hw,x1:_bv.x+hw,y0:_bv.y-hh,y1:_bv.y+hh,front:_bv.z<1};
+      const hit=placed.find(r=>r.front&&rect.front&&rect.x0<r.x1+.01&&rect.x1>r.x0-.01&&rect.y0<r.y1+.01&&rect.y1>r.y0-.01);
+      if(!hit)break;
+      lift+=it.b.scale.y*.6;
+    }
+    placed.push(rect);
+    const cur=it.b.userData.lift||0;it.b.userData.lift=cur+(lift-cur)*Math.min(1,dt*8);
+    it.b.position.y=it.base+it.b.userData.lift;
+  }
+}
+
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.8?72:55;camera.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
@@ -1749,7 +1777,7 @@ function tick(){
   if(!reduce){const a=pg.attributes.position.array;
     for(let i=0;i<PN;i++){a[i*3+1]-=dt*.25;a[i*3]+=Math.sin(t+i)*dt*.2;if(a[i*3+1]<0)a[i*3+1]=8}
     pg.attributes.position.needsUpdate=true}
-  renderer.render(scene,camera);requestAnimationFrame(tick);
+  layoutBubbles(dt);renderer.render(scene,camera);requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
 })();
