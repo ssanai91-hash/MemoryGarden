@@ -5,10 +5,14 @@ import { DurableObject } from 'cloudflare:workers';
 
 const MAX_PEERS = 16;
 // index.html의 PRAYER_SPOTS와 동일하게 유지한다.
-const PRAYER_SPOTS=Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
+// index.html의 CENTERPIECE와 같은 값으로 맞춘다.
+const CENTERPIECE='campfire';
+const PRAYER_SPOTS=CENTERPIECE==='campfire'
+  ?Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;return{x:Math.round(Math.sin(a)*370)/100,z:Math.round(Math.cos(a)*370)/100}})
+  :Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
 const TRACKS = ['dawn', 'wind', 'bowl', 'melody', 'banya'];
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
-const POSES = ['stand', 'sit', 'lie', 'wave', 'pray', 'bow', 'coffee'];
+const POSES = ['stand', 'sit', 'lie', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga'];
 const INVISIBLE = /[\u0000-\u001f\u007f​-‏‪-‮⁠-⁤﻿]/g;
 
 const clean = (v, n) => (typeof v === 'string' ? v.replace(INVISIBLE, '').trim().slice(0, n) : '');
@@ -202,6 +206,12 @@ export class GardenRoom extends DurableObject {
         this.shared.music = { track, startedAt: Date.now(), videoId: track === 'banya' && validVideo(m.videoId) ? m.videoId : null, by: a.id };
         await this.save();
         this.broadcast({ t: 'music', music: this.shared.music, name: a.name });
+        return;
+      }
+      case 'stoke': {
+        // 장작 넣기: 상태로 남기지 않고 지금 있는 사람들에게만 불꽃 연출을 알린다.
+        if (!this.allow(a, 'k', 1)) return;
+        this.broadcast({ t: 'stoke', id: a.id, name: a.name }, ws);
         return;
       }
       case 'weather': {

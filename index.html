@@ -167,7 +167,7 @@ button:disabled{opacity:.5;cursor:default}
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">눕기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">둘러앉기</button><button id="pFuel" type="button">장작 넣기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="pLie" type="button" aria-pressed="false">눕기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="hint" id="hint">조이스틱으로 걷기 · 땅을 탭하면 그곳으로 · 드래그로 둘러보기</div>
 <div class="toast" id="toast"></div>
@@ -240,6 +240,10 @@ const matCache={};const M=c=>matCache[c]||(matCache[c]=new THREE.MeshLambertMate
 const BOX=new THREE.BoxGeometry(1,1,1);
 function box(w,h,d,color,x,y,z,parent){const m=new THREE.Mesh(BOX,typeof color==='number'?M(color):color);m.scale.set(w,h,d);m.position.set(x||0,y||0,z||0);m.castShadow=true;if(parent)parent.add(m);return m}
 
+/* ---------- centrepiece: 'campfire' (night bonfire) or 'buddha' (temple garden) ---------- */
+// 불상 정원으로 되돌리려면 'buddha'로 바꾸고 worker/src/index.js의 CENTERPIECE도 같은 값으로 바꾼다.
+const CENTERPIECE='campfire';
+const NIGHT_ALWAYS=CENTERPIECE==='campfire';
 /* ---------- shared helpers for the garden ---------- */
 const dummy=new THREE.Object3D();
 const F=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:C(c),roughness:.92,metalness:0,flatShading:true},o||{}));
@@ -439,7 +443,8 @@ part(S10,goldDeep,[0,.42,.95],[.065,.065,.04],null,headG);
 }
 const halo=new THREE.Mesh(new THREE.TorusGeometry(2.05,.05,8,120),new THREE.MeshBasicMaterial({color:0xffe9b0,transparent:true,opacity:.8,toneMapped:false}));
 halo.position.set(0,2.33+5.2,-.95);memorial.add(halo);
-obstacles.push({x:0,z:0,r:5.75});
+memorial.visible=CENTERPIECE==='buddha';
+if(CENTERPIECE==='buddha')obstacles.push({x:0,z:0,r:5.75});
 
 /* ---------- courtyard: stone lanterns and prayer cushions ---------- */
 const lanternStone=F(0x8f8c80,{roughness:1});
@@ -458,10 +463,12 @@ for(let k=0;k<8;k++){
   if(Math.cos(a)>0){const l=new THREE.PointLight(0xffc278,.6,9);l.position.set(x,1.7,z);scene.add(l);lanterns.push(l)}
 }
 // worker/src/index.js의 동일한 자리 배치를 유지한다. 각 접속자에게 서로 다른 자리를 배정한다.
-const PRAYER_SPOTS=Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
+const PRAYER_SPOTS=CENTERPIECE==='campfire'
+  ?Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;return{x:Math.round(Math.sin(a)*370)/100,z:Math.round(Math.cos(a)*370)/100}})
+  :Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
 const PRAYER_MAT_TOP=.10;
 const prayerMatMaterial=F(0x6c7140);
-for(const spot of PRAYER_SPOTS){
+if(CENTERPIECE==='buddha')for(const spot of PRAYER_SPOTS){
   const mat=new THREE.Group();mat.position.set(spot.x,.07,spot.z);
   mat.rotation.y=Math.atan2(-spot.x,-spot.z);scene.add(mat);
   part(BOX,prayerMatMaterial,[0,0,.25],[1.45,.06,2.45],null,mat);
@@ -473,7 +480,19 @@ function prayerSpotAt(x,z){
     return Math.abs(lx)<=.76&&Math.abs(lz-.25)<=1.25;
   });
 }
-function prayerSurfaceAt(x,z){return prayerSpotAt(x,z)>=0?PRAYER_MAT_TOP:.035}
+function prayerSurfaceAt(x,z){return CENTERPIECE==='buddha'&&prayerSpotAt(x,z)>=0?PRAYER_MAT_TOP:.035}
+/* ---------- log benches around the fire: 8 logs, 16 seats ---------- */
+const FIRE_SEATS=Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;return{x:Math.sin(a)*4.75,z:Math.cos(a)*4.75,a}});
+function seatAt(x,z){return CENTERPIECE==='campfire'?FIRE_SEATS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.3):-1}
+if(CENTERPIECE==='campfire'){
+  const bark=F(0x5a3b24),cut=F(0xc9a46c),logGeo=new THREE.CylinderGeometry(.26,.28,2.35,9),endGeo=new THREE.CircleGeometry(.25,9);
+  for(let j=0;j<8;j++){
+    const a=(2*j+1)/16*Math.PI*2,g=new THREE.Group();g.position.set(Math.sin(a)*4.75,0,Math.cos(a)*4.75);g.rotation.y=a;scene.add(g);
+    part(logGeo,bark,[0,.27,0],null,[0,0,Math.PI/2],g);
+    for(const s of[-1,1]){const e=part(endGeo,cut,[s*1.176,.27,0],null,[0,s*Math.PI/2,0],g);e.castShadow=false}
+    for(const s of[-1,1])obstacles.push({x:g.position.x+Math.cos(a)*s*.6,z:g.position.z-Math.sin(a)*s*.6,r:.45});
+  }
+}
 
 /* ---------- flowers ---------- */
 const petalCols=[0xf2c1c9,0xffffff,0xf7d77a,0xc9b6e8,0xf0a07a];
@@ -530,11 +549,15 @@ function makePerson(L){
   if(L.hat){box(.54,.14,.54,L.shirt,0,1.23,0,torso);box(.54,.05,.22,L.shirt,0,1.18,.35,torso)}
   const cup=new THREE.Group();box(.13,.15,.13,0xf2efe8,0,0,0,cup);box(.11,.01,.11,0x4a2c1a,0,.076,0,cup);box(.04,.08,.03,0xf2efe8,.085,0,0,cup);
   cup.position.set(0,-.7,.06);arms[1].add(cup);cup.visible=false;
+  const can=new THREE.Group();const canBody=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.17,12),M(0x3f8f5a));can.add(canBody);
+  const canTop=new THREE.Mesh(new THREE.CylinderGeometry(.052,.058,.015,12),M(0xc8ccd0));canTop.position.y=.092;can.add(canTop);
+  const canBand=new THREE.Mesh(new THREE.CylinderGeometry(.061,.061,.04,12),M(0xe9e4d4));can.add(canBand);
+  can.position.set(0,-.7,.06);arms[1].add(can);can.visible=false;
   const tag=makeTag('');tag.position.y=2.25;g.add(tag);
   scene.add(g);
   const contactMeshes=[];
-  rig.traverse(node=>{if(node.isMesh&&node.parent!==cup)contactMeshes.push(node)});
-  return{g,rig,torso,legs,arms,head,cup,tag,contactMeshes,walkT:0,speed:0};
+  rig.traverse(node=>{if(node.isMesh&&node.parent!==cup&&node.parent!==can)contactMeshes.push(node)});
+  return{g,rig,torso,legs,arms,head,cup,can,tag,contactMeshes,walkT:0,speed:0};
 }
 const prayerContactBounds=new THREE.Box3();
 function posePerson(P,pose,dt,t){
@@ -544,16 +567,17 @@ function posePerson(P,pose,dt,t){
   let torsoLean=0;
   let rx=0,ry=Math.abs(Math.cos(P.walkT))*.04*w,rz=0,tagY=2.25;
   let leg=[sw,-sw],arm=[-sw*.8,sw*.8],armZ=[-.06,.06];
-  const still=w<.1;
-  if(pose==='sit'&&still){ry=-.5;leg=[-1.5,-1.5];arm=[-.7,-.7];tagY=1.8}
+  const still=w<.1,onLog=still&&seatAt(P.g.position.x,P.g.position.z)>=0;
+  if(pose==='sit'&&still){ry=onLog?-.13:-.5;leg=onLog?[-1.25,-1.25]:[-1.5,-1.5];arm=[-.7,-.7];tagY=onLog?2.05:1.8}
   else if(pose==='lie'&&still){rx=-Math.PI/2;ry=.13;rz=.85;leg=[0,0];arm=[0,0];armZ=[-.5,.5];tagY=.9}
   else if((pose==='pray'||pose==='bow')&&still){
     const q=pose==='bow'?bowFrame(P.bowPhase||0):{lean:0,drop:-.52,reach:0,knee:-1.5};
     torsoLean=q.lean;ry=q.drop;rz=0;leg=[q.knee,q.knee];arm=[-1.45-q.lean*.9,-1.45-q.lean*.9];armZ=[.56,-.56];tagY=1.6;
   }
   else if(pose==='wave'&&still){arm=[0,0];armZ=[-.06,2.6+Math.sin(t*8)*.3]}
-  else if(pose==='coffee'&&still){const c=Math.max(0,Math.sin(t*.7));arm=[0,-.9-c*1.3];armZ=[-.06,-.25-c*.15]}
-  P.cup.visible=pose==='coffee'&&still;
+  else if((pose==='coffee'||pose==='beer')&&still){const c=Math.max(0,Math.sin(t*.7));arm=[onLog?-.7:0,-.9-c*1.3];armZ=[-.06,-.25-c*.15];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
+  else if(pose==='fuel'&&still){const c=(Math.sin(t*3.2)+1)/2;torsoLean=.55;ry=-.28;leg=[-.7,.35];arm=[-1.1-c*.7,-1.1-c*.7];armZ=[.2,-.2];tagY=1.9}
+  P.cup.visible=pose==='coffee'&&still;if(P.can)P.can.visible=pose==='beer'&&still;
   P.torso.rotation.x=L(P.torso.rotation.x,torsoLean);
   P.rig.rotation.x=L(P.rig.rotation.x,rx);P.rig.position.y=L(P.rig.position.y,ry);P.rig.position.z=L(P.rig.position.z,rz);
   for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
@@ -613,7 +637,7 @@ function collide(x,z,r){
   return[x,z];
 }
 function updateDog(D,ox,oz,oh,ownerPose,ownerMoving,dt,t){
-  const resting=(['sit','lie','pray','bow','coffee'].includes(ownerPose))&&!ownerMoving;
+  const resting=(['sit','lie','pray','bow','coffee','beer'].includes(ownerPose))&&!ownerMoving;
   const back=resting?-.2:.3;
   const tx=ox-Math.cos(oh)*1.0-Math.sin(oh)*back,tz=oz+Math.sin(oh)*1.0-Math.cos(oh)*back;
   const dx=tx-D.g.position.x,dz=tz-D.g.position.z,dd=Math.hypot(dx,dz);
@@ -648,9 +672,36 @@ function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${BREEDS[d.b].k})`}
 function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 걷는 강아지: '+BREEDS[myDog.b].k}
 refreshMine();
 let pose='stand',sendDirty=true;
-function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',coffee:'pCoffee'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
-function setPose(p){const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;syncPoseButtons();sendDirty=true;closePoseMenu()}
-$('pWave').onclick=()=>setPose('wave');$('pCoffee').onclick=()=>setPose('coffee');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');
+function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',coffee:'pCoffee',beer:'pBeer'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
+function setPose(p){const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;pendingStoke=false;
+  if(pose==='sit'&&CENTERPIECE==='campfire'&&Math.hypot(me.g.position.x,me.g.position.z)<16)sitAtFire();
+  syncPoseButtons();sendDirty=true;closePoseMenu()}
+let pendingStoke=false,fuelTimer=0;
+function sitAtFire(){
+  const taken=i=>[...peers.values()].some(e=>Math.hypot(e.x-FIRE_SEATS[i].x,e.z-FIRE_SEATS[i].z)<.4);
+  let best=-1,bd=Infinity;FIRE_SEATS.forEach((sp,i)=>{const d=Math.hypot(sp.x-me.g.position.x,sp.z-me.g.position.z);if(!taken(i)&&d<bd){bd=d;best=i}});
+  if(best<0){toast('모닥불 자리가 가득 찼어요');return}
+  const sp=FIRE_SEATS[best];move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
+  me.g.position.set(sp.x,0,sp.z);me.g.rotation.y=Math.atan2(-sp.x,-sp.z);me.speed=0;userMoved=true;
+  myDogObj.g.position.set(sp.x*1.18,0,sp.z*1.18);cam.yaw=me.g.rotation.y+Math.PI;cam.pitch=.22;cam.dist=7.5;
+}
+function stokeFire(){
+  closePoseMenu();if(CENTERPIECE!=='campfire')return;
+  const d=Math.hypot(me.g.position.x,me.g.position.z);
+  if(d<=3.6){doStoke();return}
+  endPractice(false);pose='stand';syncPoseButtons();
+  const a=Math.atan2(me.g.position.x,me.g.position.z),gap=Math.round(a/(Math.PI/4))*(Math.PI/4);
+  target={x:Math.sin(gap)*3.1,z:Math.cos(gap)*3.1};marker.position.set(target.x,.04,target.z);marker.visible=true;pendingStoke=true;
+}
+function doStoke(){
+  pendingStoke=false;endPractice(false);
+  me.g.rotation.y=Math.atan2(-me.g.position.x,-me.g.position.z);pose='fuel';syncPoseButtons();sendDirty=true;
+  clearTimeout(fuelTimer);fuelTimer=setTimeout(()=>{if(pose==='fuel'){pose='stand';sendDirty=true}},1700);
+  setTimeout(()=>{bonfire.stoke=1},500);
+  if(room&&room.kind==='ws'&&room.connected())room.send({t:'stoke'});
+  toast('장작을 넣었어요. 불이 활활 타올라요');
+}
+$('pWave').onclick=()=>setPose('wave');$('pBeer').onclick=()=>setPose('beer');$('pFuel').onclick=stokeFire;$('pCoffee').onclick=()=>setPose('coffee');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');
 
 /* ---------- input ---------- */
 const cam={yaw:0,pitch:.25,dist:11.5};
@@ -723,7 +774,7 @@ function onPeerList(change){
     e.nick=typeof s.nick==='string'?stripInvisible(s.nick).slice(0,12):'';
     if(s.say&&typeof s.say.text==='string'&&Number.isFinite(s.say.at))rememberLastMessage(pr.peer,e.nick||e.nm||'친구',s.say.text,s.say.at);
     restoreLastBubble(pr.peer,e.nick||e.nm||'친구');
-    e.pose=['stand','sit','lie','wave','pray','bow','coffee'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
+    e.pose=['stand','sit','lie','wave','pray','bow','coffee','beer','fuel'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
   }
   for(const k of[...peers.keys()])if(!seen.has(k))removePeer(k);
   if(practice.mode==='idle'&&!userMoved&&!autoJoined&&peers.size){autoJoined=true;goToFriend(true)}
@@ -1025,7 +1076,7 @@ function updateEnvironment(dt,t){
   if(!appHidden){for(let i=0;i<720;i++){weatherPositions[i*3+1]-=dt*(weather==='snow'?1.1:12);weatherPositions[i*3]+=dt*(weather==='snow'?Math.sin(t+i)*.35:.7);if(weatherPositions[i*3+1]<0){weatherPositions[i*3+1]=20;weatherPositions[i*3]=(Math.random()-.5)*42}}weatherGeo.attributes.position.needsUpdate=true}
   environmentTick+=dt;if(environmentTick<1)return;environmentTick=0;
   const now=new Date(),hours=(now.getUTCHours()+9)%24+now.getUTCMinutes()/60;
-  const daylight=THREE.MathUtils.smoothstep(hours,5.5,8)*(1-THREE.MathUtils.smoothstep(hours,17,19.5));
+  let daylight=THREE.MathUtils.smoothstep(hours,5.5,8)*(1-THREE.MathUtils.smoothstep(hours,17,19.5));if(NIGHT_ALWAYS)daylight=0;
   const dusk=daylight*(1-daylight)*4,cloud=weather==='clear'?0:.4;
   sky.material.uniforms.top.value.set(0x14223c).lerp(new THREE.Color(0x5f9fd8),daylight*(1-cloud)).lerp(new THREE.Color(0x9aa7b2),daylight*cloud);
   sky.material.uniforms.bot.value.set(0x293449).lerp(new THREE.Color(0xd9e7ee),daylight).lerp(new THREE.Color(0xe7ad7c),dusk*.7);
@@ -1033,11 +1084,20 @@ function updateEnvironment(dt,t){
   ambient.intensity=.18+daylight*.5;sun.intensity=(.1+daylight*1.25)*(1-cloud*.7);sun.color.set(dusk>.4?0xffc28e:0xffedce);
   sun.position.set(Math.sin((hours-6)/12*Math.PI)*35,Math.max(4,Math.sin((hours-6)/12*Math.PI)*40),20);
   glow.intensity=1.2-daylight*.7;lanterns.forEach(l=>l.intensity=1.1-daylight*.9);lanternGlow.emissiveIntensity=.45+(1-daylight)*1.6;halo.material.opacity=.6+(1-daylight)*.35;clouds.forEach(c=>c.material.opacity=(.2+daylight*.75)*(1-cloud*.25));
+  if(NIGHT_ALWAYS){
+    sky.material.uniforms.top.value.set(cloud?0x0b0f1a:0x040817);sky.material.uniforms.bot.value.set(cloud?0x1c212c:0x141d36);
+    scene.fog.color.copy(sky.material.uniforms.bot.value).convertSRGBToLinear();scene.fog.near=weather==='clear'?40:18;scene.fog.far=weather==='clear'?260:90;
+    ambient.color.set(0x8193c8);ambient.groundColor.set(0x2b2a22);ambient.intensity=.2;
+    sun.color.set(0xa9bbf0);sun.intensity=.38*(1-cloud*.7);sun.position.set(-26,46,-34);
+    glow.intensity=.25;lanterns.forEach(l=>l.intensity=.9);lanternGlow.emissiveIntensity=1.8;
+    clouds.forEach(c=>{c.material.color.setHex(0x3c4560);c.material.opacity=cloud?.55:.22});
+    if(nightSky.mat)nightSky.mat.uniforms.uOpacity.value=1-weatherStrength*.9;if(nightSky.moon)nightSky.moon.material.opacity=1-weatherStrength*.8;
+  }
 }
 
 /* ---------- imported stone-ring campfire ---------- */
 // The uploaded GLB is embedded so this preview also works when opened as a local HTML file.
-const fireSpot={x:-6,z:13,width:2.4};
+const fireSpot=CENTERPIECE==='campfire'?{x:0,z:0,width:4.2}:{x:-6,z:13,width:2.4};
 let campfireModel=null,fireMixer=null,firePlaying=true,fireTime=0,fireLight=null;
 const fireState={loaded:false,error:null,clips:0};
 const campfireReady=new Promise(resolve=>{
@@ -1060,11 +1120,77 @@ const campfireReady=new Promise(resolve=>{
     obstacles.push({x:fireSpot.x,z:fireSpot.z,r:fireSpot.width*.5+.25});
     fireState.loaded=true;
     if(reduce)firePlaying=false;
-    $('campfireStatus').textContent='기도 마당 옆에 모닥불이 있어요';resolve(fireState);
+    $('campfireStatus').textContent=CENTERPIECE==='campfire'?'정원 가운데 모닥불이 타올라요':'기도 마당 옆에 모닥불이 있어요';resolve(fireState);
   },err=>failed(String(err&&err.message||err)));
 });
 function updateCampfire(dt){if(!fireState.loaded)return;if(firePlaying)fireTime+=dt;if(fireMixer)fireMixer.update(dt);fireLight.intensity=.52+(firePlaying?Math.sin(fireTime*8)*.06+Math.sin(fireTime*13)*.025:0)}
 
+
+
+/* ---------- big bonfire: flame and ember particles, glow, flickering light ---------- */
+const bonfire={stoke:0,group:new THREE.Group(),mats:[]};scene.add(bonfire.group);bonfire.group.visible=CENTERPIECE==='campfire';
+const FIRE_VS=`attribute float seed;uniform float uTime,uStoke,uViewH,uSpeed,uHeight,uSize,uSway,uEmber;varying float vT,vSeed;
+void main(){float sp=uSpeed*(.6+seed*.7);float t=fract(uTime*sp+seed*7.13);vT=t;vSeed=seed;
+ float h=uHeight*(.55+seed*.7)*(1.+uStoke*.75);vec3 p=position;
+ p.xz*=mix(1.,1.-t*.85,1.-uEmber);p.y=.35+t*h;
+ p.x+=sin(uTime*3.+seed*20.+t*4.)*uSway*t;p.z+=cos(uTime*2.6+seed*17.+t*3.)*uSway*t;
+ vec4 mv=modelViewMatrix*vec4(p,1.);float size=uSize*(.75+seed*.6)*mix(1.-t*.6,1.,uEmber)*(1.+uStoke*.35);
+ gl_PointSize=size*projectionMatrix[1][1]*uViewH*.5/max(.1,-mv.z);gl_Position=projectionMatrix*mv;}`;
+const FIRE_FS=`uniform float uTime,uEmber;varying float vT,vSeed;
+void main(){vec2 c=gl_PointCoord-.5;float d=length(c)*2.;if(d>1.)discard;
+ float a=pow(1.-d,1.8)*(1.-vT)*smoothstep(0.,.14,vT);
+ vec3 col=mix(vec3(1.,.8,.38),vec3(1.,.4,.05),smoothstep(.05,.42,vT));col=mix(col,vec3(.55,.07,.02),smoothstep(.5,1.,vT));
+ if(uEmber>.5){col=vec3(1.,.62,.22);a=(1.-d)*(1.-vT)*(.55+.45*sin(uTime*12.+vSeed*60.));}
+ gl_FragColor=vec4(col*a*.9,a);}`;
+function fireParticles(n,radius,u){
+  const geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),seed=new Float32Array(n);
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*radius;pos[i*3]=Math.cos(a)*r;pos[i*3+1]=0;pos[i*3+2]=Math.sin(a)*r;seed[i]=Math.random()}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('seed',new THREE.BufferAttribute(seed,1));
+  const uniforms={uTime:{value:0},uStoke:{value:0},uViewH:{value:innerHeight}};for(const k in u)uniforms[k]={value:u[k]};
+  const mat=new THREE.ShaderMaterial({uniforms,vertexShader:FIRE_VS,fragmentShader:FIRE_FS,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  const pts=new THREE.Points(geo,mat);pts.frustumCulled=false;bonfire.group.add(pts);bonfire.mats.push(mat);return mat;
+}
+fireParticles(560,1.35,{uSpeed:.55,uHeight:5.2,uSize:.85,uSway:.34,uEmber:0});
+fireParticles(220,.7,{uSpeed:.8,uHeight:3.4,uSize:.65,uSway:.2,uEmber:0});
+fireParticles(200,1.5,{uSpeed:.18,uHeight:12,uSize:.11,uSway:1.4,uEmber:1});
+{
+  const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,190,110,.9)');g.addColorStop(.35,'rgba(255,120,40,.35)');g.addColorStop(1,'rgba(255,80,20,0)');x.fillStyle=g;x.fillRect(0,0,128,128);
+  bonfire.glow=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}));
+  bonfire.glow.position.y=1.7;bonfire.glow.scale.set(8,7,1);bonfire.group.add(bonfire.glow);
+}
+bonfire.light=new THREE.PointLight(0xff8a3c,3.2,36,1.5);bonfire.light.position.set(0,2.4,0);bonfire.group.add(bonfire.light);
+bonfire.fill=new THREE.PointLight(0xffb25c,1.4,9,2);bonfire.fill.position.set(0,.6,0);bonfire.group.add(bonfire.fill);
+function updateBonfire(dt,t){
+  if(!bonfire.group.visible)return;
+  bonfire.stoke=Math.max(0,bonfire.stoke-dt*.22);const s=bonfire.stoke*bonfire.stoke*(3-2*bonfire.stoke);
+  const vh=renderer.domElement.height;bonfire.mats.forEach(m=>{m.uniforms.uTime.value=t;m.uniforms.uStoke.value=s;m.uniforms.uViewH.value=vh});
+  const f=1+Math.sin(t*9.1)*.08+Math.sin(t*14.3)*.05+Math.sin(t*3.7)*.06;
+  bonfire.light.intensity=3.2*f*(1+s*.8);bonfire.fill.intensity=1.4*f*(1+s*.6);
+  bonfire.glow.material.opacity=.32*f*(1+s*.5);bonfire.glow.scale.set(8*(1+s*.4),7*(1+s*.5),1);
+}
+/* ---------- night sky: stars, milky way, moon ---------- */
+const nightSky={group:new THREE.Group()};scene.add(nightSky.group);nightSky.group.visible=NIGHT_ALWAYS;
+{
+  const n=4200,pos=new Float32Array(n*3),size=new Float32Array(n),phase=new Float32Array(n),R=270;
+  const band=new THREE.Vector3(.35,.55,.76).normalize(),u=new THREE.Vector3(1,0,0).cross(band).normalize(),v=band.clone().cross(u).normalize(),d=new THREE.Vector3();
+  for(let i=0;i<n;i++){
+    if(i<2600){const y=Math.random(),r=Math.sqrt(1-y*y),ph=Math.random()*Math.PI*2;d.set(r*Math.cos(ph),y,r*Math.sin(ph))}
+    else{const ph=Math.random()*Math.PI*2,sp=(Math.random()+Math.random()+Math.random()-1.5)*.18;d.copy(u).multiplyScalar(Math.cos(ph)).addScaledVector(v,Math.sin(ph)).addScaledVector(band,sp).normalize();if(d.y<.03)d.y=Math.abs(d.y)+.03;d.normalize()}
+    pos[i*3]=d.x*R;pos[i*3+1]=d.y*R;pos[i*3+2]=d.z*R;size[i]=i<2600?1.5+Math.pow(Math.random(),6)*3.5:1+Math.random()*1.1;phase[i]=Math.random();
+  }
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('size',new THREE.BufferAttribute(size,1));geo.setAttribute('phase',new THREE.BufferAttribute(phase,1));
+  nightSky.mat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uPR:{value:renderer.getPixelRatio()},uOpacity:{value:1}},transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending,
+    vertexShader:`attribute float size,phase;uniform float uTime,uPR;varying float vA;varying vec3 vC;
+      void main(){vA=.55+.45*sin(uTime*(.8+phase*2.6)+phase*40.);vC=mix(vec3(.75,.85,1.),vec3(1.,.92,.78),phase);
+      vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=size*uPR;gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`uniform float uOpacity;varying float vA;varying vec3 vC;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;float a=(1.-d*d)*vA*uOpacity;gl_FragColor=vec4(vC*a,a);}`});
+  const stars=new THREE.Points(geo,nightSky.mat);stars.frustumCulled=false;nightSky.group.add(stars);
+  const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,252,236,1)');g.addColorStop(.22,'rgba(250,246,226,1)');g.addColorStop(.27,'rgba(200,214,255,.35)');g.addColorStop(1,'rgba(160,180,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);
+  const moon=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,fog:false,toneMapped:false}));
+  moon.position.set(-120,95,-200);moon.scale.set(40,40,1);nightSky.group.add(moon);nightSky.moon=moon;
+}
 
 /* ---------- shared clock: room server time when connected ---------- */
 function serverNow(){return Date.now()+(room&&room.clockOffset||0)}
@@ -1282,7 +1408,7 @@ function restoreVisit(){
     if(Number.isFinite(saved.cam.pitch))cam.pitch=Math.max(.05,Math.min(1.2,saved.cam.pitch));
     if(Number.isFinite(saved.cam.dist))cam.dist=Math.max(2.5,Math.min(12,saved.cam.dist));
   }
-  pose=['stand','sit','lie','wave','coffee','pray','bow'].includes(saved.pose)?saved.pose:'stand';
+  pose=['stand','sit','lie','wave','coffee','beer','pray','bow'].includes(saved.pose)?saved.pose:'stand';
   const pr=saved.practice||{};
   if(Number.isInteger(pr.count))practice.count=Math.min(108,Math.max(practice.count,pr.count));
   practice.mode=['pray','single','auto'].includes(pr.mode)?pr.mode:'idle';
@@ -1419,6 +1545,7 @@ function connectRoomServer(base,code){
         case 'flower':sharedFlowers=(sharedFlowers||[]).concat(Number.isInteger(m.c)?m.c:0).slice(-300);renderFlowers(sharedFlowers);break;
         case 'music':{const mu=m.music||{},ok=TRACKS.some(x=>x.id===mu.track);applyMusic({track:ok?mu.track:null,startedAt:mu.startedAt||serverNow(),videoId:validVideoId(mu.videoId)?mu.videoId:DEFAULT_BANYA_VIDEO});
           if(mu.by!==you)toast(ok?(stripInvisible(m.name).slice(0,12)||'친구')+'님이 '+TRACKS.find(x=>x.id===mu.track).name+'을 틀었어요':'음악을 껐어요');break}
+        case 'stoke':bonfire.stoke=1;toast(`${stripInvisible(m.name).slice(0,12)||'친구'}님이 장작을 넣었어요`);break;
         case 'weather':if(['auto','clear','rain','snow'].includes(m.mode)){weatherMode=m.mode;weatherTime=0;environmentTick=99}break;
         case 'pong':if(Number.isFinite(m.s)&&Number.isFinite(m.c)){const rtt=Date.now()-m.c;if(rtt>=0&&rtt<3000)api.clockOffset=m.s-(m.c+rtt/2)}break;
         case 'full':stop=true;clearTimeout(retryTimer);disconnected('이 정원은 가득 찼어요 (최대 '+(m.max||16)+'명)');toast(connectionStatus);break;
@@ -1491,7 +1618,7 @@ function tick(){
   if(keys.KeyQ)cam.yaw+=dt*1.8;if(keys.KeyE)cam.yaw-=dt*1.8;
   const sy=Math.sin(cam.yaw),cy=Math.cos(cam.yaw);
   let vx=-sy*f+cy*s,vz=-cy*f-sy*s,mag=Math.min(1,Math.hypot(vx,vz));
-  if(mag>.08){target=null;marker.visible=false;const l=Math.hypot(vx,vz);vx/=l;vz/=l}
+  if(mag>.08){target=null;marker.visible=false;pendingStoke=false;const l=Math.hypot(vx,vz);vx/=l;vz/=l}
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
@@ -1504,7 +1631,8 @@ function tick(){
   updatePractice(dt);
   posePerson(me,pose,dt,t);
   updateEnvironment(dt,t);
-  updateCampfire(dt);
+  updateCampfire(dt);updateBonfire(dt,t);if(nightSky.mat)nightSky.mat.uniforms.uTime.value=t;
+  if(pendingStoke&&!target&&Math.hypot(me.g.position.x,me.g.position.z)<4)doStoke();
   updateDog(myDogObj,me.g.position.x,me.g.position.z,me.g.rotation.y,pose,me.speed>.3,dt,t);
 
   for(const e of peers.values()){
