@@ -39,9 +39,9 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:2px solid
 #poseList{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
 .pose-row{display:flex;gap:6px;justify-content:flex-end}
 #chatBtn.unread{color:#fff;background:var(--accent);border-color:var(--accent)}
-.chatbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(200px + env(safe-area-inset-bottom,0px));width:min(380px,calc(100vw - 24px));box-sizing:border-box;z-index:6;
+.chatbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px));width:min(520px,calc(100vw - 24px));box-sizing:border-box;z-index:6;
   background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 6px 24px rgba(40,30,20,.16);backdrop-filter:blur(8px)}
-.chatlog{display:grid;gap:3px;max-height:96px;overflow-y:auto;font-size:12.5px;margin-bottom:6px}
+.chatlog{display:grid;gap:3px;max-height:min(52px,12dvh);overflow-y:auto;overflow-wrap:anywhere;font-size:12px;line-height:1.4;margin-bottom:6px}
 .chatlog:empty{display:none}
 .chatlog b{font-weight:700;margin-right:5px;color:var(--accent)}
 .chatrow{display:flex;gap:6px}
@@ -95,13 +95,30 @@ button:disabled{opacity:.5;cursor:default}
 .youtube-source{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:8px}
 .youtube-source a{color:var(--accent);font-size:12px}
 @media(max-width:380px){.practice .row{gap:4px}.practice .row button{font-size:10.5px!important;padding:5px 7px!important}}
+/* Keep the garden visible while controls are in use. */
+.plaque{box-sizing:border-box;z-index:3}
+.plaque-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.plaque-heading h1{font-size:19px;white-space:nowrap}
+#gardenToggle{flex:none;font-size:11px;padding:6px 9px}
+.plaque.collapsed{width:auto;max-width:calc(100vw - 104px);padding:9px 11px}
+.plaque.collapsed h1{font-size:17px}
+#gardenDetails>.eyebrow{margin-top:10px}
+.chatrow{align-items:center}
+.chatrow input{font-size:16px;padding:8px 10px}
+.chatrow button{flex:none;font-size:12px;padding:8px 10px}
+.chat-open .practice{display:none}
+.chat-open #joy{bottom:calc(var(--chat-height,100px) + 20px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
+.chat-open .poses{bottom:calc(var(--chat-height,100px) + 20px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px))}
+@media(max-width:380px){.plaque-heading{gap:6px}.plaque.collapsed h1{font-size:16px}#gardenToggle{font-size:10px;padding:5px 7px}}
 </style>
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
-<header class="plaque">
+<header class="plaque collapsed" id="gardenPanel">
+  <div class="plaque-heading"><h1>기억의 정원</h1><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button></div>
+  <div id="gardenDetails" hidden>
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
-  <h1>기억의 정원</h1><div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
+  <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
   <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
   <div class="environment"><span id="seoulClock">한국 시각</span><span id="skyLabel"></span></div>
@@ -120,6 +137,7 @@ button:disabled{opacity:.5;cursor:default}
       <div class="row"><button id="youtubeLoadBtn" type="button">이 영상 듣기</button><a href="https://www.youtube.com/results?search_query=반야심경+독송" target="_blank" rel="noopener noreferrer">반야심경 찾기 ↗</a></div>
     </div>
     <label class="vol" id="synthVolume" for="vol">내 볼륨<input id="vol" type="range" min="0" max="100" value="70"></label>
+  </div>
   </div>
 </header>
 <aside class="youtube-card" id="youtubeCard" aria-label="반야심경 유튜브 플레이어" hidden>
@@ -141,7 +159,7 @@ button:disabled{opacity:.5;cursor:default}
 <div class="toast" id="toast"></div>
 <form class="chatbar" id="chatBar" hidden autocomplete="off">
   <div class="chatlog" id="chatLog" aria-live="polite"></div>
-  <div class="chatrow"><input id="chatInput" type="text" maxlength="200" placeholder="정원에 한마디" enterkeyhint="send" aria-label="보낼 말"><button class="primary" type="submit">보내기</button></div>
+  <div class="chatrow"><input id="chatInput" type="text" maxlength="200" placeholder="정원에 한마디" enterkeyhint="send" aria-label="보낼 말"><button class="primary" type="submit">보내기</button><button id="chatClose" type="button" aria-label="대화창 접기">접기</button></div>
 </form>
 <div class="welcome" id="welcome" hidden>
   <form class="welcome-card" id="nameForm" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" autocomplete="off">
@@ -842,6 +860,17 @@ function setupFold(btn,panel,key,openLabel,closedLabel,onClose){
 }
 setupFold('moreBtn','plaqueMore','garden.ui.more','메뉴 접기 ▴','메뉴 펼치기 ▾',()=>{$('musicPanel').hidden=true;$('musicBtn').setAttribute('aria-expanded','false')});
 setupFold('poseToggle','poseList','garden.ui.poses','동작 접기 ▾','동작 ▴');
+function setGardenExpanded(open){
+  $('gardenDetails').hidden=!open;
+  $('gardenPanel').classList.toggle('collapsed',!open);
+  $('gardenToggle').setAttribute('aria-expanded',String(open));
+  $('gardenToggle').textContent=open?'접기 ▴':'펼치기 ▾';
+}
+setGardenExpanded(store.get('garden.ui.panel')==='1');
+$('gardenToggle').onclick=()=>{
+  const open=$('gardenDetails').hidden;setGardenExpanded(open);store.set('garden.ui.panel',open?'1':'0');
+};
+
 
 $('goBtn').onclick=()=>goToFriend(false);
 $('rerollBtn').onclick=()=>{let d=randDog();while(d.b===myDog.b)d=randDog();applyMyLook(randLook(),d,true);toast(`${dogLabel(myDog)}와 함께 걸어요`)};
@@ -999,9 +1028,34 @@ function showChat(key,name,text){
   const log=$('chatLog');log.appendChild(row);while(log.children.length>30)log.removeChild(log.firstChild);log.scrollTop=log.scrollHeight;
   if($('chatBar').hidden&&key!=='me')$('chatBtn').classList.add('unread');
 }
-function toggleChat(open){$('chatBar').hidden=!open;$('chatBtn').setAttribute('aria-expanded',String(open));$('chatBtn').textContent=open?'닫기':'말하기';
-  if(open){$('chatBtn').classList.remove('unread');setTimeout(()=>{try{$('chatInput').focus()}catch(e){}},30)}}
+function syncChatDock(){
+  const open=!$('chatBar').hidden;
+  const viewport=window.visualViewport;
+  const keyboardLift=open&&viewport?Math.max(0,innerHeight-viewport.height-viewport.offsetTop):0;
+  document.documentElement.style.setProperty('--keyboard-lift',keyboardLift+'px');
+  if(open)document.documentElement.style.setProperty('--chat-height',$('chatBar').offsetHeight+'px');
+}
+function toggleChat(open){
+  $('chatBar').hidden=!open;document.body.classList.toggle('chat-open',open);
+  $('chatBtn').setAttribute('aria-expanded',String(open));$('chatBtn').textContent=open?'대화 접기':'말하기';
+  if(open){
+    $('chatBtn').classList.remove('unread');
+    $('poseList').hidden=true;$('poseToggle').setAttribute('aria-expanded','false');$('poseToggle').textContent='동작 ▴';store.set('garden.ui.poses','0');
+    setTimeout(()=>{if($('chatBar').hidden)return;try{$('chatInput').focus()}catch(e){}syncChatDock()},30);
+  }else{
+    $('chatInput').blur();$('chatBtn').focus();
+  }
+  syncChatDock();
+}
 $('chatBtn').onclick=()=>toggleChat($('chatBar').hidden);
+$('chatClose').onclick=()=>toggleChat(false);
+$('chatBar').addEventListener('keydown',e=>{if(e.key==='Escape')toggleChat(false)});
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncChatDock).observe($('chatBar'));
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',syncChatDock);
+  visualViewport.addEventListener('scroll',syncChatDock);
+}
+addEventListener('resize',syncChatDock);
 $('chatBar').onsubmit=e=>{e.preventDefault();const text=stripInvisible($('chatInput').value).slice(0,200);if(!text||!room)return;
   if(room.kind==='ws'){if(!room.connected()){toast('정원에 다시 연결되면 보낼 수 있어요');return}room.send({t:'chat',text})}
   else{room.presence({say:{text,at:serverNow()}}).catch(()=>{});showChat('me',shownName(),text)}
