@@ -131,12 +131,9 @@ button:disabled{opacity:.5;cursor:default}
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
   <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
-  <button class="fold" id="moreBtn" type="button" aria-expanded="false" aria-controls="plaqueMore">메뉴 펼치기 ▾</button>
-  <div id="plaqueMore" hidden>
   <div class="row"><button id="flowerBtn" type="button">꽃 놓기</button><button id="musicBtn" type="button" aria-expanded="false">음악</button><button id="rerollBtn" type="button">새 강아지</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   <div class="now" id="nowPlaying" hidden></div>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status" style="font-size:11px;color:var(--soft);margin-top:6px">모닥불을 불러오는 중…</div>
-  </div>
   <div class="panel" id="musicPanel" hidden>
     <div class="mhead" id="musicNote">고른 곡은 지금 정원에 있는 모두에게 같은 박자로 들려요</div>
     <div class="tracks" id="tracks"></div>
@@ -910,13 +907,13 @@ function setupFold(btn,panel,key,openLabel,closedLabel,onClose){
   apply(store.get(key)==='1');
   $(btn).onclick=()=>{const open=$(panel).hidden;apply(open);store.set(key,open?'1':'0')};
 }
-setupFold('moreBtn','plaqueMore','garden.ui.more','메뉴 접기 ▴','메뉴 펼치기 ▾',()=>{$('musicPanel').hidden=true;$('musicBtn').setAttribute('aria-expanded','false')});
 setupFold('poseToggle','poseList','garden.ui.poses','동작 접기 ▾','동작 ▴');
 function setGardenExpanded(open){
   $('gardenDetails').hidden=!open;
   $('gardenPanel').classList.toggle('collapsed',!open);
   $('gardenToggle').setAttribute('aria-expanded',String(open));
   $('gardenToggle').textContent=open?'접기 ▴':'펼치기 ▾';
+  if(!open){$('musicPanel').hidden=true;$('musicBtn').setAttribute('aria-expanded','false')}
 }
 setGardenExpanded(store.get('garden.ui.panel')==='1');
 $('gardenToggle').onclick=()=>{
