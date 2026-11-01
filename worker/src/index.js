@@ -16,6 +16,9 @@ const PRAYER_SPOTS=CENTERPIECE==='campfire'
 const TRACKS=['dawn','wind','bowl','melody','banya'];
 const validVideo=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{11}$/.test(v);
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
+const BOARD_PAGE_SIZE=6,BOARD_MAX_NOTES=500,BOARD_MAX_TEXT=600;
+const boardText=v=>typeof v==='string'?v.replace(/\r\n?/g,'\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]/g,'').trim():'';
+const boardId=v=>typeof v==='string'&&/^[a-f0-9]{32}$/.test(v);
 
 const RPS_DISTANCE = 4, RPS_BREAK_DISTANCE = 6;
 const RPS_INVITE_MS = 15000, RPS_RETAIN_MS = 30000;
@@ -174,6 +177,49 @@ export class GardenRoom extends DurableObject {
   }
   async save() {
     await this.ctx.storage.put('shared', this.shared);
+  }
+
+  // Notes live under their own keys, independent of transient chat/shared state.
+  async handleBoard(ws,a,m){
+    const request=typeof m.request==='string'?m.request.slice(0,64):'';
+    const fail=code=>ws.send(JSON.stringify({t:'board_error',code,request,nonce:boardId(m.nonce)?m.nonce:null}));
+    try{
+      if(m.t==='board_list'){
+        if(!this.allow(a,'board_read',4)){fail('slow');return}
+        const index=(await this.ctx.storage.get('boardIndex'))||[];
+        const pages=Math.max(1,Math.ceil(index.length/BOARD_PAGE_SIZE));
+        const page=Number.isInteger(m.page)?Math.max(0,Math.min(pages-1,m.page)):0;
+        const notes=(await Promise.all(index.slice(page*BOARD_PAGE_SIZE,(page+1)*BOARD_PAGE_SIZE).map(id=>this.ctx.storage.get('board.note.'+id)))).filter(Boolean);
+        ws.send(JSON.stringify({t:'board_page',request,page,pages,total:index.length,notes:notes.map(({id,to,from,at,body})=>({id,to,from,at,preview:body.slice(0,48)}))}));return;
+      }
+      if(m.t==='board_read'){
+        if(!this.allow(a,'board_read',4)){fail('slow');return}
+        if(!boardId(m.id)){fail('missing');return}
+        const note=await this.ctx.storage.get('board.note.'+m.id);
+        if(!note){fail('missing');return}
+        ws.send(JSON.stringify({t:'board_note',request,note}));return;
+      }
+      if(m.t!=='board_post')return;
+      const to=clean(m.to,13),body=boardText(m.body);
+      if(!boardId(m.nonce)||!to||to.length>12||!body||body.length>BOARD_MAX_TEXT){fail('invalid');return}
+      // Same tab + same draft nonce always resolves to the same stored note, including after reconnect.
+      const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(a.id+':'+m.nonce));
+      const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('').slice(0,32),key='board.note.'+id;
+      const existing=await this.ctx.storage.get(key);
+      if(existing){ws.send(JSON.stringify({t:'board_posted',nonce:m.nonce,note:existing}));return}
+      if(!this.allow(a,'board_post',1)){fail('slow');return}
+      const result=await this.ctx.storage.transaction(async txn=>{
+        const duplicate=await txn.get(key);if(duplicate)return{note:duplicate,created:false};
+        const index=(await txn.get('boardIndex'))||[];
+        if(index.length>=BOARD_MAX_NOTES)return{full:true};
+        const note={id,to,body,from:a.name,at:Date.now()};
+        await txn.put(key,note);await txn.put('boardIndex',[id,...index]);
+        return{note,created:true,total:index.length+1};
+      });
+      if(result.full){fail('full');return}
+      ws.send(JSON.stringify({t:'board_posted',nonce:m.nonce,note:result.note}));
+      if(result.created)this.broadcast({t:'board_changed',total:result.total});
+    }catch(error){fail('storage')}
   }
 
 
@@ -355,6 +401,7 @@ export class GardenRoom extends DurableObject {
       return;
     }
     if (!a.ready) return;
+    if (['board_list','board_read','board_post'].includes(m.t)) return this.handleBoard(ws,a,m);
     if (['rps_invite', 'rps_reply', 'rps_cancel', 'rps_choose', 'rps_sync'].includes(m.t)) return this.handleRps(ws, a, m);
 
     switch (m.t) {
