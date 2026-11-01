@@ -3091,7 +3091,7 @@ function connectRoomServer(base,code){
         case 'replaced':api.close();setConn(false,'다른 창에서 정원을 이어서 열었어요');break;
         case 'prayer_place':break; // Ignore legacy seat-allocation messages: prayer stays in place.
         case 'visit_ended':leaveGarden(false,false);break;
-        case 'join':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,{...m.peer,quiet:false});emit()}break;
+        case 'join':if(m.peer&&m.peer.id!==you){for(const [id,p] of peersById)if(p.away&&p.name===m.peer.name)peersById.delete(id);peersById.set(m.peer.id,{...m.peer,quiet:false});emit()}break;
         case 'resume':case 'away':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,{...m.peer,quiet:true});emit()}break;
         case 'state':{const p=peersById.get(m.id);if(p){p.s=m.s;emit()}break}
         case 'profile':{const p=peersById.get(m.id);if(p){p.name=m.name;p.look=m.look;p.dog=m.dog;emit()}break}

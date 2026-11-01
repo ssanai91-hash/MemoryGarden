@@ -365,6 +365,10 @@ export class GardenRoom extends DurableObject {
       ws.serializeAttachment(a);
       await this.advanceRps();
       await this.rememberVisit(a);
+      // 같은 이름으로 '잠시 자리 비움'인 예전 접속이 있으면 같은 사람이 새로 들어온 것으로 보고 지운다.
+      const ghosts=Object.entries(this.visits).filter(([id,v])=>id!==a.id&&v.peer&&!v.revoked&&v.awayUntil&&v.peer.name===a.name&&!this.readyPeers().some(p=>p.a.id===id)).map(([id])=>id);
+      for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
+      if(ghosts.length)await this.saveVisits();
       const peers = this.visiblePeers(a.id);
       ws.send(JSON.stringify({ t: 'welcome', features:{board:1}, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
