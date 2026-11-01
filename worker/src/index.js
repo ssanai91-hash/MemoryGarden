@@ -63,7 +63,12 @@ function cleanLook(l) {
   return o;
 }
 function cleanDog(d) {
-  if (!d || !Number.isInteger(d.b) || d.b < 0 || d.b > 9) return null;
+  if (!d || !Number.isInteger(d.b) || d.b < 0) return null;
+  if (d.kind === 'cat') {
+    if (d.b >= 8 || !Number.isInteger(d.coat) || d.coat < 0 || d.coat >= 8) return null;
+    return { kind: 'cat', b: d.b, coat: d.coat, n: clean(d.n, 8) };
+  }
+  if ((d.kind !== undefined && d.kind !== 'dog') || d.b > 9) return null;
   return { b: d.b, n: clean(d.n, 8) };
 }
 function cleanState(s) {
