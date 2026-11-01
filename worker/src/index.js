@@ -12,7 +12,7 @@ const PRAYER_SPOTS=CENTERPIECE==='campfire'
   :Array.from({length:16},(_,i)=>({x:[-1.2,1.2,-3.6,3.6][i%4],z:7.6+Math.floor(i/4)*3.4}));
 const TRACKS = ['dawn', 'wind', 'bowl', 'melody', 'banya'];
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
-const POSES = ['stand', 'sit', 'lie', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga'];
+const POSES = ['stand', 'sit', 'lie', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers'];
 const INVISIBLE = /[\u0000-\u001f\u007f​-‏‪-‮⁠-⁤﻿]/g;
 
 const clean = (v, n) => (typeof v === 'string' ? v.replace(INVISIBLE, '').trim().slice(0, n) : '');
@@ -206,6 +206,12 @@ export class GardenRoom extends DurableObject {
         this.shared.music = { track, startedAt: Date.now(), videoId: track === 'banya' && validVideo(m.videoId) ? m.videoId : null, by: a.id };
         await this.save();
         this.broadcast({ t: 'music', music: this.shared.music, name: a.name });
+        return;
+      }
+      case 'cheers': {
+        // 짠: 상태로 남기지 않고 지금 있는 사람들에게만 알린다. 같은 테이블 판단은 화면에서 한다.
+        if (!this.allow(a, 'h', 1)) return;
+        this.broadcast({ t: 'cheers', id: a.id, name: a.name }, ws);
         return;
       }
       case 'stoke': {
