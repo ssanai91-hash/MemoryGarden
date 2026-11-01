@@ -26,7 +26,7 @@ const RPS_CHOICES = ['scissors', 'rock', 'paper'];
 const RPS_BEATS = { scissors: 'paper', rock: 'scissors', paper: 'rock' };
 const activeRps = g => g.status === 'invited' || g.status === 'playing';
 
-const POSES = ['stand', 'standing_pray', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
+const POSES = ['stand', 'standing_pray', 'pray2', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
 const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'soju', 'beer', 'makgeolli', 'cider'];
 
 const POCHA_CENTER={x:-6.3,z:-23.4};
