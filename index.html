@@ -196,6 +196,11 @@ button:disabled{opacity:.5;cursor:default}
 .youtube-source a{color:var(--accent);font-size:12px}
 .poses #firePlayList{display:flex;flex-direction:column;gap:var(--action-gap,4px);width:100%;flex:none}
 .poses.poses-open #firePlayList>button{height:var(--action-height,28px);min-height:0;padding:var(--action-padding,2px) 4px;font-size:var(--action-font,11px);line-height:1.15}
+.poses .action-sub{display:flex;flex-direction:column;align-items:stretch;gap:var(--action-gap,4px);width:100%;flex:none}
+.poses .action-sub[hidden]{display:none}
+.poses.poses-open .action-sub>button{height:var(--action-height,28px);min-height:0;padding:var(--action-padding,2px) 4px;font-size:var(--action-font,11px);line-height:1.15}
+.poses .cat-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.poses .sub-back{color:var(--soft)}
 
 /* Keep the garden card on a consistent two-column rhythm. */
 #gardenPanel{padding:10px}
@@ -421,7 +426,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button id="firePlayBtn" type="button" aria-expanded="false" aria-controls="firePlayList">불장난 ▸</button><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 안쓰기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><div id="firePlayList" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button id="firePlayBack" type="button">← 동작</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="quickPhrases" class="quick-phrases" aria-label="자주 쓰는 말" hidden></div><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subDrink" aria-expanded="false" aria-controls="subDrink">마시기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 접기</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subDrink" class="action-sub" role="group" aria-label="마시기" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button class="sub-back" type="button" data-back="subDrink">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div><div class="pose-row"><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 기록</button><button class="fold" id="chatBtn" type="button" aria-expanded="false" aria-controls="chatBar" hidden>말하기</button><button class="fold" id="quickPhrasesBtn" type="button" aria-expanded="false" aria-controls="quickPhrases" aria-pressed="false">말모음</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="toast" id="toast"></div>
@@ -1399,7 +1404,7 @@ function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${BREEDS[d.b].k})`}
 function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 걷는 강아지: '+BREEDS[myDog.b].k}
 refreshMine();
 let pose='stand',sendDirty=true;
-function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',prone:'pProne',coffee:'pCoffee',beer:'pBeer',standing_pray:'standingPrayBtn',pray2:'pray2Btn',shake:'shakeBtn'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
+function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',prone:'pProne',coffee:'pCoffee',beer:'pBeer',standing_pray:'standingPrayBtn',pray2:'pray2Btn',shake:'shakeBtn'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k));if(typeof markActionCategories==='function')markActionCategories()}
 function setPose(p){const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;pendingStoke=false;
   if(pose==='sit')sitNearest();
   syncPoseButtons();sendDirty=true;closePoseMenu()}
@@ -1407,6 +1412,7 @@ let pendingStoke=false,fuelTimer=0,pendingFireAction='stoke';
 function syncUmbrellaButtons(){
   $('umbrellaOnBtn').setAttribute('aria-pressed',String(myUmbrella));
   $('umbrellaOffBtn').setAttribute('aria-pressed',String(!myUmbrella));
+  $('umbrellaOnBtn').hidden=myUmbrella;$('umbrellaOffBtn').hidden=!myUmbrella;$('umbrellaOnBtn').setAttribute('aria-pressed','false');$('umbrellaOffBtn').setAttribute('aria-pressed','false');
 }
 function setMyUmbrella(open){
   if(!hasEntered||visitEnded)return;
@@ -1842,24 +1848,25 @@ function closeOtherMenus(keep){
   if(keep!=='music')setMusicExpanded(false);
   if(keep!=='garden'&&keep!=='music')setGardenExpanded(false);
 }
-function actionMenuOpen(){return !$('poseList').hidden||!$('firePlayList').hidden}
+const ACTION_SUBS=['subRest','subDrink','subFriend','subPray','firePlayList'];
+function actionMenuOpen(){return !$('poseList').hidden||ACTION_SUBS.some(id=>!$(id).hidden)}
 function setPoseMenu(open){
   if(open)closeOtherMenus('poses');
-  $('firePlayList').hidden=true;$('firePlayBtn').setAttribute('aria-expanded','false');
+  ACTION_SUBS.forEach(id=>{$(id).hidden=true});document.querySelectorAll('.cat-btn').forEach(b=>b.setAttribute('aria-expanded','false'));
   $('poseList').hidden=!open;$('poseToggle').setAttribute('aria-expanded',String(open));
   $('poseToggle').textContent=open?'동작 접기 ▾':'동작 ▴';
   store.set('garden.ui.poses',open?'1':'0');syncMenuSections();
 }
 $('poseToggle').onclick=()=>setPoseMenu(!actionMenuOpen());
 function syncMenuSections(){
-  const open=['poseList','firePlayList','quickPhrases','chatHistory','chatBar','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
+  const open=['poseList',...ACTION_SUBS,'quickPhrases','chatHistory','chatBar','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
   $('rightMenu').classList.toggle('submenu-open',open);
   $('rightMenu').classList.toggle('poses-open',actionMenuOpen());
-  document.body.classList.toggle('actions-open',actionMenuOpen());syncActionMenuSize();
+  document.body.classList.toggle('actions-open',actionMenuOpen());syncActionMenuSize();if(typeof markActionCategories==='function')markActionCategories();
 }
 function syncActionMenuSize(){
   if(!actionMenuOpen())return;
-  const list=$('poseList').hidden?$('firePlayList'):$('poseList');
+  const list=$('poseList').hidden?$(ACTION_SUBS.find(id=>!$(id).hidden)||'poseList'):$('poseList');
   const menu=$('rightMenu'),count=Array.from(list.children).filter(button=>!button.hidden).length;
   const available=menu.getBoundingClientRect().height,closeHeight=$('poseToggle').getBoundingClientRect().height||28;
   const gap=available<380?2:4,height=Math.min(32,Math.max(14,Math.floor((available-closeHeight-gap*count)/Math.max(1,count))));
@@ -2389,12 +2396,17 @@ function watchFireworks(){
   const dx=FIREWORK_BEACH.x-me.g.position.x,dz=FIREWORK_BEACH.z-me.g.position.z;
   cam.yaw=Math.atan2(-dx,-dz);cam.skyPitch=Math.atan2(48,Math.max(1,Math.hypot(dx,dz)));cam.skyFov=75;resize();
 }
-function openFirePlay(open){
-  if(open){$('poseList').hidden=true;$('firePlayList').hidden=false;$('firePlayBtn').setAttribute('aria-expanded','true')}
-  else{$('firePlayList').hidden=true;$('poseList').hidden=false;$('firePlayBtn').setAttribute('aria-expanded','false')}
+function openActionSub(id){
+  ACTION_SUBS.forEach(x=>{$(x).hidden=x!==id});$('poseList').hidden=!!id;
+  document.querySelectorAll('.cat-btn').forEach(b=>b.setAttribute('aria-expanded',String(b.dataset.sub===id)));
   syncMenuSections();
 }
-$('firePlayBtn').onclick=()=>openFirePlay(true);$('firePlayBack').onclick=()=>openFirePlay(false);
+function openFirePlay(open){openActionSub(open?'firePlayList':null)}
+document.querySelectorAll('.cat-btn').forEach(b=>b.onclick=()=>openActionSub(b.dataset.sub));
+document.querySelectorAll('.sub-back').forEach(b=>b.onclick=()=>openActionSub(null));
+// 지금 하고 있는 동작이 들어 있는 분류 버튼을 강조한다.
+function markActionCategories(){document.querySelectorAll('.cat-btn').forEach(b=>{const sub=$(b.dataset.sub);b.classList.toggle('active',!!sub&&!!sub.querySelector('[aria-pressed="true"]'))})}
+
 $('auroraBtn').onclick=()=>{pendingFireAction='aurora';stokeFire()};
 $('fireworksBtn').onclick=()=>{if(requestFirePlay('fireworks'))watchFireworks()};
 {
