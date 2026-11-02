@@ -744,6 +744,7 @@ document.addEventListener('error',event=>{
 <script type="module" id="gardenSceneModule">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import {createGardenRenderer,markBloom} from './assets/garden-renderer.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -834,6 +835,7 @@ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 // Count both shadow and colour passes, resetting once per rendered frame.
 renderer.info.autoReset=false;
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;
+const gardenPost=createGardenRenderer(renderer);
 const scene=new THREE.Scene();
 let worldSpace='garden',listeningDoor=null,pendingShake=null,shakeTimer=0;
 const listening={scene:null,returnPoint:null,state:{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0},audio:null,
@@ -915,6 +917,7 @@ function applyQuality(){
     if(sun.shadow.mapPass){sun.shadow.mapPass.dispose();sun.shadow.mapPass=null}
     sun.shadow.mapSize.set(q.shadow,q.shadow);renderer.shadowMap.needsUpdate=true;
   }
+  gardenPost.setSize(innerWidth,innerHeight,quality.level);
   quality.latest=null;
   $('qualityMode').value=quality.mode;
   $('qualityDescription').textContent=quality.mode==='auto'?'자동 조절 중 · 현재 '+q.name+' · 느려지면 풍경의 세밀함을 줄여요.':q.name+' · 이 기기에만 적용해요.';
@@ -928,7 +931,7 @@ function sceneryInstanced(geo,mat,items,shadow,options={}){
   for(const it of items){const key=Math.floor(it.x/size)+','+Math.floor(it.z/size);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(it)}
   const levels=[geo,options.medium||geo,options.low||options.medium||geo];
   for(const batch of buckets.values()){
-    const mesh=instanced(geo,mat,batch,shadow);mesh.frustumCulled=false;
+    const mesh=instanced(geo,mat,batch,shadow);mesh.frustumCulled=false;mesh.userData.gardenBloomOccluderGeometry=levels[2];
     const bounds=new THREE.Box3(),sphere=new THREE.Sphere(),lo=new THREE.Vector3(),hi=new THREE.Vector3();
     for(const it of batch){
       dummy.position.set(it.x,it.y,it.z);dummy.rotation.set(it.rx||0,it.ry||0,it.rz||0);
@@ -979,16 +982,16 @@ function performancePlace(){
 function renderQualityStats(){
   if(!$('qualityDialog').open||!$('qualityDiagnostics').open)return;
   const r=quality.latest;
-  $('qualityStats').textContent=r?`${r.place} · ${r.fps} FPS · 평균 ${r.frame}ms / 느린 프레임 ${r.p90}ms · CPU 작업 ${r.work}ms · 그리기 ${r.calls}회 / 삼각형 ${r.triangles.toLocaleString()}개 · 표시 구역 ${r.chunks}/${sceneryChunks.length} · ${r.width}×${r.height} · 친구 ${r.peers}명 · 날씨 ${r.weather}`:'입장 후 같은 풍경에서 잠시 기다려 주세요.';
+  $('qualityStats').textContent=r?`${r.place} · ${r.bloom} · ${r.fps} FPS · 평균 ${r.frame}ms / 느린 프레임 ${r.p90}ms · CPU 작업 ${r.work}ms · 그리기 ${r.calls}회 / 삼각형 ${r.triangles.toLocaleString()}개 · 표시 구역 ${r.chunks}/${sceneryChunks.length} · ${r.width}×${r.height} · 친구 ${r.peers}명 · 날씨 ${r.weather}`:'입장 후 같은 풍경에서 잠시 기다려 주세요.';
   const body=$('qualityRecords').tBodies[0];body.textContent='';
   for(const row of quality.records.values()){
-    const tr=document.createElement('tr');for(const value of [row.place,QUALITY_LEVELS[row.level].name,row.fps]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td)}body.appendChild(tr);
+    const tr=document.createElement('tr');for(const value of [row.place+' · '+row.bloom,QUALITY_LEVELS[row.level].name,row.fps]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td)}body.appendChild(tr);
   }
 }
 function sampleGardenFrame(now,work){
   if(!hasEntered||appHidden||gardenBoard.isOpen()||$('homeInstallHelp').open){resetQualitySampling(1000);return}
   if(now<quality.warmUntil){quality.previous=0;return}
-  const key=performancePlace()+':'+quality.level+':'+cam.sky+':'+weatherMode+':'+peers.size+':'+innerWidth+':'+innerHeight;
+  const key=performancePlace()+':'+quality.level+':'+cam.sky+':'+weatherMode+':'+peers.size+':'+innerWidth+':'+innerHeight+':'+gardenPost.label;
   if(key!==quality.recordKey){resetQualitySampling(700);quality.recordKey=key;return}
   if(!quality.previous){quality.previous=now;return}
   const elapsed=now-quality.previous;quality.previous=now;
@@ -998,8 +1001,8 @@ function sampleGardenFrame(now,work){
   if(quality.frames.length<30||quality.elapsed<2000)return;
   const n=quality.frames.length,sorted=quality.frames.slice().sort((a,b)=>a-b),sum=quality.elapsed,average=sum/n,p90=sorted[Math.floor((n-1)*.9)];
   const size=renderer.getDrawingBufferSize(new THREE.Vector2());
-  const r={place:performancePlace(),level:quality.level,fps:Math.round(1000/average),frame:+average.toFixed(1),p90:+p90.toFixed(1),work:+(quality.work/n).toFixed(1),calls:Math.round(quality.calls/n),triangles:Math.round(quality.triangles/n),chunks:sceneryVisible,width:size.x,height:size.y,peers:peers.size,weather:weatherMode+' · 비 '+Math.round(weatherFrame(serverNow()).rain*100)+'% / 눈 '+Math.round(weatherFrame(serverNow()).snow*100)+'%'};
-  quality.latest=r;quality.records.set(r.place+':'+r.level,r);renderQualityStats();
+  const r={place:performancePlace(),level:quality.level,bloom:gardenPost.label,fps:Math.round(1000/average),frame:+average.toFixed(1),p90:+p90.toFixed(1),work:+(quality.work/n).toFixed(1),calls:Math.round(quality.calls/n),triangles:Math.round(quality.triangles/n),chunks:sceneryVisible,width:size.x,height:size.y,peers:peers.size,weather:weatherMode+' · 비 '+Math.round(weatherFrame(serverNow()).rain*100)+'% / 눈 '+Math.round(weatherFrame(serverNow()).snow*100)+'%'};
+  quality.latest=r;quality.records.set(r.place+':'+r.level+':'+r.bloom,r);renderQualityStats();
   quality.frames.length=0;quality.elapsed=quality.work=quality.calls=quality.triangles=0;
   if(quality.mode!=='auto')return;
   quality.bad=average>34||p90>55?quality.bad+sum:0;
@@ -1163,7 +1166,7 @@ function addGlow(x,y,z,size,color,parent){
   if(!glowTex){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),gr=g.createRadialGradient(32,32,0,32,32,32);
     gr.addColorStop(0,'rgba(255,255,255,.9)');gr.addColorStop(.3,'rgba(255,255,255,.35)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);glowTex=new THREE.CanvasTexture(c)}
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:color||0xffc77a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,opacity:.55}));
-  sp.position.set(x,y,z);sp.scale.set(size,size,1);(parent||scene).add(sp);return sp;
+  markBloom(sp.material,1.6);sp.position.set(x,y,z);sp.scale.set(size,size,1);(parent||scene).add(sp);return sp;
 }
 /* ---------- big lake with a boardwalk, waterfall up the path, farm hut by the shore ---------- */
 const waterworks={sheets:[],mist:null,foam:[],tex:null};
@@ -1266,9 +1269,9 @@ const waterworks={sheets:[],mist:null,foam:[],tex:null};
   // door, window glow, porch bulb
   listeningDoor=part(plank,F(0x6f8d6a),[.6,1.05,-.08],[.95,1.95,.06],null,hut);
   {const c=document.createElement('canvas');c.width=256;c.height=80;const x=c.getContext('2d');x.fillStyle='#493624';x.fillRect(0,0,256,80);x.fillStyle='#f4dfb2';x.font='bold 38px sans-serif';x.textAlign='center';x.fillText('음악방 ♫',128,53);const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;const sign=new THREE.Mesh(new THREE.PlaneGeometry(1.12,.35),new THREE.MeshBasicMaterial({map:tx,toneMapped:false}));sign.position.set(.6,2.27,-.02);hut.add(sign)}const knob=new THREE.Mesh(new THREE.SphereGeometry(.04,8,6),M(0xd8c27a));knob.position.set(.25,1.0,-.03);hut.add(knob);
-  const win=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.8),new THREE.MeshBasicMaterial({color:C(0xffcf86),toneMapped:false}));win.position.set(-1.0,1.55,-.07);hut.add(win);
+  const win=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.8),new THREE.MeshBasicMaterial({color:C(0xffcf86),toneMapped:false}));markBloom(win.material,2);win.position.set(-1.0,1.55,-.07);hut.add(win);
   part(plank,F(0x5e4128),[-1.0,1.55,-.06],[1.25,.07,.05],null,hut);part(plank,F(0x5e4128),[-1.0,1.55,-.06],[.05,.95,.05],null,hut);
-  const bulb=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),new THREE.MeshBasicMaterial({color:C(0xffd59a),toneMapped:false}));bulb.position.set(0,2.45,1.4);hut.add(bulb);
+  const bulb=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),new THREE.MeshBasicMaterial({color:C(0xffd59a),toneMapped:false}));markBloom(bulb.material,1.7);bulb.position.set(0,2.45,1.4);hut.add(bulb);
   const porchLight=gardenPointLight('porch',0xffc27a,1.1,9);porchLight.position.set(0,2.3,1.4);hut.add(porchLight);
   // firewood, watering can, pots, vegetable patch
   for(let r=0;r<3;r++)for(let c=0;c<5-r;c++){const lg=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.7,8),F(0x9a6a40));lg.rotation.x=Math.PI/2;lg.position.set(1.55+c*.22+r*.11,.27+r*.19,.6);hut.add(lg)}
@@ -1344,7 +1347,7 @@ function makeListeningScene(){
   for(const x of[-2.1,2.1])for(const z of[-4.76,-3.75])cube(x,.82,z,.055,1.6,.055,silver);
   const equipment=(x,y,w,col)=>{listening.audioTargets.push(cube(x,y,-4.18,w,.36,.76,mat(col,.38,.4)));for(const dx of[-w*.42,w*.42]){const knob=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.05,20),silver);knob.rotation.x=Math.PI/2;knob.position.set(x+dx,y,-3.77);sc.add(knob)}cube(x,y,-3.785,w*.52,.15,.015,black)};
   equipment(-1.08,.49,1.75,0x20252a);equipment(1.08,.49,1.75,0x20252a);equipment(0,1.03,3.2,0xb3b3aa);
-  const ledMat=new THREE.MeshBasicMaterial({color:0x84b9a1,toneMapped:false});listening.led=ledMat;
+  const ledMat=new THREE.MeshBasicMaterial({color:0x84b9a1,toneMapped:false});listening.led=ledMat;markBloom(ledMat,1.4);
   cube(0,1.04,-3.78,.85,.12,.025,ledMat);
   listening.needles=[];for(const x of[-.9,.9]){cube(x,1.055,-3.775,.52,.21,.02,new THREE.MeshBasicMaterial({color:0xeacb8d,toneMapped:false}));const n=cube(x,1.025,-3.75,.014,.15,.014,black);listening.needles.push(n)}
   const deck=new THREE.Group();deck.position.set(-.85,1.43,-4.14);sc.add(deck);cube(0,.08,0,1.65,.12,1.02,black,deck);
@@ -1555,7 +1558,7 @@ const ffGeo=new THREE.BufferGeometry(),ffPos=new Float32Array(FIREFLY_N*3),ffCol
 ffGeo.setAttribute('position',new THREE.BufferAttribute(ffPos,3));ffGeo.setAttribute('color',new THREE.BufferAttribute(ffCol,3));
 const ffDot=document.createElement('canvas');ffDot.width=ffDot.height=32;{const c=ffDot.getContext('2d'),g=c.createRadialGradient(16,16,0,16,16,16);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.7)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,32,32)}
 const ffPoints=new THREE.Points(ffGeo,new THREE.PointsMaterial({size:.55,map:new THREE.CanvasTexture(ffDot),vertexColors:true,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));
-ffPoints.frustumCulled=false;scene.add(ffPoints);
+markBloom(ffPoints.material,1.5);ffPoints.frustumCulled=false;scene.add(ffPoints);
 const ffFree=[];// released ones flying away
 function updateFireflies(dt,t){
   const now=performance.now(),mx=me.g.position.x,mz=me.g.position.z;
@@ -1980,7 +1983,7 @@ const maryStatue=new THREE.Group();maryStatue.position.set(ALTAR_SPOTS[1].x,0,AL
 
 /* ---------- courtyard: stone lanterns and prayer cushions ---------- */
 const lanternStone=F(0x8f8c80,{roughness:1});
-const lanternGlow=new THREE.MeshStandardMaterial({color:C(0xf3d9a4),emissive:C(0xffb45c),emissiveIntensity:.6,roughness:.6});
+const lanternGlow=markBloom(new THREE.MeshStandardMaterial({color:C(0xf3d9a4),emissive:C(0xffb45c),emissiveIntensity:.6,roughness:.6}),1.7);
 const LG={base:new THREE.CylinderGeometry(.45,.56,.24,8),post:new THREE.CylinderGeometry(.15,.17,1,8),deck:new THREE.CylinderGeometry(.46,.42,.14,8),
   roof:new THREE.ConeGeometry(.72,.42,4),cap:new THREE.ConeGeometry(.24,.3,4),ball:new THREE.SphereGeometry(.09,6,4)};
 const glow=gardenPointLight('altar',0xffce88,1,20);glow.position.set(0,4,7);scene.add(glow);
@@ -2103,7 +2106,7 @@ function randLook(gender){
 }
 function makeTag(text){
   const c=document.createElement('canvas');c.width=512;c.height=96;
-  const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true,toneMapped:false}));
+  const t=new THREE.CanvasTexture(c);const s=gardenPost.registerLabel(new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true,toneMapped:false})));
   s.scale.set(2.4,.45,1);s.renderOrder=10;s.userData.c=c;setTag(s,text);return s;
 }
 function setTag(s,text){
@@ -3466,7 +3469,7 @@ function fireParticles(n,radius,u){
   geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('seed',new THREE.BufferAttribute(seed,1));
   const uniforms={uTime:{value:0},uStoke:{value:0},uPower:{value:0},uOpacity:{value:0},uViewH:{value:innerHeight},uAurora:{value:0},uHue:{value:0}};for(const k in u)uniforms[k]={value:u[k]};
   const mat=new THREE.ShaderMaterial({uniforms,vertexShader:FIRE_VS,fragmentShader:FIRE_FS,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
-  const pts=new THREE.Points(geo,mat);pts.frustumCulled=false;bonfire.group.add(pts);bonfire.mats.push(mat);return mat;
+  const pts=new THREE.Points(geo,mat);pts.frustumCulled=false;bonfire.group.add(pts);bonfire.mats.push(mat);markBloom(mat,.65);return mat;
 }
 fireParticles(560,1.35,{uSpeed:.55,uHeight:5.2,uSize:.85,uSway:.34,uEmber:0});
 fireParticles(220,.7,{uSpeed:.8,uHeight:3.4,uSize:.65,uSway:.2,uEmber:0});
@@ -3475,11 +3478,12 @@ fireParticles(200,1.5,{uSpeed:.18,uHeight:12,uSize:.11,uSway:1.4,uEmber:1});
   const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
   g.addColorStop(0,'rgba(255,190,110,.9)');g.addColorStop(.35,'rgba(255,120,40,.35)');g.addColorStop(1,'rgba(255,80,20,0)');x.fillStyle=g;x.fillRect(0,0,128,128);
   bonfire.glow=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}));
-  bonfire.glow.position.y=1.7;bonfire.glow.scale.set(8,7,1);bonfire.group.add(bonfire.glow);
+  markBloom(bonfire.glow.material,.35);bonfire.glow.position.y=1.7;bonfire.glow.scale.set(8,7,1);bonfire.group.add(bonfire.glow);
 }
 bonfire.light=gardenPointLight('fireMain',0xff8a3c,3.2,36);bonfire.light.position.set(0,2.4,0);bonfire.group.add(bonfire.light);
 bonfire.fill=gardenPointLight('fireFill',0xffb25c,1.4,9);bonfire.fill.position.set(0,.6,0);bonfire.group.add(bonfire.fill);
 const coalMaterial=new THREE.MeshStandardMaterial({color:C(0x302825),roughness:1,emissive:C(0xef3308),emissiveIntensity:0});
+markBloom(coalMaterial,1.3);
 const coalBed=new THREE.Mesh(new THREE.SphereGeometry(1,12,6),coalMaterial);coalBed.position.y=.12;coalBed.scale.set(1.18,.11,1.18);bonfire.group.add(coalBed);
 const burningLogs=[];
 for(let i=0;i<6;i++){
@@ -3618,7 +3622,7 @@ function updateNightSky(now,weather,phase){
   nightSky.galaxy.renderOrder=-5;nightSky.group.add(nightSky.galaxy);
   nightSky.moons=[0].map(()=>{
     const moon=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false,blending:THREE.AdditiveBlending}));
-    moon.scale.set(38,38,1);moon.renderOrder=2;nightSky.group.add(moon);return moon;
+    markBloom(moon.material,1.6);moon.scale.set(38,38,1);moon.renderOrder=2;nightSky.group.add(moon);return moon;
   });
   loadPhotographicMoon();
 }
@@ -4229,7 +4233,7 @@ function showBubble(key,name,text){
   if(!b){
     const c=document.createElement('canvas');c.width=80;c.height=96;
     const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
-    b=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,transparent:true,toneMapped:false}));
+    b=gardenPost.registerLabel(new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,transparent:true,toneMapped:false})));
     b.renderOrder=11;b.userData.c=c;bubbles.set(key,b);
   }
   if(b.parent!==P.g){if(b.parent)b.parent.remove(b);P.g.add(b)}
@@ -4540,6 +4544,7 @@ function refreshGarden(){
 }
 $('refreshBtn').onclick=refreshGarden;
 function showExitScreen(){
+  gardenPost.dispose();
   exitWindowControls.reset();
   document.body.classList.add('visit-ended');$('exitScreen').hidden=false;$('welcome').hidden=true;$('shareDialog').hidden=true;$('leaveConfirm').hidden=true;
   me.g.visible=false;myDogObj.g.visible=false;quietThunder(true);silenceMusicOnExit();
@@ -4892,8 +4897,12 @@ function onShakeFrom(id,name){
 }
 $('shakeBtn').onclick=startShake;
 
+markBloom(nightSky.mat,1.1);markBloom(meteorMaterial,1.2);markBloom(meteorHeadsMaterial,1.3);
+markBloom(lightningMaterial,1.5);markBloom(fireworkMaterial,2.5);markBloom(rocketMaterial,2);
+waterworks.sheets.forEach(material=>markBloom(material,1.3));
+
 /* ---------- loop ---------- */
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=cam.sky?cam.skyFov:w/h<.8?72:55;camera.updateProjectionMatrix()}
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);gardenPost.setSize(w,h,quality.level);camera.aspect=w/h;camera.fov=cam.sky?cam.skyFov:w/h<.8?72:55;camera.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PN=160,pg=new THREE.BufferGeometry(),pp=new Float32Array(PN*3);
@@ -4971,7 +4980,9 @@ function tick(){
     pg.attributes.position.needsUpdate=true}
   layoutBubbles(dt);windU.value=t;updateMoonSanctuary();updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);
   if(!gardenBoard.isOpen()){
-    renderer.info.reset();if(worldSpace==='listening'){updateListening(dt,t);renderer.render(listening.scene,camera)}else{updateScenery();renderer.render(scene,camera)}
+    renderer.info.reset();if(worldSpace==='listening')updateListening(dt,t);else updateScenery();
+    const phase=gardenEnvironment.frame(serverNow());
+    gardenPost.draw(worldSpace==='listening'?listening.scene:scene,camera,dt,{...phase,rain:weatherFrame(serverNow()).rain,space:worldSpace,level:hasEntered?quality.level:0});
     sampleGardenFrame(frameStart,performance.now()-frameStart);
   }else resetQualitySampling();
   requestGardenFrame();
