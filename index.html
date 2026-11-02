@@ -745,6 +745,7 @@ document.addEventListener('error',event=>{
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {createGardenRenderer,markBloom} from './assets/garden-renderer.js';
+import {lushTreeCrowns} from './assets/garden-foliage.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -943,7 +944,7 @@ function sceneryInstanced(geo,mat,items,shadow,options={}){
     bounds.expandByScalar(2); // wind and a little camera movement at chunk edges
     const viewSphere=bounds.getBoundingSphere(new THREE.Sphere());
     viewSphere.radius+=CURVE_CAP*CURVE_CAP*CURVE_K+1; // curved-world shader moves vertices in view space
-    sceneryChunks.push({mesh,bounds,sphere:viewSphere,levels,total:batch.length,kind:options.kind||'solid',shadow:shadow!==false,lod:0});
+    sceneryChunks.push({mesh,bounds,sphere:viewSphere,levels,total:batch.length,kind:options.kind||'solid',minQuality:options.minQuality||0,shadow:shadow!==false,lod:0});
   }
 }
 function chunkDistance(bounds,x,z){return Math.hypot(Math.max(bounds.min.x-x,0,x-bounds.max.x),Math.max(bounds.min.z-z,0,z-bounds.max.z))}
@@ -951,8 +952,9 @@ function updateScenery(){
   camera.updateMatrixWorld();sceneryProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);sceneryFrustum.setFromProjectionMatrix(sceneryProjection);
   const q=QUALITY_LEVELS[quality.level];sceneryVisible=0;
   for(const c of sceneryChunks){
+    if(quality.level<c.minQuality){c.mesh.visible=false;c.mesh.castShadow=false;continue}
     const distance=chunkDistance(c.bounds,camera.position.x,camera.position.z);
-    const max=c.kind==='grass'?q.grass:c.kind==='flower'?q.flowers:c.kind==='backdrop'?240:Math.min(220,scene.fog.far+12);
+    const max=c.kind==='grass'?q.grass:c.kind==='flower'||c.kind==='understory'?q.flowers:c.kind==='backdrop'?240:Math.min(220,scene.fog.far+12);
     const cast=c.shadow&&chunkDistance(c.bounds,me.g.position.x,me.g.position.z)<q.shadowReach;
     // Off-screen nearby casters still contribute shadows to the visible garden.
     c.mesh.visible=distance<max&&(sceneryFrustum.intersectsSphere(c.sphere)||cast);
@@ -964,7 +966,7 @@ function updateScenery(){
     if(lod===1&&distance>q.middle+4)lod=2;
     if(lod===2&&distance<q.middle-4)lod=1;
     c.lod=lod;c.mesh.geometry=c.levels[lod];
-    c.mesh.count=c.kind==='grass'||c.kind==='flower'?Math.max(1,Math.ceil(c.total*q.density)):c.total;
+    c.mesh.count=c.kind==='grass'||c.kind==='flower'||c.kind==='understory'?Math.max(1,Math.ceil(c.total*q.density)):c.total;
     sceneryVisible++;
   }
 }
@@ -1742,6 +1744,8 @@ const arboretum={trees:[],species:new Map()};
 {
   let state=0x6a39f1;const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296},choose=a=>a[Math.floor(random()*a.length)];
   const types=new Map(ARBORETUM_TREES.map(t=>[t.id,t])),trunks=[],leaves=[],broadLeaves=[],fanLeaves=[],mapleLeaves=[],flowerLeaves=[],pinePads=[],needles=[],curtains=[],petals=[],shrubs=[],flowers=[],rocks=[];
+  const foliageArrays={leaves,broadLeaves,fanLeaves,mapleLeaves,flowerLeaves,pinePads,needles,curtains,petals};
+  const lushTiers=[new Map(),new Map()],understoryShrubs=[],understoryFerns=[];
   const color=(hex,spread=.045)=>C(hex).offsetHSL((random()-.5)*.012,(random()-.5)*.025,(random()-.5)*spread);
   const limb=(a,b,r,bark)=>{const delta=new THREE.Vector3(b.x-a.x,b.y-a.y,b.z-a.z),rotation=new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),delta.clone().normalize()));
     trunks.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:(a.z+b.z)/2,sx:r,sy:delta.length(),sz:r,rx:rotation.x,ry:rotation.y,rz:rotation.z,c:color(bark,.025)})};
@@ -1757,6 +1761,7 @@ const arboretum={trees:[],species:new Map()};
     return !arboretum.trees.some(t=>Math.hypot(x-t.x,z-t.z)<Math.max(3.2,(t.radius+radius)*.8));
   }
   function tree(x,z,id,scale){
+    const starts=Object.fromEntries(Object.entries(foliageArrays).map(([name,items])=>[name,items.length]));
     const type=types.get(id),h=type.h*scale,w=type.w*scale,bark=type.bark,palette=type.colors,form=type.form,base={x,y:0,z},lean=(random()-.5)*.35*scale;
     const trunkTop=h*(form==='spire'?.86:form==='birch'?.8:.62),trunkR=(form==='birch'?.115:form==='magnolia'?.18:.23)*scale;
     const top={x:x+lean,y:trunkTop,z:z+lean*.5};limb(base,top,trunkR,bark);
@@ -1799,6 +1804,16 @@ const arboretum={trees:[],species:new Map()};
           crown(top.x+Math.cos(a)*r,y,top.z+Math.sin(a)*r,size,form==='magnolia'?size*1.8:size*.7,size,bloomPalette,petals);
         }
       }
+    }
+    // Fill the upper canopy without advancing the original placement RNG.
+    for(const[name,items]of Object.entries(foliageArrays))for(let i=starts[name];i<items.length;i++){
+      const height=THREE.MathUtils.clamp((items[i].y/h-.4)/.55,0,1);items[i].c.multiplyScalar(.88+height*.21);
+    }
+    const lush=lushTreeCrowns({x,z,h,w,id,form,palette,scale},C);
+    lush.tiers.forEach((items,tier)=>items.forEach(item=>{if(!lushTiers[tier].has(item.family))lushTiers[tier].set(item.family,[]);lushTiers[tier].get(item.family).push(item)}));
+    for(const item of lush.understory){
+      if(gardenWalkDistance(item.x,item.z)<1.6||nearWaterworks(item.x,item.z,.7)||nearPocha(item.x,item.z,4.8))continue;
+      (item.family==='fern'?understoryFerns:understoryShrubs).push(item);
     }
     const record={x,z,id,height:h,radius:w};arboretum.trees.push(record);arboretum.species.set(id,(arboretum.species.get(id)||0)+1);obstacles.push({x,z,r:Math.max(.3,trunkR+.16*scale)});
   }
@@ -1848,6 +1863,13 @@ const arboretum={trees:[],species:new Map()};
   willowMat.onBeforeCompile=sh=>{willowCompile(sh);sh.vertexShader=sh.vertexShader.replace('float hgt=(position.y+1.)*.5;','float hgt=clamp((1.-position.y)*.5,0.,1.);')};willowMat.customProgramCacheKey=()=> 'arboretum-willow-v2';
   draw(arboretumWillowGeometry(2),willowMat,curtains,true,{size:48,medium:arboretumWillowGeometry(1),low:arboretumWillowGeometry(0)});
   draw(arboretumSprayGeometry('flower',0),foliage,petals,false,{size:48,kind:'flower',medium:arboretumSprayGeometry('flower',0),low:arboretumSprayGeometry('flower',0)});
+
+  const lushGeometry={cores:[roundGeo,roundMedium,roundLow],leaves:[roundGeo,roundMedium,roundLow],broadLeaves:[arboretumSprayGeometry('broad',2),arboretumSprayGeometry('broad',1),arboretumSprayGeometry('broad',0)],fanLeaves:[arboretumSprayGeometry('fan',2),arboretumSprayGeometry('fan',1),arboretumSprayGeometry('fan',0)],mapleLeaves:[arboretumSprayGeometry('maple',2),arboretumSprayGeometry('maple',1),arboretumSprayGeometry('maple',0)],flowerLeaves:[arboretumSprayGeometry('flower',2),arboretumSprayGeometry('flower',1),arboretumSprayGeometry('flower',0)],pinePads:[arboretumPlateGeometry(2),arboretumPlateGeometry(1),arboretumPlateGeometry(0)],needles:[new THREE.ConeGeometry(1,1,7),new THREE.ConeGeometry(1,1,5),new THREE.ConeGeometry(1,1,4)],curtains:[arboretumWillowGeometry(2),arboretumWillowGeometry(1),arboretumWillowGeometry(0)],petals:[arboretumSprayGeometry('flower',0),arboretumSprayGeometry('flower',0),arboretumSprayGeometry('flower',0)]};
+  lushTiers.forEach((groups,tier)=>{for(const[family,items]of groups){
+    const geometry=lushGeometry[family];draw(geometry[0],family==='curtains'?willowMat:foliage,items,family!=='petals',{size:48,kind:family==='petals'?'flower':'solid',minQuality:tier+1,medium:geometry[1],low:geometry[2]});
+  }});
+  draw(roundGeo,foliage,understoryShrubs,true,{size:40,kind:'understory',medium:roundMedium,low:roundLow});
+  draw(arboretumSprayGeometry('fern',1),swayMaterial(new THREE.MeshStandardMaterial({color:0xffffff,side:THREE.DoubleSide,roughness:1}),.12,true),understoryFerns,false,{size:40,kind:'understory',medium:arboretumSprayGeometry('fern',0),low:arboretumSprayGeometry('fern',0)});
 
   // Low flowering borders echo the nearby grove, leaving both loop walks and connecting paths clear.
   for(let i=0;i<210;i++){
