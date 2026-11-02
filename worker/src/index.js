@@ -581,27 +581,10 @@ export class GardenRoom extends DurableObject {
 }
 
 
-// 정적 자산은 Range 요청(206)을 지원하지 않아 iPhone Safari가 음원을 재생하지 못한다. 음원만 Worker가 직접 잘라 준다.
-async function serveMusic(req, env, url) {
-  if (!/^\/music\/[a-z0-9-]+\.mp3$/.test(url.pathname)) return new Response('Not found', { status: 404 });
-  const res = await env.ASSETS.fetch(new Request(url.origin + url.pathname));
-  if (!res.ok) return res;
-  const buf = await res.arrayBuffer(), size = buf.byteLength;
-  const headers = { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=604800' };
-  const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get('Range') || '');
-  if (!range) return new Response(req.method === 'HEAD' ? null : buf, { status: 200, headers: { ...headers, 'Content-Length': String(size) } });
-  let start = range[1] === '' ? size - Number(range[2]) : Number(range[1]);
-  let end = range[1] !== '' && range[2] !== '' ? Number(range[2]) : size - 1;
-  start = Math.max(0, start); end = Math.min(size - 1, end);
-  if (!(start <= end)) return new Response(null, { status: 416, headers: { ...headers, 'Content-Range': `bytes */${size}` } });
-  return new Response(req.method === 'HEAD' ? null : buf.slice(start, end + 1), { status: 206, headers: { ...headers, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) } });
-}
-
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === '/health') return new Response('ok',{headers:{'X-Garden-Protocol':'board-v2'}});
-    if (env.ASSETS && url.pathname.startsWith('/music/')) return serveMusic(req, env, url);
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{6,40})$/);
     if (!m) {
       if (env.ASSETS) {
