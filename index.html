@@ -839,6 +839,8 @@ const nearPocha=(x,z,r)=>Math.hypot(POCHA.x-x,POCHA.z-z)<r||nearBulletin(x,z,Mat
 // 걸을 수 있는 반경(m). worker/src/index.js의 WORLD_R와 같게 둔다.
 const WORLD_R=90,OUTER_TRAIL=57;
 const TRAIL_ANGLES=[.35,2.45,4.3];
+const MOON_GROVES=[{x:-20,z:-18,h:23,w:14,rootR:6.2},{x:46,z:-3,h:17,w:10,rootR:4.6}];
+const MOON_FLOWER_BEDS=[{x:-14,z:6,r:4.3},{x:13,z:-5,r:3.5},{x:-12,z:-15,r:3.2},{x:13,z:14,r:3.3},{x:-25,z:8,r:5.5},{x:-34,z:-12,r:5.8},{x:38,z:5,r:5.8},{x:50,z:-13,r:5.5},{x:22,z:-13,r:3.7},{x:-28,z:-20,r:4},{x:-16,z:-25,r:3.8}];
 const dummy=new THREE.Object3D();
 const F=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:C(c),roughness:.92,metalness:0,flatShading:true},o||{}));
 function part(geo,mat,p,s,r,parent){const m=new THREE.Mesh(geo,mat);m.position.set(p[0],p[1],p[2]);if(s)m.scale.set(s[0],s[1],s[2]);if(r)m.rotation.set(r[0],r[1],r[2]);m.castShadow=m.receiveShadow=true;(parent||scene).add(m);return m}
@@ -1090,7 +1092,7 @@ function gardenWalkDistance(x,z){
 function grassClear(x,z){
   const r=Math.hypot(x,z);if(r<12||r>WORLD_R+6)return false;if(r>16.6&&r<19.6)return false;if(Math.abs(r-OUTER_TRAIL)<1.3)return false;
   if(gardenWalkDistance(x,z)<1.35)return false;if(nearWaterworks(x,z,.9))return false;
-  if(nearTable(x,z,3)||nearPocha(x,z,4.4)||nearAltar(x,z,2))return false;return true;
+  if(nearTable(x,z,3)||nearPocha(x,z,4.4)||nearAltar(x,z,2))return false;if(MOON_GROVES.some(t=>Math.hypot(x-t.x,z-t.z)<2.6))return false;return true;
 }
 {
   const blades=[],gCols=[0x6aa944,0x7dbb4f,0x8fc95b,0x5e9c3c,0xa2d06a];
@@ -1103,17 +1105,19 @@ function grassClear(x,z){
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));return g})();
   sceneryInstanced(bladeGeo,swayMaterial(new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide}),.22,true),blades,false,{size:24,kind:'grass'});
   const heads=[],stems=[],fCols=[0xffffff,0xfff1b8,0xf6d36b,0xf4b8c8,0xc9b6f0,0xff9e8a];
-  const flower=(x,z)=>{const h=.3+rnd()*.25,c=C(fCols[Math.floor(rnd()*fCols.length)]);stems.push({x,y:0,z,sx:1,sy:h,sz:1,c:C(0x5f9a3c)});heads.push({x,y:h,z,sx:.075+rnd()*.035,sy:.05,sz:.075+rnd()*.035,c})};
+  const flower=(x,z,palette=fCols,large=false)=>{const h=(large?.38:.3)+rnd()*(large?.38:.25),c=C(palette[Math.floor(rnd()*palette.length)]),size=(large?.13:.075)+rnd()*(large?.075:.035);stems.push({x,y:0,z,sx:1,sy:h,sz:1,c:C(0x5f9a3c)});heads.push({x,y:h,z,sx:size,sy:size*.7,sz:size,ry:rnd()*Math.PI,c})};
   MEADOWS.forEach(m=>{for(let i=0;i<620;i++){const a=rnd()*Math.PI*2,r=Math.sqrt(rnd())*m.r,x=m.x+Math.cos(a)*r,z=m.z+Math.sin(a)*r;if(grassClear(x,z))flower(x,z)}});
   for(let i=0;i<900;i++){const a=rnd()*Math.PI*2,r=22+rnd()*(WORLD_R-20),x=Math.cos(a)*r,z=Math.sin(a)*r;if(grassClear(x,z))flower(x,z)}
+  MOON_FLOWER_BEDS.forEach((bed,i)=>{const palette=i%3===0?[0xf1c0d4,0xffe4ec,0xe6d7f0]:i%3===1?[0xf2eee0,0xe9d9ed,0xc9b7df]:[0xe8b4c9,0xd5c0eb,0xfff1df];
+    for(let k=0;k<220;k++){const a=rnd()*Math.PI*2,r=Math.sqrt(rnd())*bed.r,x=bed.x+Math.cos(a)*r,z=bed.z+Math.sin(a)*r;if(grassClear(x,z)&&!nearAltar(x,z,3))flower(x,z,palette,true)}});
   const stemGeo=new THREE.CylinderGeometry(.008,.008,1,3);stemGeo.translate(0,.5,0);
   sceneryInstanced(stemGeo,swayMaterial(new THREE.MeshLambertMaterial({color:0xffffff}),.12,true),stems,false,{kind:'flower'});
-  const headGeo=new THREE.SphereGeometry(1,8,5);
-  const headMat=new THREE.MeshLambertMaterial({color:0xffffff});headMat.onBeforeCompile=sh=>{sh.uniforms.uWind=windU;
+  const headGeo=moonFlowerGeometry(8);
+  const headMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,emissive:C(0x251222),emissiveIntensity:.18});headMat.onBeforeCompile=sh=>{sh.uniforms.uWind=windU;
     sh.vertexShader='uniform float uWind;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
       vec3 ip=vec3(instanceMatrix[3]);float sw=sin(uWind*1.6+ip.x*.31+ip.z*.23)*.6+sin(uWind*2.7+ip.z*.47-ip.x*.2)*.4;
       transformed.x+=sw*ip.y*.12/max(.05,length(instanceMatrix[0].xyz));transformed.z+=sw*ip.y*.066/max(.05,length(instanceMatrix[2].xyz));`)};
-  sceneryInstanced(headGeo,headMat,heads,false,{kind:'flower',medium:new THREE.SphereGeometry(1,5,3),low:new THREE.SphereGeometry(1,4,2)});
+  sceneryInstanced(headGeo,headMat,heads,false,{kind:'flower',medium:moonFlowerGeometry(6),low:moonFlowerGeometry(5)});
 }
 /* ---------- soft light halos for lanterns and bulbs ---------- */
 let glowTex=null;
@@ -1543,6 +1547,99 @@ function releaseFireflies(){
 }
 $('jarBtn').onclick=releaseFireflies;syncJar();
 
+/* ---------- moonlit blossom sanctuary: two sculpted old trees, violet tassels and falling petals ---------- */
+function moonFlowerGeometry(petals=8){
+  const p=[];for(let i=0;i<petals;i++){
+    const a=i/petals*Math.PI*2,point=(r,s,y)=>[Math.cos(a)*r-Math.sin(a)*s,y,Math.sin(a)*r+Math.cos(a)*s];
+    const root=point(.12,0,.1),left=point(.65,.3,.2),tip=point(1,0,.06),right=point(.65,-.3,.2),ridge=point(.62,0,.3);
+    p.push(...root,...left,...ridge,...left,...tip,...ridge,...tip,...right,...ridge,...right,...root,...ridge);
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();return g;
+}
+function moonBranchGeometry(points,r0,r1,steps=14,sides=9){
+  const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),frames=curve.computeFrenetFrames(steps,false),pos=[],uv=[],idx=[],length=curve.getLength();
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,c=curve.getPointAt(t),radius=r0+(r1-r0)*Math.pow(t,.8);
+    for(let j=0;j<=sides;j++){
+      const a=j/sides*Math.PI*2,rr=radius*(1+.055*Math.sin(a*5+t*11)),p=c.clone().addScaledVector(frames.normals[i],Math.cos(a)*rr).addScaledVector(frames.binormals[i],Math.sin(a)*rr);
+      pos.push(p.x,p.y,p.z);uv.push(j/sides,length*t/4);
+      if(i<steps&&j<sides){const k=i*(sides+1)+j;idx.push(k,k+sides+1,k+1,k+1,k+sides+1,k+sides+2)}
+    }
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
+}
+function moonMergeGeometries(parts){
+  const pos=[],nor=[],uv=[];for(const part of parts){const g=part.index?part.toNonIndexed():part;pos.push(...g.attributes.position.array);nor.push(...g.attributes.normal.array);uv.push(...g.attributes.uv.array);if(g!==part)g.dispose();part.dispose()}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.computeBoundingSphere();return g;
+}
+const moonSanctuary={roots:[],cards:[],petals:null,clock:0};
+function makeMoonSanctuary(){
+  let state=0x93a7e1;const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296};
+  const wood=[],vines=[],cards=[],fallback=[],beads=[],moss=[],leafPalette=[0xe4adc5,0xf1c5d6,0xf5dce3,0xe9d0e6],loader=new THREE.TextureLoader();
+  const bark=loader.load('assets/moon-bark.jpg',undefined,undefined,()=>{barkMat.map=null;barkMat.needsUpdate=true});bark.encoding=THREE.sRGBEncoding;bark.wrapS=bark.wrapT=THREE.RepeatWrapping;bark.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  const blossom=loader.load('assets/moon-blossoms.webp',undefined,undefined,()=>{moonSanctuary.cards.forEach(m=>{m.visible=false;m.userData.failedTexture=true})});blossom.encoding=THREE.sRGBEncoding;blossom.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  const barkMat=new THREE.MeshStandardMaterial({map:bark,color:C(0xd9c9ba),roughness:.96,emissive:C(0x322135),emissiveIntensity:.09});
+  const blossomMat=swayMaterial(new THREE.MeshStandardMaterial({map:blossom,color:0xffffff,side:THREE.DoubleSide,alphaTest:.35,roughness:.95,emissive:C(0x916078),emissiveIntensity:.17}),.09,false);blossomMat.customProgramCacheKey=()=> 'moon-blossom-cards-v1';
+  const branch=(points,r0,r1,steps=14)=>wood.push(moonBranchGeometry(points,r0,r1,steps,9));
+  for(const [number,t] of MOON_GROVES.entries()){
+    const {x,z,h,w}=t,scale=h/23,r=2.05*scale;
+    branch([[x,.08,z],[x-.6*scale,h*.2,z+.4*scale],[x+1.1*scale,h*.41,z-.6*scale],[x+.25*scale,h*.63,z-.7*scale],[x-1.7*scale,h*.84,z-.5*scale]],r,.25*scale,24);
+    // A second, slightly spiralling stem makes a mature, intertwined trunk.
+    branch([[x+1.2*scale,.06,z-.3*scale],[x+1.4*scale,h*.21,z-.6*scale],[x-.35*scale,h*.4,z+.3*scale],[x-.7*scale,h*.61,z-.5*scale]],r*.64,.18*scale,22);
+    obstacles.push({x,z,r:r+1.1*scale});
+    for(let i=0;i<10;i++){
+      const a=i/10*Math.PI*2+random()*.23,length=t.rootR*(.65+random()*.32),dx=Math.cos(a),dz=Math.sin(a);
+      branch([[x+dx*r*.5,.6*scale,z+dz*r*.5],[x+dx*length*.46,.45*scale,z+dz*length*.46],[x+dx*length,.035,z+dz*length]],r*.39,.035,9);
+      for(let j=0;j<2;j++){const rr=length*(.6+random()*.45);moss.push({x:x+dx*rr,y:.1,z:z+dz*rr,sx:.5*scale,sy:.12,sz:.28*scale,ry:a,c:C(j?0x8ba886:0x68856a)})}
+    }
+    for(let i=0;i<10;i++){
+      const a=i*2.39996+number*.65,reach=w*(.56+random()*.33),startY=h*(.45+(i%4)*.065),endY=h*(.77+random()*.15),dx=Math.cos(a),dz=Math.sin(a);
+      const fork=[x+dx*reach*.55,endY-h*.09,z+dz*reach*.55],end=[x+dx*reach,endY,z+dz*reach];
+      branch([[x+.3*scale,startY,z-.5*scale],[x+dx*reach*.27,startY+h*.1,z+dz*reach*.27],fork,end],(.65-(i%3)*.08)*scale,.08*scale,16);
+      for(let k=0;k<3;k++){
+        const angle=a+(k-1)*.4,rr=reach*(.7+k*.14),cx=x+Math.cos(angle)*rr,cz=z+Math.sin(angle)*rr,cy=endY+Math.sin(i+k)*.7*scale;
+        branch([fork,[cx,cy-.25*scale,cz]],.14*scale,.025,5);
+        // Texture-backed crossed boughs leave holes through the canopy and avoid spherical crowns.
+        const size=(3.6+random()*1.7)*scale;
+        for(let face=0;face<3;face++)cards.push({x:cx,y:cy,z:cz,sx:size,sy:size*.82,sz:1,ry:face*Math.PI/3+a,rz:(random()-.5)*.3,c:C(leafPalette[(i+k)%leafPalette.length])});
+        fallback.push({x:cx,y:cy-.1,z:cz,sx:size*.6,sy:size*.28,sz:size*.55,ry:a,c:C(leafPalette[(i+k)%leafPalette.length])});
+        if(k===1||i%3===0){
+          const length=(2.2+random()*3.2)*scale,side=(random()-.5)*.6;
+          vines.push(moonBranchGeometry([[cx,cy,cz],[cx+.16*scale,cy-length*.45,cz+side],[cx-.1*scale,cy-length,cz+side*.6]],.018*scale,.009,8,4));
+          for(let j=1;j<=9;j++){const u=j/9,spread=.16*(1-u*.65)*scale;beads.push({x:cx+Math.sin(u*3)*.12*scale,y:cy-length*u,z:cz+side*u,sx:spread,sy:.16*scale,sz:spread,c:C(j%3?0xc6a3f4:0xf0c9ed)})}
+        }
+      }
+    }
+    // A few warm glimmers and cool root flowers; no additional point-light or shadow passes.
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2,rr=t.rootR+1.2;addGlow(x+Math.cos(a)*rr,.4,z+Math.sin(a)*rr,.6*scale,i%3?0xe5b1df:0x9fe5df)}
+  }
+  const woodMesh=new THREE.Mesh(moonMergeGeometries(wood),barkMat);woodMesh.castShadow=woodMesh.receiveShadow=true;woodMesh.frustumCulled=false;scene.add(woodMesh);moonSanctuary.roots.push(woodMesh);
+  const vineMesh=new THREE.Mesh(moonMergeGeometries(vines),new THREE.MeshStandardMaterial({color:C(0xaa8fb6),emissive:C(0x674a83),emissiveIntensity:.35,roughness:1}));vineMesh.frustumCulled=false;scene.add(vineMesh);
+  const cardMesh=instanced(new THREE.PlaneGeometry(1,1),blossomMat,cards,false);cardMesh.frustumCulled=false;moonSanctuary.cards.push(cardMesh);
+  sceneryInstanced(arboretumSprayGeometry('flower',1),swayMaterial(new THREE.MeshStandardMaterial({color:0xffffff,side:THREE.DoubleSide,roughness:.95}),.06,false),fallback,true,{size:48,medium:arboretumSprayGeometry('flower',0),low:arboretumSprayGeometry('flower',0)});
+  const beadsMat=new THREE.MeshBasicMaterial({color:0xffffff,toneMapped:false});const tassels=instanced(new THREE.IcosahedronGeometry(1,0),beadsMat,beads,false);tassels.frustumCulled=false;
+  sceneryInstanced(new THREE.SphereGeometry(1,6,4),new THREE.MeshLambertMaterial({color:0xffffff}),moss,false,{size:48,low:new THREE.IcosahedronGeometry(1,0)});
+  // Fallen petals use a tiny reused petal texture and GPU drift, not hundreds of scene objects.
+  const positions=[],seeds=[],colors=[];for(let i=0;i<240;i++){
+    const t=MOON_GROVES[i%2],a=random()*Math.PI*2,r=Math.sqrt(random())*t.w;positions.push(t.x+Math.cos(a)*r,.7+random()*t.h*.8,t.z+Math.sin(a)*r);seeds.push(random()*100);const c=C(i%3?0xf0c3d9:0xd8c6f2);colors.push(c.r,c.g,c.b);
+  }
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('petalSeed',new THREE.Float32BufferAttribute(seeds,1));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  const petalsMat=new THREE.PointsMaterial({size:.11,color:0xffffff,vertexColors:true,transparent:true,opacity:.67,depthWrite:false,toneMapped:false});
+  petalsMat.onBeforeCompile=sh=>{sh.uniforms.uPetalTime=windU;sh.vertexShader='uniform float uPetalTime;attribute float petalSeed;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+    transformed.x+=sin(uPetalTime*.23+petalSeed)*1.1;transformed.z+=cos(uPetalTime*.19+petalSeed)*.7;transformed.y=.45+mod(position.y-.32*uPetalTime+petalSeed,17.);
+  `);sh.fragmentShader=sh.fragmentShader.replace('#include <map_particle_fragment>',`#include <map_particle_fragment>
+    vec2 petalUv=gl_PointCoord*2.-1.;float d=length(petalUv*vec2(.72,1.25));if(d>1.)discard;diffuseColor.a*=1.-smoothstep(.55,1.,d);
+  `)};petalsMat.customProgramCacheKey=()=> 'moon-falling-petals-v1';
+  const falling=new THREE.Points(geo,petalsMat);falling.frustumCulled=false;scene.add(falling);moonSanctuary.petals=falling;
+}
+function updateMoonSanctuary(){
+  const garden=worldSpace==='garden',near=MOON_GROVES.some(t=>Math.hypot(me.g.position.x-t.x,me.g.position.z-t.z)<60);
+  if(moonSanctuary.petals){moonSanctuary.petals.visible=garden&&near&&!cam.sky;moonSanctuary.petals.geometry.setDrawRange(0,quality.level===0?72:quality.level===1?144:240)}
+  for(const m of moonSanctuary.cards)m.visible=garden&&!m.userData.failedTexture;
+  for(const m of moonSanctuary.roots)m.castShadow=garden&&quality.level>0;
+}
+makeMoonSanctuary();
+
 /* ---------- arboretum: small groves, distinct silhouettes and a restrained botanical palette ---------- */
 // 나무는 실제 수종에서 색과 수형을 참고한 그림책 표현. 같은 소스에서는 모두 같은 자리에 심는다.
 const ARBORETUM_TREES=[
@@ -1612,6 +1709,7 @@ const arboretum={trees:[],species:new Map()};
     const r=Math.hypot(x,z);if(r<13.2+radius*.2||r>WORLD_R-2)return false;
     if(gardenWalkDistance(x,z)<1.8+radius*.38||meadowAt(x,z,radius*.6))return false;
     if(z>6&&z<32&&Math.abs(x)<12+radius*.3)return false;
+    if(MOON_GROVES.some(t=>Math.hypot(x-t.x,z-t.z)<t.rootR+radius+1.5))return false;
     if(nearWaterworks(x,z,1.5+radius*.45)||nearTable(x,z,5.1+radius*.35)||nearPocha(x,z,5+radius*.3)||nearAltar(x,z,3.4+radius*.45))return false;
     // Keep the four ring-walk benches and their front approach open, even before bench meshes exist.
     if([.6,2.2,3.6,5.0].some(a=>Math.hypot(x-Math.cos(a)*20.4,z-Math.sin(a)*20.4)<2.4+radius*.45))return false;
@@ -1664,6 +1762,7 @@ const arboretum={trees:[],species:new Map()};
     const record={x,z,id,height:h,radius:w};arboretum.trees.push(record);arboretum.species.set(id,(arboretum.species.get(id)||0)+1);obstacles.push({x,z,r:Math.max(.3,trunkR+.16*scale)});
   }
   function speciesAt(x,z){
+    if(MOON_GROVES.some(t=>Math.hypot(x-t.x,z-t.z)<21)&&random()<.72)return choose(['cherry','cherry','whiteCherry','magnolia','birch','silver']);
     const shore=Math.hypot(x-LAKE.x,z-LAKE.z)-lakeR(Math.atan2(z-LAKE.z,x-LAKE.x));
     if(shore<11&&random()<.72)return random()<.58?'willow':'birch';
     let best=null,distance=Infinity;for(const grove of ARBORETUM_GROVES){const d=Math.hypot(x-grove.x,z-grove.z)/grove.r;if(d<distance){best=grove;distance=d}}
@@ -1691,7 +1790,7 @@ const arboretum={trees:[],species:new Map()};
       }
     }
   }
-  for(let attempt=0;attempt<2400&&arboretum.trees.length<235;attempt++){
+  for(let attempt=0;attempt<2400&&arboretum.trees.length<290;attempt++){
     const a=random()*Math.PI*2,r=Math.sqrt(13*13+random()*(87*87-13*13)),x=Math.cos(a)*r,z=Math.sin(a)*r,id=speciesAt(x,z),s=.68+random()*.54;
     if(plantable(x,z,types.get(id).w*s))tree(x,z,id,s);
   }
@@ -4667,7 +4766,7 @@ function tick(){
   if(!reduce){const a=pg.attributes.position.array;
     for(let i=0;i<PN;i++){a[i*3+1]-=dt*.25;a[i*3]+=Math.sin(t+i)*dt*.2;if(a[i*3+1]<0)a[i*3+1]=8}
     pg.attributes.position.needsUpdate=true}
-  layoutBubbles(dt);windU.value=t;updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);
+  layoutBubbles(dt);windU.value=t;updateMoonSanctuary();updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);
   if(!gardenBoard.isOpen()){
     renderer.info.reset();if(worldSpace==='listening'){updateListening(dt,t);renderer.render(listening.scene,camera)}else{updateScenery();renderer.render(scene,camera)}
     sampleGardenFrame(frameStart,performance.now()-frameStart);
