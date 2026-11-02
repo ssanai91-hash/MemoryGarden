@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 let now=1793536000000;
 const code=fs.readFileSync(__dirname+'/../worker/src/index.js','utf8').replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject{constructor(ctx){this.ctx=ctx}}').replace('export class GardenRoom','class GardenRoom').replace('export default {','const handler={')+'\nglobalThis.Room=GardenRoom;';
-const c={crypto,TextEncoder,Date:class extends Date{static now(){return now}},URL,Headers,Response,Request,Uint32Array};vm.createContext(c);vm.runInContext(code,c);
+const c={crypto,TextEncoder,Date:class extends Date{static now(){return now}},URL,Headers,Response,Request,Uint32Array};vm.createContext(c);vm.runInContext(fs.readFileSync(__dirname+'/../assets/campfire-rules.js','utf8'),c);vm.runInContext(code.replace("import '../../assets/campfire-rules.js';",''),c);
 function context(){
  const values=new Map(),sockets=[];let tail=Promise.resolve();const ctx={values,sockets,fail:false,getWebSockets:()=>sockets,blockConcurrencyWhile(fn){this.ready=fn()}};
  ctx.storage={async get(k){return structuredClone(values.get(k))},async put(k,v){values.set(k,structuredClone(v))},async getAlarm(){return null},async setAlarm(){},async transaction(fn){const run=tail.then(async()=>{const copy=new Map(structuredClone([...values])),txn={async get(k){return structuredClone(copy.get(k))},async put(k,v){copy.set(k,structuredClone(v));if(ctx.fail&&k==='boardIndex')throw Error('disk failure')}};const result=await fn(txn);values.clear();for(const [k,v]of copy)values.set(k,v);return result});tail=run.catch(()=>{});return run}};return ctx;

@@ -227,6 +227,8 @@ button:disabled{opacity:.5;cursor:default}
 #gardenPanel .who{gap:7px;margin:10px 0 0;padding:9px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;line-height:1.5;word-break:keep-all}
 #gardenPanel #campfireStatus,#gardenPanel #nowPlaying{margin-top:9px;font-size:11px;line-height:1.5;word-break:keep-all}
 #gardenPanel #campfireStatus{color:var(--soft)}
+#campfireLastCare{margin-top:5px;font-size:11px;line-height:1.5;color:var(--soft)}
+body.listening-room #campfireLastCare{display:none}
 #gardenPanel #nowPlaying{padding-top:8px;border-top:1px solid var(--line)}
 @media(max-width:380px){
   #gardenPanel .plaque-heading{grid-template-columns:minmax(0,1fr) 26px 50px;gap:4px}
@@ -375,7 +377,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
     <div class="garden-action-row"><button id="musicBtn" type="button" aria-expanded="false">소리 · 음악</button><button id="thunderSoundBtn" type="button" aria-pressed="true">천둥 소리 끄기</button></div>
     <div class="garden-action-row"><button id="rerollBtn" type="button">반려동물 변경</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
   </div>
-  <div class="mine" id="mine"></div><div id="campfireStatus" role="status">모닥불을 불러오는 중…</div>
+  <div class="mine" id="mine"></div><div id="campfireStatus" role="status">모닥불을 불러오는 중…</div><div id="campfireLastCare"></div>
   <div class="now" id="nowPlaying" hidden></div>
   <div class="panel" id="musicPanel" hidden>
     <button id="natureSoundBtn" type="button" aria-pressed="false">자연의 소리 켜기</button>
@@ -726,6 +728,7 @@ try{
   }else if(visit&&visit.v===1&&/^[a-f0-9]{64}$/.test(visit.token||'')&&typeof visit.name==='string'&&visit.name.trim())document.getElementById('welcome').hidden=true;
 }catch(e){}
 </script>
+<script src="assets/campfire-rules.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
@@ -823,6 +826,9 @@ function box(w,h,d,color,x,y,z,parent){const m=new THREE.Mesh(BOX,typeof color==
 /* ---------- centrepiece: 'campfire' (night bonfire) or 'buddha' (temple garden) ---------- */
 // 불상 정원으로 되돌리려면 여기의 CENTERPIECE를 'buddha'로 바꾼다. 서버는 수행 위치를 강제하지 않는다.
 const CENTERPIECE='campfire';
+const Fire=globalThis.GardenCampfire;
+let sharedCampfire=null,fireAction=null,fireStatusKey='',fireWelcomeShown=false;
+let fireVisual={flame:0,heat:0};
 // 큰 파라솔 테이블 2개(의자 4개씩, 말풍선이 겹치지 않게 넓게). 나무·덤불·바위는 이 자리를 비운다.
 const TABLE_SPOTS=[0.95,4.4].map((a,i)=>({x:Math.round(Math.sin(a)*1420)/100,z:Math.round(Math.cos(a)*1420)/100,i}));
 const nearTable=(x,z,r)=>TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<r);
@@ -1357,7 +1363,7 @@ function syncListeningActors(){
   const put=(P,D,space)=>{const parent=space==='listening'?listening.scene:scene;P.g.userData.space=D.g.userData.space=space;const visible=space===worldSpace;P.g.visible=D.g.visible=visible&&!cam.sky;if(parent&&P.g.parent!==parent){parent.add(P.g);parent.add(D.g)}};
   put(me,myDogObj,worldSpace);for(const e of peers.values())put(e.P,e.D,e.space||'garden');
 }
-function stopListeningMovement(){pendingStoke=false;pendingShake=null;clearTimeout(fuelTimer);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);me.speed=0;sendDirty=true;userMoved=true;autoJoined=true}
+function stopListeningMovement(){cancelFireCare();pendingStoke=false;pendingShake=null;clearTimeout(fuelTimer);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);me.speed=0;sendDirty=true;userMoved=true;autoJoined=true}
 function enterListening(fromHistory=false,restored=null){
   if(!hasEntered||visitEnded||worldSpace==='listening')return;
   if(room&&room.connected()&&!room.listeningVersion){toast('음악방 서버가 아직 준비되지 않았어요. 최신 버전으로 반영해 주세요.');return}
@@ -2017,6 +2023,21 @@ if(CENTERPIECE==='campfire'){
   }
 }
 
+/* ---------- stacked dry firewood beside the fire ---------- */
+const firewoodGeo=new THREE.CylinderGeometry(.92,1,1,9),firewoodBark=F(0x65402a),firewoodCut=F(0xc49c62);
+function makeFirewood(length=1.25,radius=.18){
+  const g=new THREE.Group(),wood=new THREE.Mesh(firewoodGeo,[firewoodBark,firewoodCut,firewoodCut]);
+  wood.rotation.z=Math.PI/2;wood.scale.set(radius,length,radius);wood.castShadow=true;wood.receiveShadow=true;g.add(wood);return g;
+}
+const woodpile=new THREE.Group();woodpile.position.set(Fire.PILE.x,.04,Fire.PILE.z);scene.add(woodpile);woodpile.visible=CENTERPIECE==='campfire';
+const pileLogs=[];
+for(let row=0;row<3;row++)for(let col=0;col<4-row;col++){
+  const log=makeFirewood(1.7,.2);log.rotation.y=Math.PI/2;log.position.set((col-(3-row)/2)*.39,.22+row*.34,0);woodpile.add(log);pileLogs.push(log);
+}
+for(const x of[-.95,.95])part(BOX,F(0x493629),[x,.1,0],[.12,.2,1.9],null,woodpile);
+const woodSign=makeTag('장작 · 가까이서 넣기');woodSign.position.set(0,1.65,0);woodpile.add(woodSign);
+obstacles.push({x:Fire.PILE.x,z:Fire.PILE.z,r:1.02});
+
 /* ---------- flowers ---------- */
 const petalCols=[0xf2c1c9,0xffffff,0xf7d77a,0xc9b6e8,0xf0a07a];
 const flowerGroup=new THREE.Group();scene.add(flowerGroup);
@@ -2094,7 +2115,7 @@ function makeDrinkingGlass(id){
 /* ---------- manually selected umbrellas, stable colours per person ---------- */
 const UMBRELLA_COLORS=[0xd75155,0x4465a1,0xe9b849,0x4e8c6d,0x8d6ab0,0xd68749,0x4a9d9b,0xdb8db5];
 let umbrellaGeometry=null,umbrellaRibGeometry=null;
-const UMBRELLA_BLOCKED_POSES=['lie','prone','standing_pray','pray','pray2','bow','fuel'];
+const UMBRELLA_BLOCKED_POSES=['lie','prone','standing_pray','pray','pray2','bow','fuel','woodpick','woodcarry','woodfeed'];
 function umbrellaColorFor(identity){
   let hash=2166136261;for(const char of String(identity)){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619)}
   return UMBRELLA_COLORS[(hash>>>0)%UMBRELLA_COLORS.length];
@@ -2236,12 +2257,13 @@ function makePerson(L){
     k.rotation.y=i?Math.PI*.12:-Math.PI*.12;
     k.traverse(n=>{n.userData.handProp=true;if(n.isMesh)n.castShadow=true});return k;
   });
+  const wood=makeFirewood(.78,.12);wood.position.set(0,.27,.46);wood.visible=false;torso.add(wood);wood.traverse(n=>n.userData.handProp=true);
   const tag=makeTag('');tag.position.y=2.25;g.add(tag);
   scene.add(g);
   const contactMeshes=[];
   rig.traverse(node=>{if(node.isMesh&&!node.userData.handProp)contactMeshes.push(node)});
   g.add(blobShadow(.62));
-  return{knives,eyes,blinkT:1+Math.random()*3,dustT:0,g,rig,torso,legs,arms,head,cup,can,soda,shot,riceCup,beerGlass,sodaGlass,tag,contactMeshes,walkT:0,speed:0};
+  return{wood,knives,eyes,blinkT:1+Math.random()*3,dustT:0,g,rig,torso,legs,arms,head,cup,can,soda,shot,riceCup,beerGlass,sodaGlass,tag,contactMeshes,walkT:0,speed:0};
 }
 const prayerContactBounds=new THREE.Box3();
 function posePerson(P,pose,dt,t){
@@ -2270,6 +2292,13 @@ function posePerson(P,pose,dt,t){
   else if(pose==='cheers'&&still){arm=[onLog?-.7:0,-2.5];armZ=[-.06,-.35];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
   else if(['coffee','beer','soda','soju','makgeolli'].includes(pose)&&still){const c=Math.max(0,Math.sin(t*.7));arm=[onLog?-.7:0,-.9-c*1.3];armZ=[-.06,-.25-c*.15];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
   else if(pose==='fuel'&&still){const c=(Math.sin(t*3.2)+1)/2;torsoLean=.55;ry=-.28;leg=[-.7,.35];arm=[-1.1-c*.7,-1.1-c*.7];armZ=[.2,-.2];tagY=1.9}
+  if(pose==='woodcarry'){arm=[-1.12,-1.12];armZ=[.18,-.18];torsoLean=.08}
+  if(pose==='woodpick'&&still){torsoLean=.65;ry=-.23;leg=[-.55,.2];arm=[-1.45,-1.45];armZ=[.15,-.15]}
+  if(pose==='woodfeed'&&still){torsoLean=.35;ry=-.12;arm=[-1.45,-1.45];armZ=[.15,-.15]}
+  if(P.woodPose!==pose){P.woodPose=pose;P.woodElapsed=0}P.woodElapsed=(P.woodElapsed||0)+dt;
+  const deposit=Math.min(1,P.woodElapsed/.85);
+  P.wood.visible=pose==='woodcarry'||pose==='woodpick'&&P.woodElapsed>.35||pose==='woodfeed'&&deposit<1;
+  P.wood.position.set(0,pose==='woodfeed'?.27-deposit*.55:.27,pose==='woodfeed'?.46+deposit*1.25:.46);P.wood.rotation.x=pose==='woodfeed'?deposit*1.1:0;
   if(personSpace==='listening'&&pose==='sit'&&onLog){torsoLean=-.16;rz=.13;ry=-.08;arm=[-.65,-.65]}
   const held=pose==='cheers'?(P.lastDrink||'soju'):pose,atPocha=seatAt(P.g.position.x,P.g.position.z,personSpace)>=200;
   P.cup.visible=held==='coffee'&&still;P.can.visible=held==='beer'&&still&&!atPocha;P.soda.visible=held==='soda'&&still&&!atPocha;
@@ -2530,7 +2559,7 @@ function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 
 refreshMine();
 let pose='stand',sendDirty=true;
 function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',prone:'pProne',coffee:'pCoffee',beer:'pBeer',standing_pray:'standingPrayBtn',pray2:'pray2Btn',shake:'shakeBtn'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k));if(typeof markActionCategories==='function')markActionCategories()}
-function setPose(p){if(worldSpace==='listening'&&p==='sit'){sitListening();return}const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;pendingStoke=false;
+function setPose(p){cancelFireCare();if(worldSpace==='listening'&&p==='sit'){sitListening();return}const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;pendingStoke=false;
   if(pose==='sit')sitNearest();
   syncPoseButtons();sendDirty=true;closePoseMenu()}
 let pendingStoke=false,fuelTimer=0,pendingFireAction='stoke';
@@ -2570,6 +2599,7 @@ function sitAtFire(){
 }
 function stokeFire(){
   closePoseMenu();if(CENTERPIECE!=='campfire')return;
+  if(pendingFireAction!=='aurora'){startFireCare();return}
   const d=Math.hypot(me.g.position.x,me.g.position.z);
   if(d<=3.6){doStoke();return}
   endPractice(false);pose='stand';syncPoseButtons();
@@ -2580,13 +2610,89 @@ function doStoke(){
   pendingStoke=false;endPractice(false);
   me.g.rotation.y=Math.atan2(-me.g.position.x,-me.g.position.z);pose='fuel';syncPoseButtons();sendDirty=true;
   clearTimeout(fuelTimer);fuelTimer=setTimeout(()=>{if(pose==='fuel'){pose='stand';sendDirty=true}},1700);
-  if(pendingFireAction==='aurora'){
-    pendingFireAction='stoke';if(requestFirePlay('aurora'))toast('오로라 가루를 넣었어요. 10초 동안 반짝여요');
-  }else{
-    setTimeout(()=>{if(!visitEnded)bonfire.stoke=1},500);
-    if(room&&room.kind==='ws'&&room.connected())room.send({t:'stoke'});
-    toast('장작을 넣었어요. 불이 활활 타올라요');
+  pendingFireAction='stoke';if(requestFirePlay('aurora'))toast('오로라 가루를 넣었어요. 10초 동안 반짝여요');
+}
+function cancelFireCare(notify=false){
+  if(!fireAction)return;
+  const old=fireAction;fireAction=null;
+  if(target?.fireCare){target=null;marker.visible=false}
+  if(pose.startsWith('wood')){pose='stand';sendDirty=true;syncPoseButtons()}
+  if(room?.connected())room.send({t:'fire_cancel',request:old.request});
+  if(notify)toast('장작 옮기기를 멈췄어요');
+}
+function firePath(points){
+  fireAction.path=points;advanceFirePath();
+}
+function advanceFirePath(){
+  const point=fireAction.path.shift();target=point?{...point,fireCare:true}:null;marker.visible=false;
+}
+function startFireCare(){
+  if(fireAction||!hasEntered||visitEnded||worldSpace!=='garden')return;
+  if(!room?.connected()||room.fireVersion!==1){toast('정원에 연결한 뒤 장작을 넣을 수 있어요');return}
+  const p=me.g.position;
+  if(Math.hypot(p.x-Fire.PILE.x,p.z-Fire.PILE.z)>Fire.PILE.r){toast('모닥불 오른쪽 장작 더미로 가까이 가 주세요');return}
+  if(Fire.frame(sharedCampfire,serverNow()).left>=Fire.MAX_MS-60000){toast('장작이 충분해요. 조금 탄 뒤 넣어 주세요');return}
+  endPractice(false);pendingStoke=false;clearTimeout(fuelTimer);pendingShake=null;
+  move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);userMoved=true;autoJoined=true;
+  const request=Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');
+  fireAction={phase:'approach',elapsed:0,total:0,request,path:[]};pose='stand';sendDirty=true;
+  const side=p.z<0?-1:1,points=[];
+  if(p.x>6.2){points.push({x:p.x,z:side*2.15},{x:5.9,z:side*2.15})}
+  points.push({x:5.9,z:0});firePath(points);closePoseMenu();
+}
+function updateFireCare(dt){
+  const a=fireAction;if(!a)return;
+  a.elapsed+=dt;a.total+=dt;
+  if(worldSpace!=='garden'||!room?.connected()||visitEnded||a.total>38||cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('listeningAudio').open||calm.mode||rpsGame?.status==='playing'){cancelFireCare();return}
+  const expected={approach:'stand',waiting:'stand',pickup:'woodpick',carry:'woodcarry',feed:'woodfeed',confirm:'woodfeed'}[a.phase];
+  if(pose!==expected||target&&!target.fireCare){cancelFireCare();return}
+  if(a.phase==='approach'||a.phase==='carry'){
+    if(target)return;
+    if(a.path.length){advanceFirePath();return}
+    const goal=a.phase==='approach'?{x:5.9,z:0}:Fire.FEED;
+    if(Math.hypot(me.g.position.x-goal.x,me.g.position.z-goal.z)>.35){cancelFireCare();return}
+    if(a.phase==='approach'){
+      a.phase='waiting';a.elapsed=0;me.g.rotation.y=Math.atan2(Fire.PILE.x-me.g.position.x,-me.g.position.z);
+      sendDirty=true;sendPresence();room.send({t:'fire_begin',request:a.request});
+    }else{
+      a.phase='feed';a.elapsed=0;pose='woodfeed';me.g.rotation.y=Math.atan2(-me.g.position.x,-me.g.position.z);sendDirty=true;sendPresence();
+    }
+  }else if(a.phase==='pickup'&&a.elapsed>.8){
+    a.phase='carry';a.elapsed=0;pose='woodcarry';sendDirty=true;firePath([{...Fire.FEED}]);
+  }else if(a.phase==='feed'&&a.elapsed>1.1){
+    a.phase='confirm';a.elapsed=0;sendPresence();room.send({t:'fire_add',token:a.token});
+  }else if((a.phase==='waiting'||a.phase==='confirm')&&a.elapsed>8){
+    cancelFireCare();toast('연결을 확인하고 모닥불 상태를 다시 확인해 주세요');
   }
+}
+function receiveFireMessage(m){
+  if(m.t==='fire_ready'){
+    if(!fireAction||fireAction.phase!=='waiting'||fireAction.request!==m.request)return;
+    Object.assign(fireAction,{phase:'pickup',elapsed:0,token:m.token});pose='woodpick';sendDirty=true;sendPresence();return;
+  }
+  if(m.t==='fire_error'){
+    if(m.request&&fireAction&&m.request!==fireAction.request)return;
+    cancelFireCare();
+    const text={pile:'장작 더미 가까이에서 집어 주세요',fire:'모닥불 가까이에서 장작을 넣어 주세요',cooldown:'방금 장작을 넣었어요. 잠시 쉬었다 넣어 주세요',full:'장작이 충분해요. 조금 탄 뒤 넣어 주세요',expired:'장작을 다시 집어 주세요',storage:'저장을 확인하지 못했어요. 잠시 후 다시 넣어 주세요',refresh:'정원을 새로 열어 주세요',space:'정원에서 장작을 넣어 주세요'};
+    toast(text[m.code]||'잠시 후 다시 장작을 집어 주세요');return;
+  }
+  if(m.t!=='fire_state'||!m.fire)return;
+  const changed=!sharedCampfire||m.fire.rev>sharedCampfire.rev;
+  if(changed)sharedCampfire=m.fire;
+  if(fireAction?.token===m.token)cancelFireCare();
+  if(changed&&m.event){bonfire.stoke=1;toast(`${stripInvisible(m.event.name).slice(0,12)||'친구'}님이 ${m.event.kind==='relit'?'불을 다시 살렸어요':'장작을 넣었어요'}`)}
+  renderCampfireStatus();
+}
+function renderCampfireStatus(){
+  const state=Fire.frame(sharedCampfire,serverNow()),last=sharedCampfire?.last;
+  const label={out:'모닥불이 꺼졌어요 · 장작으로 다시 살릴 수 있어요',embers:'작은 잉걸불이 남아 있어요',low:'모닥불이 잦아들고 있어요',steady:'모닥불이 은은하게 타고 있어요',bright:'모닥불이 활활 타오르고 있어요'}[state.stage];
+  const age=last?Math.max(0,serverNow()-last.at):0;
+  const ago=age<60000?'방금':age<3600000?Math.floor(age/60000)+'분 전':age<86400000?Math.floor(age/3600000)+'시간 전':Math.floor(age/86400000)+'일 전';
+  const minutes=Math.ceil(state.left/60000),remaining=minutes>=60?Math.floor(minutes/60)+'시간 '+(minutes%60?minutes%60+'분':''):minutes+'분';
+  const text=!sharedCampfire?'모닥불 상태를 연결하고 있어요…':label+(state.left?' · 남은 불 약 '+remaining:'');
+  const detail=last?`${stripInvisible(last.name).slice(0,12)||'친구'}님이 ${ago} ${last.kind==='relit'?'불을 다시 살렸어요':'장작을 넣었어요'}`:'장작 한 개로 2시간 · 최대 12시간';
+  const key=text+'|'+detail;if(key===fireStatusKey)return;fireStatusKey=key;
+  $('campfireStatus').textContent=text;$('campfireLastCare').textContent=detail;
 }
 $('pWave').onclick=()=>setPose('wave');$('pray2Btn').onclick=()=>setPose('pray2');$('pBeer').onclick=()=>setPose('beer');$('pFuel').onclick=()=>{pendingFireAction='stoke';stokeFire()};$('pCoffee').onclick=()=>setPose('coffee');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');$('pProne').onclick=()=>setPose('prone');
 
@@ -2627,7 +2733,7 @@ let move={x:0,y:0},target=null;
 const joy=$('joy'),knob=$('knob');let joyId=null;
 function joyUpdate(e){const r=joy.getBoundingClientRect();let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
   const m=r.width/2-14,d=Math.hypot(dx,dy);if(d>m){dx*=m/d;dy*=m/d}knob.style.transform=`translate(${dx}px,${dy}px)`;move={x:dx/m,y:-dy/m}}
-joy.addEventListener('pointerdown',e=>{e.preventDefault();joyId=e.pointerId;try{joy.setPointerCapture(e.pointerId)}catch(_){}joy.classList.add('on');target=null;joyUpdate(e)});
+joy.addEventListener('pointerdown',e=>{e.preventDefault();cancelFireCare();joyId=e.pointerId;try{joy.setPointerCapture(e.pointerId)}catch(_){}joy.classList.add('on');target=null;joyUpdate(e)});
 joy.addEventListener('pointermove',e=>{if(e.pointerId===joyId)joyUpdate(e)});
 function joyEnd(e){if(e.pointerId!==joyId)return;joyId=null;move={x:0,y:0};knob.style.transform='';joy.classList.remove('on')}
 joy.addEventListener('pointerup',joyEnd);joy.addEventListener('pointercancel',joyEnd);
@@ -2646,7 +2752,7 @@ function lookEnd(e){const p=looks.get(e.pointerId);looks.delete(e.pointerId);if(
     ray.setFromCamera({x:e.clientX/innerWidth*2-1,y:-(e.clientY/innerHeight)*2+1},camera);
     if(worldSpace==='listening'){if(listening.exitDoor&&ray.intersectObject(listening.exitDoor).length){exitListening();return}if(listening.audioTargets&&ray.intersectObjects(listening.audioTargets,true).length){openListeningAudio();return}for(let i=0;i<listening.chairs.length;i++){if(ray.intersectObject(listening.chairs[i],true).length){sitListening(i);return}}}else if(hasEntered&&listeningDoor&&ray.intersectObject(listeningDoor).length&&nearListeningDoor(me.g.position.x,me.g.position.z)){enterListening();return}
     if(worldSpace==='garden'&&hasEntered&&ray.intersectObject(bulletinGroup,true).length){gardenBoard.open();return}
-    if(ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.position.set(x,.04,z);marker.visible=true}}}
+    if(ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){cancelFireCare();const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.position.set(x,.04,z);marker.visible=true}}}
 canvas.addEventListener('pointerup',lookEnd);canvas.addEventListener('pointercancel',lookEnd);
 canvas.addEventListener('wheel',e=>{e.preventDefault();if(cam.sky){cam.skyFov=Math.max(45,Math.min(95,cam.skyFov+e.deltaY*.025));resize()}else cam.dist=Math.max(2.5,Math.min(12,cam.dist+e.deltaY*.005))},{passive:false});
 
@@ -2655,6 +2761,7 @@ let room=null,userNS=null,db=null,assets=null,myId=null;
 const peers=new Map();
 let pendingHello=[],userMoved=false,autoJoined=false;
 function goToFriend(auto){
+  cancelFireCare();
   let best=null,bd=1e9;for(const e of peers.values()){if((e.space||'garden')!==worldSpace)continue;const d=Math.hypot(e.x-me.g.position.x,e.z-me.g.position.z);if(d<bd){bd=d;best=e}}
   if(!best)return;
   const a=Math.random()*Math.PI*2;const[x,z]=collide(best.x+Math.cos(a)*1.8,best.z+Math.sin(a)*1.8,.4);
@@ -2692,7 +2799,7 @@ function onPeerList(change){
     e.nick=typeof s.nick==='string'?stripInvisible(s.nick).slice(0,12):'';e.away=!!s.away;e.umbrella=s.u===true;
     if(s.say&&typeof s.say.text==='string'&&Number.isFinite(s.say.at))rememberLastMessage(pr.peer,e.nick||e.nm||'친구',s.say.text,s.say.at);
     restoreLastBubble(pr.peer,e.nick||e.nm||'친구');
-    e.pose=['stand','sit','lie','prone','wave','standing_pray','pray2','shake','pray','bow','coffee','beer','fuel','soda','soju','cheers','makgeolli'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
+    e.pose=['stand','sit','lie','prone','wave','standing_pray','pray2','shake','pray','bow','coffee','beer','fuel','woodpick','woodcarry','woodfeed','soda','soju','cheers','makgeolli'].includes(s.p)?s.p:'stand';e.P.bowPhase=Number.isFinite(s.bp)?Math.max(0,Math.min(1,s.bp)):0;
   }
   for(const k of[...peers.keys()])if(!seen.has(k))removePeer(k);
   if(practice.mode==='idle'&&!userMoved&&!autoJoined&&peers.size){autoJoined=true;goToFriend(true)}
@@ -3073,6 +3180,7 @@ function practiceUI(){
 }
 function endPractice(notify=true){practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
 function preparePracticeInPlace(){
+  cancelFireCare();
   // Stop walking and pending fire actions without moving the person, dog or camera.
   target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
   Object.keys(keys).forEach(key=>delete keys[key]);
@@ -3100,7 +3208,7 @@ function updatePractice(dt){
 }
 practiceUI();
 // Background time never counts as completed bows. Explicit pause remains paused on return.
-let appHidden=document.hidden;document.addEventListener('visibilitychange',()=>{appHidden=document.hidden;clock.getDelta();if(appHidden){Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''}});
+let appHidden=document.hidden;document.addEventListener('visibilitychange',()=>{appHidden=document.hidden;clock.getDelta();if(appHidden){cancelFireCare();Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''}});
 addEventListener('blur',()=>{Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''});
 
 /* ---------- shared garden clock and independent weather fronts (pure, testable maths) ---------- */
@@ -3275,7 +3383,7 @@ const campfireReady=new Promise(resolve=>{
     const scale=fireSpot.width/Math.max(size.x,size.z);
     model.scale.setScalar(scale);model.position.set(fireSpot.x-center.x*scale,.035-bounds.min.y*scale,fireSpot.z-center.z*scale);
     model.traverse(node=>{if(!node.isMesh)return;const flame=/flame/i.test(node.name);node.castShadow=!flame;node.receiveShadow=!flame;
-      if(flame){node.material=node.material.clone();node.material.emissive.setHex(0xff7200);node.material.emissiveIntensity=.45}
+      if(flame){node.material=node.material.clone();node.material.emissive.setHex(0xff7200);node.material.emissiveIntensity=.45;node.material.transparent=true;node.material.opacity=0;node.visible=false}
     });
     campfireModel=model;scene.add(model);
     fireLight=new THREE.PointLight(0xff9a46,.55,8,2);fireLight.position.set(fireSpot.x,1.05,fireSpot.z);scene.add(fireLight);
@@ -3284,35 +3392,46 @@ const campfireReady=new Promise(resolve=>{
     obstacles.push({x:fireSpot.x,z:fireSpot.z,r:fireSpot.width*.5+.25});
     fireState.loaded=true;
     if(reduce)firePlaying=false;
-    $('campfireStatus').textContent=CENTERPIECE==='campfire'?'정원 가운데 모닥불이 타올라요':'기도 마당 옆에 모닥불이 있어요';resolve(fireState);
+    renderCampfireStatus();resolve(fireState);
   },err=>failed(String(err&&err.message||err)));
 });
-function updateCampfire(dt){if(!fireState.loaded)return;if(firePlaying)fireTime+=dt;if(fireMixer)fireMixer.update(dt);fireLight.intensity=.52+(firePlaying?Math.sin(fireTime*8)*.06+Math.sin(fireTime*13)*.025:0)}
-
-
+function updateCampfire(dt){
+  const state=Fire.frame(sharedCampfire,serverNow()),k=1-Math.exp(-dt*2.2);
+  fireVisual.flame+=(state.flame-fireVisual.flame)*k;fireVisual.heat+=(state.heat-fireVisual.heat)*k;
+  // Never leave even a tiny light burning once the durable fuel is exhausted.
+  if(!state.left){fireVisual.flame=0;fireVisual.heat=0}
+  pileLogs[pileLogs.length-1].visible=!fireAction||['approach','waiting'].includes(fireAction.phase);
+  if(!fireState.loaded)return;
+  if(firePlaying)fireTime+=dt;if(fireMixer)fireMixer.update(dt);
+  campfireModel.traverse(node=>{if(node.isMesh&&/flame/i.test(node.name)){
+    node.visible=fireVisual.flame>.002;node.material.opacity=fireVisual.flame;
+    node.scale.set(.5+fireVisual.flame*.5,Math.max(.04,fireVisual.flame),.5+fireVisual.flame*.5);
+  }});
+  fireLight.intensity=(.52+(firePlaying?Math.sin(fireTime*8)*.06+Math.sin(fireTime*13)*.025:0))*fireVisual.flame;
+}
 
 /* ---------- big bonfire: flame and ember particles, glow, flickering light ---------- */
 const bonfire={stoke:0,group:new THREE.Group(),mats:[]};scene.add(bonfire.group);bonfire.group.visible=CENTERPIECE==='campfire';
-const FIRE_VS=`attribute float seed;uniform float uTime,uStoke,uViewH,uSpeed,uHeight,uSize,uSway,uEmber;varying float vT,vSeed;
+const FIRE_VS=`attribute float seed;uniform float uTime,uStoke,uPower,uViewH,uSpeed,uHeight,uSize,uSway,uEmber;varying float vT,vSeed;
 void main(){float sp=uSpeed*(.6+seed*.7);float t=fract(uTime*sp+seed*7.13);vT=t;vSeed=seed;
  float h=uHeight*(.55+seed*.7)*(1.+uStoke*.75);vec3 p=position;
- p.xz*=mix(1.,1.-t*.85,1.-uEmber);p.y=.35+t*h;
+ p.xz*=mix(1.,1.-t*.85,1.-uEmber);p.y=.16+t*h*max(.04,uPower);
  p.x+=sin(uTime*3.+seed*20.+t*4.)*uSway*t;p.z+=cos(uTime*2.6+seed*17.+t*3.)*uSway*t;
- vec4 mv=modelViewMatrix*vec4(p,1.);{float cd=min(length(mv.xz),70.);mv.y-=cd*cd*.0012;}float size=uSize*(.75+seed*.6)*mix(1.-t*.6,1.,uEmber)*(1.+uStoke*.35);
+ vec4 mv=modelViewMatrix*vec4(p,1.);{float cd=min(length(mv.xz),70.);mv.y-=cd*cd*.0012;}float size=uSize*sqrt(max(.02,uPower))*(.75+seed*.6)*mix(1.-t*.6,1.,uEmber)*(1.+uStoke*.35);
  gl_PointSize=size*projectionMatrix[1][1]*uViewH*.5/max(.1,-mv.z);gl_Position=projectionMatrix*mv;}`;
-const FIRE_FS=`uniform float uTime,uEmber,uAurora,uHue;varying float vT,vSeed;
+const FIRE_FS=`uniform float uTime,uEmber,uAurora,uHue,uOpacity;varying float vT,vSeed;
 vec3 rainbow(float h){return clamp(abs(mod(h*6.+vec3(0.,4.,2.),6.)-3.)-1.,0.,1.);}
 void main(){vec2 c=gl_PointCoord-.5;float d=length(c)*2.;if(d>1.)discard;
  float a=pow(1.-d,1.8)*(1.-vT)*smoothstep(0.,.14,vT);
  vec3 col=mix(vec3(1.,.8,.38),vec3(1.,.4,.05),smoothstep(.05,.42,vT));col=mix(col,vec3(.55,.07,.02),smoothstep(.5,1.,vT));
  if(uEmber>.5){col=vec3(1.,.62,.22);a=(1.-d)*(1.-vT)*(.55+.45*sin(uTime*12.+vSeed*60.));}
  if(uAurora>0.){vec3 magic=rainbow(fract(uHue+vT*.7+vSeed*.55));float glitter=.75+.25*sin(uTime*22.+vSeed*100.);col=mix(col,magic*(1.2+glitter*.5),uAurora);a*=mix(1.,glitter,uAurora);}
- gl_FragColor=vec4(col*a*.9,a);}`;
+ gl_FragColor=vec4(col*a*.9*uOpacity,a*uOpacity);}`;
 function fireParticles(n,radius,u){
   const geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),seed=new Float32Array(n);
   for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*radius;pos[i*3]=Math.cos(a)*r;pos[i*3+1]=0;pos[i*3+2]=Math.sin(a)*r;seed[i]=Math.random()}
   geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('seed',new THREE.BufferAttribute(seed,1));
-  const uniforms={uTime:{value:0},uStoke:{value:0},uViewH:{value:innerHeight},uAurora:{value:0},uHue:{value:0}};for(const k in u)uniforms[k]={value:u[k]};
+  const uniforms={uTime:{value:0},uStoke:{value:0},uPower:{value:0},uOpacity:{value:0},uViewH:{value:innerHeight},uAurora:{value:0},uHue:{value:0}};for(const k in u)uniforms[k]={value:u[k]};
   const mat=new THREE.ShaderMaterial({uniforms,vertexShader:FIRE_VS,fragmentShader:FIRE_FS,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
   const pts=new THREE.Points(geo,mat);pts.frustumCulled=false;bonfire.group.add(pts);bonfire.mats.push(mat);return mat;
 }
@@ -3327,16 +3446,27 @@ fireParticles(200,1.5,{uSpeed:.18,uHeight:12,uSize:.11,uSway:1.4,uEmber:1});
 }
 bonfire.light=new THREE.PointLight(0xff8a3c,3.2,36,1.5);bonfire.light.position.set(0,2.4,0);bonfire.group.add(bonfire.light);
 bonfire.fill=new THREE.PointLight(0xffb25c,1.4,9,2);bonfire.fill.position.set(0,.6,0);bonfire.group.add(bonfire.fill);
+const coalMaterial=new THREE.MeshStandardMaterial({color:C(0x302825),roughness:1,emissive:C(0xef3308),emissiveIntensity:0});
+const coalBed=new THREE.Mesh(new THREE.SphereGeometry(1,12,6),coalMaterial);coalBed.position.y=.12;coalBed.scale.set(1.18,.11,1.18);bonfire.group.add(coalBed);
+const burningLogs=[];
+for(let i=0;i<6;i++){
+  const log=makeFirewood(1.65,.17),mat=new THREE.MeshStandardMaterial({color:C(0x67412a),roughness:1,emissive:C(0xdb3004),emissiveIntensity:0});
+  log.children[0].material=mat;log.rotation.y=i*2.4;log.position.set(Math.sin(i*2.4)*.3,.24+(i%2)*.18,Math.cos(i*2.4)*.3);bonfire.group.add(log);burningLogs.push({log,mat});
+}
+
 function updateBonfire(dt,t){
   if(!bonfire.group.visible)return;
   bonfire.stoke=Math.max(0,bonfire.stoke-dt*.22);const s=bonfire.stoke*bonfire.stoke*(3-2*bonfire.stoke);
   const now=serverNow(),aurora=Math.min(1,Math.max(0,(firePlayState.auroraUntil-now)/700)),hue=(now/1400)%1;
-  const vh=renderer.domElement.height;bonfire.mats.forEach(m=>{m.uniforms.uTime.value=(now%120000)/1000;m.uniforms.uStoke.value=s;m.uniforms.uViewH.value=vh;m.uniforms.uAurora.value=aurora;m.uniforms.uHue.value=hue});
+  const power=fireVisual.flame,heat=fireVisual.heat;
+  const state=Fire.frame(sharedCampfire,now);coalMaterial.emissiveIntensity=heat*.8;
+  burningLogs.forEach(({log,mat},i)=>{const portion=Math.max(0,Math.min(1,state.left/Fire.LOG_MS-i));log.visible=portion>0;log.scale.setScalar(.3+.7*Math.sqrt(portion));mat.emissiveIntensity=heat*.18;mat.color.setHex(portion<.2?0x383230:0x67412a)});
+  const vh=renderer.domElement.height;bonfire.mats.forEach(m=>{m.uniforms.uPower.value=power;m.uniforms.uOpacity.value=power;m.uniforms.uTime.value=(now%120000)/1000;m.uniforms.uStoke.value=s;m.uniforms.uViewH.value=vh;m.uniforms.uAurora.value=aurora;m.uniforms.uHue.value=hue});
   if(aurora>0){bonfire.light.color.setHSL(hue,.9,.6);bonfire.fill.color.setHSL((hue+.35)%1,.9,.6);bonfire.glow.material.color.setHSL((hue+.1)%1,.8,.7)}
   else{bonfire.light.color.setHex(0xff8a3c);bonfire.fill.color.setHex(0xffb25c);bonfire.glow.material.color.setHex(0xffffff)}
   const f=1+Math.sin(t*9.1)*.08+Math.sin(t*14.3)*.05+Math.sin(t*3.7)*.06;
-  bonfire.light.intensity=3.2*f*(1+s*.8);bonfire.fill.intensity=1.4*f*(1+s*.6);
-  bonfire.glow.material.opacity=.32*f*(1+s*.5);bonfire.glow.scale.set(8*(1+s*.4),7*(1+s*.5),1);
+  bonfire.light.intensity=3.2*f*(1+s*.8)*power;bonfire.fill.intensity=1.4*f*(1+s*.6)*Math.max(power,heat*.12);
+  bonfire.glow.material.opacity=.32*f*(1+s*.5)*power;bonfire.glow.scale.set(8*(1+s*.4),7*(1+s*.5),1);
 }
 /* ---------- moving sun and moon: shared 24-minute day, one lunar phase per night ---------- */
 const nightSky={group:new THREE.Group(),moonLight:1,moonPhoto:null,moonPhotoReady:false};scene.add(nightSky.group);nightSky.group.visible=true;
@@ -3904,11 +4034,17 @@ let ctxTick=0;
 function updateContext(dt){
   ctxTick+=dt;if(ctxTick<.25)return;ctxTick=0;syncTableBar();
   const b=$('ctxBtn'),x=me.g.position.x,z=me.g.position.z;
+  renderCampfireStatus();
+  const nearWood=worldSpace==='garden'&&Math.hypot(x-Fire.PILE.x,z-Fire.PILE.z)<=Fire.PILE.r;
+  $('pFuel').disabled=!hasEntered||!nearWood||!!fireAction||!room?.connected()||room.fireVersion!==1;
+  $('pFuel').title=nearWood?'장작을 집어 모닥불에 넣어요':'모닥불 오른쪽 장작 더미로 가까이 가 주세요';
+  if(fireAction){b.textContent='장작 옮기기 멈추기';b.dataset.act='fireCancel';b.hidden=false;return}
   if(worldSpace==='listening'){b.hidden=true;return}
   if(hasEntered&&nearListeningDoor(x,z)){b.textContent='음악방 들어가기';b.dataset.act='listening';b.hidden=false;return}
   if(inPocha()){b.textContent='포차 나오기';b.dataset.act='leave';b.hidden=false;return}
   if(seatedNow()){b.textContent='일어나기';b.dataset.act='up';b.hidden=false;return}
   if(pose!=='stand'&&pose!=='wave'){b.hidden=true;return}
+  if(hasEntered&&nearWood&&room?.connected()&&room.fireVersion===1){b.textContent='모닥불에 장작 넣기';b.dataset.act='firewood';b.hidden=false;return}
   if(hasEntered&&nearBulletin(x,z,2.7)){b.textContent='게시판 보기';b.dataset.act='board';b.hidden=false;return}
   if(hasEntered&&underHutRoof(x,z)){b.textContent='평상에서 낮잠';b.dataset.act='nap';b.hidden=false;return}
   if(hasEntered&&nearestFirefly(2.2)>=0){b.textContent='반딧불이 잡기 ✨';b.dataset.act='firefly';b.hidden=false;return}
@@ -3919,7 +4055,7 @@ function updateContext(dt){
 }
 $('ctxBtn').onclick=()=>{
   closePoseMenu();
-  const act=$('ctxBtn').dataset.act;if(act==='listening'){enterListening();return}if(act==='board'){gardenBoard.open();return}
+  const act=$('ctxBtn').dataset.act;if(act==='firewood'){startFireCare();return}if(act==='fireCancel'){cancelFireCare(true);return}if(act==='listening'){enterListening();return}if(act==='board'){gardenBoard.open();return}
   if(act==='firefly'||act==='nap'||act==='meditate'){if(act==='firefly')catchFirefly();else startCalm(act);ctxTick=1;updateContext(0);return}if(act==='enter'){enterPocha();ctxTick=1;updateContext(0);return}if(act==='leave'){leavePocha();ctxTick=1;updateContext(0);return}
   if(act==='up'){const sp=me.g.position,h=me.g.rotation.y;pose='stand';const [x,z]=collide(sp.x-Math.sin(h)*.8,sp.z-Math.cos(h)*.8,.4);me.g.position.x=x;me.g.position.z=z;sendDirty=true;syncPoseButtons()}
   else setPose('sit');
@@ -4380,11 +4516,11 @@ function leaveGarden(closeWindow=true,notifyServer=true){
   if(worldSpace==='listening')exitListening(true);
   gardenBoard.close(true);if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
-  clearVisit();visitToken='';
+  clearVisit();visitToken='';fireWelcomeShown=false;
   const old=room;room=null;
   if(old){if(notifyServer)old.send({t:'leave'});old.close()}
   if(cam.sky)setSkyView(false,true);
-  pendingStoke=false;pendingFireAction='stoke';clearTimeout(fuelTimer);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(key=>delete keys[key]);
+  cancelFireCare();pendingStoke=false;pendingFireAction='stoke';clearTimeout(fuelTimer);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(key=>delete keys[key]);
   rpsGame=null;rpsPending=null;rpsDismissed=null;renderRps();
   for(const key of [...peers.keys()])removePeer(key);
   disposeBubble('me');me.bubble=null;pendingHello=[];autoJoined=false;userMoved=false;
@@ -4397,7 +4533,7 @@ function leaveGarden(closeWindow=true,notifyServer=true){
 function beginManualEntry(){
   exitWindowControls.reset();
   visitEnded=false;try{sessionStorage.removeItem(LEFT_KEY)}catch(e){}
-  clearVisit();visitToken='';hasEntered=false;
+  clearVisit();visitToken='';fireWelcomeShown=false;hasEntered=false;
   $('exitScreen').hidden=true;document.body.classList.remove('visit-ended');me.g.visible=true;myDogObj.g.visible=true;
   if(!musicScheduleTimer)musicScheduleTimer=setInterval(schedule,250);
   clock.getDelta();installGardenHistory();requestGardenFrame();openNameDialog(true);updateWho();
@@ -4493,9 +4629,13 @@ function connectRoomServer(base,code){
   function emit(){if(emitQueued||stop)return;emitQueued=true;requestAnimationFrame(()=>{emitQueued=false;if(stop)return;
     const list=[...peersById.values()].map(p=>({peer:p.id,quiet:!!p.quiet,sameTab:false,kind:'viewer',by:null,guest:false,presence:Object.assign({},p.s||{},{look:p.look,dog:p.dog,nick:p.name,say:p.lastChat||null,away:!!p.away})}));
     peerL.forEach(fn=>fn({peers:list}))})}
-  function setConn(c,message){connected=c;gardenBoard.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
+  function setConn(c,message){connected=c;if(!c)cancelFireCare();gardenBoard.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
   function applyShared(sh){
     if(!sh)return;
+    if(sh.campfire){
+      sharedCampfire=sh.campfire;renderCampfireStatus();
+      if(!fireWelcomeShown){fireWelcomeShown=true;if(sharedCampfire.last)toast($('campfireLastCare').textContent);else if(!Fire.frame(sharedCampfire,serverNow()).left)toast('모닥불이 꺼져 있어요. 장작을 넣으면 다시 살릴 수 있어요')}
+    }
     if(sh.fireplay)applyFirePlay(sh.fireplay);
     if(Array.isArray(sh.flowers)){sharedFlowers=sh.flowers.filter(Number.isInteger).slice(-300);renderFlowers(sharedFlowers)}
     if(sh.music){const ok=TRACKS.some(x=>x.id===sh.music.track);applyMusic({track:ok?sh.music.track:null,startedAt:Number.isFinite(sh.music.startedAt)?sh.music.startedAt:0})}
@@ -4531,7 +4671,7 @@ function connectRoomServer(base,code){
     socket.onmessage=ev=>{if(stop||visitEnded||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;
-          api.selfId=you;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
+          api.selfId=you;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
         case 'listening_audio':applyListeningState(m.audio);break;
         case 'listening_error':toast(m.code==='space'?'음악방 안에서 오디오를 조작해 주세요.':m.code==='storage'?'저장을 확인하지 못했어요. 다시 눌러 주세요.':'잠시 후 다시 눌러 주세요.');break;
@@ -4565,7 +4705,7 @@ function connectRoomServer(base,code){
         case 'fireplay':applyFirePlay(m.effect);break;
         case 'fireplay_error':toast(m.code==='far'?'모닥불 가까이에서 넣어 주세요.':'잠시 후 다시 눌러 주세요.');break;
         case 'shake':if(m.to===you)onShakeFrom(m.id,stripInvisible(m.name).slice(0,12)||'친구');break;
-        case 'stoke':bonfire.stoke=1;toast(`${stripInvisible(m.name).slice(0,12)||'친구'}님이 장작을 넣었어요`);break;
+        case 'fire_ready':case 'fire_error':case 'fire_state':receiveFireMessage(m);break;
         case 'weather':setSharedWeather(m.mode,m.transition);break;
         case 'pong':if(Number.isFinite(m.s)&&Number.isFinite(m.c)){const rtt=Date.now()-m.c;if(rtt>=0&&rtt<3000)api.clockOffset=m.s-(m.c+rtt/2)}break;
         case 'full':stop=true;clearTimeout(retryTimer);disconnected('이 정원은 가득 찼어요 (최대 '+(m.max||16)+'명)');toast(connectionStatus);break;
@@ -4746,18 +4886,18 @@ function tick(){
   }
   const sy=Math.sin(cam.yaw),cy=Math.cos(cam.yaw);
   let vx=-sy*f+cy*s,vz=-cy*f-sy*s,mag=Math.min(1,Math.hypot(vx,vz));
-  if(mag>.08){target=null;marker.visible=false;pendingStoke=false;pendingShake=null;const l=Math.hypot(vx,vz);vx/=l;vz/=l}
+  if(mag>.08){cancelFireCare();target=null;marker.visible=false;pendingStoke=false;pendingShake=null;const l=Math.hypot(vx,vz);vx/=l;vz/=l}
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
   if(cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('listeningAudio').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
-  if(mag>0&&pose!=='stand'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
+  if(mag>0&&pose!=='stand'&&pose!=='woodcarry'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
     me.g.rotation.y=angLerp(me.g.rotation.y,Math.atan2(vx,vz),Math.min(1,dt*10))}
   const moved=Math.hypot(me.g.position.x-ox,me.g.position.z-oz)/Math.max(dt,1e-4);
   me.speed+=(moved-me.speed)*Math.min(1,dt*10);
-  updatePractice(dt);
+  updatePractice(dt);updateFireCare(dt);
   posePerson(me,pose,dt,t);
   if(worldSpace==='garden'){updateEnvironment(dt,t);updateWaterworks(dt,t)}else updateUmbrellas();
   if(worldSpace==='garden'){updateCampfire(dt);updateBonfire(dt,t);updateOwner(dt,t)}updateContext(dt);updateRps(dt);syncListeningActors();

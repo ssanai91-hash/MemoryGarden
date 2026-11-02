@@ -2,6 +2,8 @@
 // 방 하나 = Durable Object 하나. 접속자 위치·동작은 중계만 하고,
 // 꽃·날씨·최근 대화는 방 저장소에 남겨 늦게 온 사람도 같은 상태를 본다.
 import { DurableObject } from 'cloudflare:workers';
+import '../../assets/campfire-rules.js';
+const Fire=globalThis.GardenCampfire;
 
 // 걸을 수 있는 반경(m). index.html의 WORLD_R와 같게 둔다.
 const WORLD_R = 90;
@@ -23,7 +25,7 @@ const RPS_CHOICES = ['scissors', 'rock', 'paper'];
 const RPS_BEATS = { scissors: 'paper', rock: 'scissors', paper: 'rock' };
 const activeRps = g => g.status === 'invited' || g.status === 'playing';
 
-const POSES = ['stand', 'standing_pray', 'pray2', 'shake', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
+const POSES = ['stand', 'standing_pray', 'pray2', 'shake', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'woodpick', 'woodcarry', 'woodfeed', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
 const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'soju', 'beer', 'makgeolli', 'cider'];
 
 const POCHA_CENTER={x:-6.3,z:-23.4};
@@ -98,6 +100,8 @@ export class GardenRoom extends DurableObject {
       this.listeningAudio=(await ctx.storage.get('listeningAudio'))||{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0};
       this.rps = (await ctx.storage.get('rpsGames')) || [];
       this.visits=(await ctx.storage.get('visits'))||{};
+      this.campfire=await ctx.storage.get('campfire');
+      if(!this.campfire){this.campfire=Fire.initial(Date.now());await ctx.storage.put('campfire',this.campfire)}
       // Preserve a pending alarm when waking from hibernation.
       if ((this.rps.length||Object.keys(this.visits).length) && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
     });
@@ -162,6 +166,48 @@ export class GardenRoom extends DurableObject {
   }
   async save() {
     await this.ctx.storage.put('shared', this.shared);
+  }
+
+  async handleFire(ws,a,m){
+    const now=Date.now(),error=code=>ws.send(JSON.stringify({t:'fire_error',code,request:m.request||a.fireCarry?.request}));
+    if(!this.allow(a,'fire',4)){error('slow');return}
+    if(m.t==='fire_cancel'){
+      if(a.fireCarry&&a.fireCarry.request===m.request){delete a.fireCarry;if(a.s?.p.startsWith('wood'))a.s.p='stand';ws.serializeAttachment(a);this.broadcast({t:'state',id:a.id,s:a.s},ws)}return;
+    }
+    if(a.away||spaceOf(a.s)!=='garden'){error('space');return}
+    if(m.t==='fire_begin'){
+      if(typeof m.request!=='string'||!/^[a-f0-9]{32}$/.test(m.request)){error('invalid');return}
+      if(Math.hypot(a.s.x-Fire.PILE.x,a.s.z-Fire.PILE.z)>Fire.PILE.r){error('pile');return}
+      if(Fire.frame(this.campfire,now).left>=Fire.MAX_MS-60000){error('full');return}
+      if(this.campfire.recent?.[a.id]?.at>now-Fire.COOLDOWN_MS){error('cooldown');return}
+      if(!a.fireCarry||a.fireCarry.request!==m.request||now-a.fireCarry.at>45000)
+        a.fireCarry={request:m.request,token:crypto.randomUUID(),at:now};
+      ws.serializeAttachment(a);ws.send(JSON.stringify({t:'fire_ready',...a.fireCarry}));return;
+    }
+    if(m.t!=='fire_add')return;
+    if(typeof m.token!=='string'||!/^[-a-f0-9]{36}$/.test(m.token)){error('invalid');return}
+    // A replay acknowledges an already durable contribution without adding fuel again.
+    if(this.campfire.recent?.[a.id]?.token===m.token){ws.send(JSON.stringify({t:'fire_state',fire:Fire.publicState(this.campfire),token:m.token}));return}
+    const carry=a.fireCarry;
+    if(!carry||carry.token!==m.token||now-carry.at>45000){error('expired');return}
+    if(now-carry.at<1800){error('early');return}
+    const distance=Math.hypot(a.s.x,a.s.z);
+    if(distance<2.5||distance>3.8||a.s.p!=='woodfeed'){error('fire');return}
+    try{
+      const result=await this.ctx.storage.transaction(async txn=>{
+        const prev=(await txn.get('campfire'))||Fire.initial(now);
+        if(prev.recent?.[a.id]?.token===m.token)return{fire:prev,added:false};
+        if(prev.recent?.[a.id]?.at>now-Fire.COOLDOWN_MS)return{code:'cooldown'};
+        if(Fire.frame(prev,now).left>=Fire.MAX_MS-60000)return{code:'full'};
+        const fire=Fire.add(prev,now,a,carry.token);await txn.put('campfire',fire);return{fire,added:true};
+      });
+      if(result.code){error(result.code);return}
+      if(result.fire.rev>=this.campfire.rev)this.campfire=result.fire;
+      const current=ws.deserializeAttachment();
+      if(current?.fireCarry?.token===m.token){delete current.fireCarry;ws.serializeAttachment(current)}
+      const message={t:'fire_state',fire:Fire.publicState(this.campfire),token:m.token};
+      if(result.added)this.broadcast({...message,by:a.id,event:result.fire.last});else ws.send(JSON.stringify(message));
+    }catch(e){error('storage')}
   }
 
   // Notes live under their own keys, independent of transient chat/shared state.
@@ -396,6 +442,7 @@ export class GardenRoom extends DurableObject {
       a.look = cleanLook(m.look);
       a.dog = cleanDog(m.dog);
       a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0, u:false };
+      if(a.s.p.startsWith('wood'))a.s.p='stand';
       a.ready = true;a.away=!!m.away;
       a.handshaking = false;
       ws.serializeAttachment(a);
@@ -406,11 +453,12 @@ export class GardenRoom extends DurableObject {
       for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
       if(ghosts.length)await this.saveVisits();
       const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1},listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: this.shared, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1,campfire:1},listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire)}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }
     if (!a.ready) return;
+    if(['fire_begin','fire_add','fire_cancel'].includes(m.t))return this.handleFire(ws,a,m);
     if (['board_list','board_read','board_post','board_confirm'].includes(m.t)) return this.handleBoard(ws,a,m);
     if (['rps_invite', 'rps_reply', 'rps_cancel', 'rps_choose', 'rps_sync'].includes(m.t)) return this.handleRps(ws, a, m);
 
@@ -418,7 +466,7 @@ export class GardenRoom extends DurableObject {
       case 'background':case 'foreground':{
         if(!this.allow(a,'visibility',4))return;
         const away=m.t==='background';if(a.away===away)return;
-        a.away=away;ws.serializeAttachment(a);await this.rememberVisit(a);
+        a.away=away;if(away){delete a.fireCarry;if(a.s?.p.startsWith('wood'))a.s.p='stand'}ws.serializeAttachment(a);await this.rememberVisit(a);
         this.broadcast({t:away?'away':'resume',peer:this.peerInfo(a)},ws);return;
       }
       case 'leave': {
@@ -429,6 +477,8 @@ export class GardenRoom extends DurableObject {
         if (!this.allow(a, 's', 25)) return;
         const s = cleanState(m.s);
         if (!s) return;
+        if(spaceOf(s)!=='garden'||a.fireCarry&&Date.now()-a.fireCarry.at>45000)delete a.fireCarry;
+        if(s.p.startsWith('wood')&&!a.fireCarry)s.p='stand';
         a.s = s;
         ws.serializeAttachment(a);
         this.broadcast({ t: 'state', id: a.id, s: a.s }, ws);
@@ -536,9 +586,8 @@ export class GardenRoom extends DurableObject {
         return;
       }
       case 'stoke': {
-        // 장작 넣기: 상태로 남기지 않고 지금 있는 사람들에게만 불꽃 연출을 알린다.
-        if (spaceOf(a.s)!=='garden'||!this.allow(a, 'k', 1)) return;
-        this.broadcast({ t: 'stoke', id: a.id, name: a.name }, ws);
+        // Legacy clients cannot bypass the shared wood-carrying action.
+        ws.send(JSON.stringify({t:'fire_error',code:'refresh'}));
         return;
       }
       case 'weather': {
@@ -561,6 +610,7 @@ export class GardenRoom extends DurableObject {
   async departVisit(ws,explicit){
     const a=ws.deserializeAttachment();
     if(a&&a.ready){
+      delete a.fireCarry;if(a.s?.p.startsWith('wood'))a.s.p='stand';
       a.ready=false;ws.serializeAttachment(a);
       if(!this.readyPeers().some(p=>p.a.id===a.id)){
         if(explicit){
