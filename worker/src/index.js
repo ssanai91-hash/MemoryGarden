@@ -543,9 +543,11 @@ export class GardenRoom extends DurableObject {
       }
       case 'weather': {
         if (!this.allow(a, 'w', 1) || !WEATHER.includes(m.mode)) return;
+        if(this.shared.weather===m.mode)return;
+        this.shared.weatherTransition={from:this.shared.weather||'auto',to:m.mode,at:Date.now()};
         this.shared.weather = m.mode;
         await this.save();
-        this.broadcast({ t: 'weather', mode: m.mode, name: a.name });
+        this.broadcast({ t: 'weather', mode: m.mode, transition:this.shared.weatherTransition, name: a.name });
         return;
       }
       case 'ping': {
