@@ -1,6 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><style>
-#candleDialog{box-sizing:border-box;width:min(440px,calc(100vw - 28px));max-height:82dvh;border:1px solid #b8a47f;border-radius:19px;padding:20px;background:#f7f1e5;color:#493f32;overflow-y:auto;overscroll-behavior:contain}#candleDialog::backdrop{background:#162018a8}#candleDialog h2{font:700 23px var(--display);margin:0}#candleDialog .candle-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}#candleClose{min-height:40px;min-width:48px}#candleForm{display:grid;gap:9px;margin-top:16px}#candleForm label{font-size:14px}#candleForm input,#candleForm textarea{box-sizing:border-box;width:100%;font:16px/1.5 var(--body);padding:11px;border:1px solid #c7b99c;border-radius:9px;background:#fffdf7;color:#493f32}#candleForm textarea{resize:vertical;min-height:86px}#candleSubmit,#candlePray{min-height:44px;padding:10px 15px;border-radius:10px;font-size:16px}#candleSubmit{background:#a3743a;color:#fffaf0}#candlePray{width:100%;margin-top:10px}#candleStatus{font-size:14px;line-height:1.5;min-height:1.5em;white-space:pre-line}#candleList{display:grid;gap:8px}#candleList details{padding:11px 12px;background:#fffaf0;border:1px solid #ddcaaa;border-radius:10px}#candleList summary{cursor:pointer;font-size:15px}#candleList summary span{display:block;font-size:12px;color:#8a755a;margin-top:4px}#candleList p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.6}#candleList small{color:#8a755a}#candleDialog .candle-note{font-size:12px;line-height:1.5;color:#817059}
-</style>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="stylesheet" href="./assets/prayer-candles.css">
 </head><body>
 <title>기억의 정원</title>
 <link rel="manifest" href="/manifest.webmanifest">
@@ -745,17 +743,27 @@ document.addEventListener('error',event=>{
 <script src="assets/campfire-rules.js?v=1"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 
+<div id="candleActions" hidden><button id="candleLightBtn" type="button">초 켜기</button><button id="candleViewBtn" type="button">초함 보기</button></div>
 <dialog id="candleDialog" aria-labelledby="candleHeading">
-  <div class="candle-heading"><h2 id="candleHeading">소원을 밝히는 초함</h2><button id="candleClose" type="button">닫기</button></div>
-  <form id="candleForm">
-    <label for="candleName">기도할 사람의 이름</label><input id="candleName" maxlength="24" autocomplete="off" required placeholder="누구를 위해 기도하나요?">
-    <label for="candleWish">초에 붙일 소원</label><textarea id="candleWish" maxlength="160" rows="3" required placeholder="마음에 담은 소원을 적어 주세요"></textarea>
-    <p class="candle-note">이름과 소원은 초와 함께 모두에게 보여요. 불은 실제 시간으로 24시간 켜져요.</p>
-    <button id="candleSubmit" type="submit">초 켜기</button>
-  </form>
-  <p id="candleStatus" role="status" aria-live="polite"></p><button id="candlePray" type="button">초 앞에서 기도하기</button>
-  <h3 id="candleCount">켜진 초 0개</h3><div id="candleList"></div>
+ <div class="candle-heading"><h2 id="candleHeading">소원을 밝히는 초</h2><button id="candleClose" type="button">닫기</button></div>
+ <form id="candleForm">
+  <label for="candleName">기도할 사람</label><input id="candleName" maxlength="24" autocomplete="off" required placeholder="이름을 적어 주세요">
+  <label for="candleWish">초에 담을 소원</label><textarea id="candleWish" maxlength="160" rows="3" required placeholder="마음에 담은 소원을 적어 주세요"></textarea>
+  <p class="candle-note">이름과 소원은 모두에게 보여요.<br>큰 초 20자리 · 실제 시간으로 24시간 밝혀져요.</p>
+  <button id="candleSubmit" type="submit">초 켜기</button>
+ </form>
+ <p id="candleStatus" role="status" aria-live="polite"></p><button id="candleEntryView" type="button">초함 보기</button>
 </dialog>
+<section id="candleVault" hidden role="dialog" aria-modal="true" aria-label="소원을 밝히는 초함">
+ <div class="candle-stage">
+  <h2 class="candle-sr">소원을 밝히는 초함</h2>
+  <button id="candleVaultClose" class="candle-hotspot" type="button"><span class="candle-sr">닫기</span></button>
+  <nav class="candle-paging" aria-label="초함 페이지"><button id="candlePrev" type="button" aria-label="이전 초">‹ 이전</button><span id="candlePage" aria-live="polite"></span><button id="candleNext" type="button" aria-label="다음 초">다음 ›</button></nav>
+  <div id="candleSlots"></div>
+  <section id="candleFocus" hidden aria-label="초의 소원 자세히 보기"><button id="candleFocusClose" type="button">돌아가기</button><span id="candleFocusArt"></span><button id="candleFocusPray" type="button">이 초 앞에서 기도하기</button><span id="candleFocusTime"></span></section>
+  <button id="candleVaultNew" class="candle-hotspot" type="button"><span class="candle-sr">초 켜기</span></button>
+ </div>
+</section>
 <script type="module" id="gardenSceneModule">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -4154,12 +4162,13 @@ function updateContext(dt){
   ctxTick+=dt;if(ctxTick<.25)return;ctxTick=0;syncTableBar();
   const b=$('ctxBtn'),x=me.g.position.x,z=me.g.position.z;
   renderCampfireStatus();
+  $('candleActions').hidden=!(hasEntered&&worldSpace==='garden'&&Prayer.nearBox(x,z)&&!fireAction);
   const nearWood=worldSpace==='garden'&&Math.hypot(x-Fire.PILE.x,z-Fire.PILE.z)<=Fire.PILE.r;
   $('pFuel').disabled=!hasEntered||!nearWood||!!fireAction||!room?.connected()||room.fireVersion!==1;
   $('pFuel').title=nearWood?'장작을 집어 모닥불에 넣어요':'모닥불 오른쪽 장작 더미로 가까이 가 주세요';
   if(fireAction){b.textContent='장작 옮기기 멈추기';b.dataset.act='fireCancel';b.hidden=false;return}
   if(worldSpace==='listening'){b.hidden=true;return}
-  if(hasEntered&&Prayer.nearBox(x,z)){b.textContent='초 켜기';b.dataset.act='candles';b.hidden=false;return}
+  if(hasEntered&&Prayer.nearBox(x,z)){b.hidden=true;return}
   if(hasEntered&&nearListeningDoor(x,z)){b.textContent='음악방 들어가기';b.dataset.act='listening';b.hidden=false;return}
   if(inPocha()){b.textContent='포차 나오기';b.dataset.act='leave';b.hidden=false;return}
   if(seatedNow()){b.textContent='일어나기';b.dataset.act='up';b.hidden=false;return}
@@ -4993,8 +5002,9 @@ candleUI=createCandleUI({document,storage:store,pendingStorage:{get(k){try{retur
   ready:()=>!!room?.connected()&&room.candleVersion===1,selfName:()=>shownName(),
   send:m=>{if(!room?.connected()||room.candleVersion!==1)return false;sendPresence();return room.send(m)},
   pause:()=>{closeOtherMenus('candles');target=null;marker.visible=false;pendingShake=null;cancelFireCare();move={x:0,y:0};me.speed=0;knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k])},
-  onState:s=>prayerView.apply(s)});
-$('candlePray').onclick=()=>{candleUI.close();startStandingPrayer()};
+  onState:s=>prayerView.apply(s),onPray:()=>startStandingPrayer(),onLit:()=>toast('초함에 초를 밝혔어요. 24시간 동안 소원을 밝혀요.')});
+$('candleLightBtn').onclick=()=>candleUI.open();
+$('candleViewBtn').onclick=()=>candleUI.openVault();
 let candleRefreshSecond=-1;
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);gardenPost.setSize(w,h,quality.level);camera.aspect=w/h;camera.fov=cam.sky?cam.skyFov:w/h<.8?72:55;camera.updateProjectionMatrix()}

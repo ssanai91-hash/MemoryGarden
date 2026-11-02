@@ -1,62 +1,41 @@
 import './prayer-rules.js';
 const P=globalThis.GardenPrayer;
-export function createCandleUI({document,storage,pendingStorage=storage,now,near,send,ready,selfName,pause,onState}){
-  const $=id=>document.getElementById(id),dialog=$('candleDialog'),form=$('candleForm'),name=$('candleName'),wish=$('candleWish'),submit=$('candleSubmit'),status=$('candleStatus'),list=$('candleList');
-  let state={rev:-1,items:[]},pending=null,busy=false,timer=0,listKey='';
-  const backing=k=>k==='garden.candle.pending'?pendingStorage:storage;
-  const read=k=>{try{return JSON.parse(backing(k).get(k)||'null')}catch{return null}},save=(k,v)=>backing(k).set(k,JSON.stringify(v));
-  const cached=read('garden.candle.pending');if(cached&&P.nonce(cached.nonce)&&typeof cached.name==='string'&&typeof cached.wish==='string'&&Number.isFinite(cached.issuedAt))pending=cached;
-  function draft(){return{name:name.value,wish:wish.value}}
-  function persist(){save('garden.candle.draft',draft())}
-  function waiting(value){busy=value;name.disabled=wish.disabled=value;submit.disabled=value;submit.textContent=value?'초를 확인하고 있어요…':pending?'다시 확인하고 초 켜기':'초 켜기'}
-  function remaining(expires){const mins=Math.max(1,Math.ceil((expires-now())/60000)),h=Math.floor(mins/60),m=mins%60;return h?`${h}시간${m?' '+m+'분':''} 남음`:`${m}분 남음`}
-  function render(){
-    const active=P.active(state,now()),key=active.map(c=>c.id).join(',');$('candleCount').textContent='켜진 초 '+active.length+'개';
-    if(key!==listKey){
-      const open=new Set([...list.querySelectorAll('details[open]')].map(n=>n.dataset.id));list.replaceChildren();
-      for(const c of active){const row=document.createElement('details');row.dataset.id=c.id;row.open=open.has(c.id);const head=document.createElement('summary'),label=document.createElement('strong'),time=document.createElement('span'),body=document.createElement('p'),by=document.createElement('small');
-        label.textContent=c.name;time.dataset.expires=String(c.expiresAt);time.textContent=remaining(c.expiresAt);body.textContent=c.wish;by.textContent=(c.litBy||'친구')+'님이 밝힌 초';head.append(label,time);row.append(head,body,by);list.appendChild(row);
-      }
-      if(!active.length){const empty=document.createElement('p');empty.textContent='소원을 적고 첫 초를 밝혀 보세요.';list.appendChild(empty)}listKey=key;
-    }
-    for(const span of list.querySelectorAll('[data-expires]'))span.textContent=remaining(Number(span.dataset.expires));
+export function createCandleUI({document,storage,pendingStorage=storage,now,near,send,ready,selfName,pause,onState,onLit=()=>{},onPray=()=>{}}){
+ const $=id=>document.getElementById(id),dialog=$('candleDialog'),vault=$('candleVault'),form=$('candleForm'),name=$('candleName'),wish=$('candleWish'),submit=$('candleSubmit'),status=$('candleStatus');
+ let state={rev:-1,items:[]},pending=null,busy=false,timer=0,page=0,focused=null,returnFocus=null;
+ const backing=k=>k==='garden.candle.pending'?pendingStorage:storage;
+ const read=k=>{try{return JSON.parse(backing(k).get(k)||'null')}catch{return null}},save=(k,v)=>backing(k).set(k,JSON.stringify(v));
+ const cached=read('garden.candle.pending');if(cached&&P.nonce(cached.nonce)&&typeof cached.name==='string'&&typeof cached.wish==='string'&&Number.isFinite(cached.issuedAt))pending=cached;
+ const persist=()=>save('garden.candle.draft',{name:name.value,wish:wish.value});
+ function waiting(value){busy=value;name.disabled=wish.disabled=submit.disabled=value;submit.textContent=value?'초를 확인하고 있어요…':pending?'다시 확인하고 초 켜기':'초 켜기'}
+ function remaining(expires){const mins=Math.max(1,Math.ceil((expires-now())/60000)),h=Math.floor(mins/60),m=mins%60;return h?`${h}시간${m?' '+m+'분':''}`:`${m}분`}
+ function art(c,large=false){const body=document.createElement('span');body.className=large?'focus-candle':'candle-body-art';const wax=document.createElement('img'),flame=document.createElement('img'),copy=document.createElement('span'),n=document.createElement('strong'),w=document.createElement('span');wax.className='candle-wax';wax.src='./assets/candle-body.webp';wax.alt='';flame.className='candle-flame';flame.src='./assets/candle-flame.webp';flame.alt='';flame.style.animationDelay=`-${(c.displaySlot||0)*.37}s`;copy.className='candle-copy';n.textContent=c.name;w.className='wax-wish';w.textContent=c.wish;copy.append(n,w);body.append(wax,flame,copy);return body}
+ function focusCandle(c){focused=c.id;$('candleFocusArt').replaceChildren(art(c,true));$('candleFocusTime').textContent=remaining(c.expiresAt);$('candleFocus').hidden=false;$('candleFocusClose').focus()}
+ function render(){
+  const live=P.display(state,now());$('candlePage').textContent=`${page+1} / 4 · ${live.length} / 20개`;$('candlePrev').disabled=page===0;$('candleNext').disabled=page===3;
+  const slots=$('candleSlots');const key=page+':'+live.map(c=>c.id+':'+c.expiresAt).join(',');
+  if(slots.dataset.key!==key){slots.dataset.key=key;slots.replaceChildren();for(let j=0;j<Math.min(6,P.MAX-page*6);j++){const i=page*6+j,c=live[i],slot=document.createElement('button'),time=document.createElement('span');slot.type='button';slot.className=`candle-slot col-${j%2} row-${Math.floor(j/2)}${c?'':' is-empty'}`;time.className='candle-time';
+    if(c){slot.append(art(c));time.dataset.expires=c.expiresAt;time.textContent=remaining(c.expiresAt);slot.setAttribute('aria-label',`${c.name} · ${c.wish} · 자세히 보기`);slot.onclick=()=>focusCandle(c)}else{time.textContent=`빈자리 ${i+1}`;slot.setAttribute('aria-label',`${i+1}번 빈자리 · 초 켜기`);slot.onclick=openEntry}slot.append(time);slots.append(slot)}
   }
-  function apply(s){
-    if(!s||!Number.isInteger(s.rev)||s.rev<state.rev||!Array.isArray(s.items))return;
-    state={rev:s.rev,items:s.items.filter(c=>P.nonce(c.id)&&Number.isInteger(c.slot)&&c.slot>=0&&c.slot<P.MAX&&typeof c.name==='string'&&typeof c.wish==='string'&&Number.isFinite(c.expiresAt)).slice(0,P.MAX)};
-    onState(state);render();
-  }
-  function clearPending(){pending=null;save('garden.candle.pending',null)}
-  function attempt(){
-    if(busy)return;
-    if(!ready()){status.textContent='정원 연결이 준비되면 다시 눌러 주세요.';return}
-    if(!near()){status.textContent='초함 가까이에서 초를 켜 주세요.';return}
-    const n=P.clean(name.value,25).replace(/\s+/g,' '),w=P.clean(wish.value,161);
-    if(!n||n.length>24||!w||w.length>160){status.textContent='이름은 24자, 소원은 160자 안으로 적어 주세요.';return}
-    if(!pending||pending.name!==n||pending.wish!==w||now()-pending.issuedAt>300000){const b=new Uint8Array(16);crypto.getRandomValues(b);pending={nonce:[...b].map(v=>v.toString(16).padStart(2,'0')).join(''),name:n,wish:w,issuedAt:now()}}
-    if(!save('garden.candle.pending',pending)){status.textContent='입력을 보관하지 못했어요. 다시 눌러 주세요.';return}
-    persist();waiting(true);status.textContent='초함에 불을 밝히고 있어요…';
-    clearTimeout(timer);timer=setTimeout(()=>{waiting(false);status.textContent='아직 확인되지 않았어요. 다시 눌러도 같은 초를 확인해요.'},8000);
-    if(send({t:'candle_light',...pending})===false){clearTimeout(timer);waiting(false);status.textContent='연결을 확인한 뒤 다시 눌러 주세요.'}
-  }
-  name.addEventListener('input',()=>{if(pending&&name.value!==pending.name)clearPending();persist()});wish.addEventListener('input',()=>{if(pending&&wish.value!==pending.wish)clearPending();persist()});
-  form.addEventListener('submit',e=>{e.preventDefault();attempt()});$('candleClose').onclick=()=>dialog.close();
-  dialog.addEventListener('close',()=>{clearTimeout(timer);waiting(false);persist()});
-  return{apply,refresh:render,isOpen:()=>dialog.open,
-    open(){if(!near())return false;pause();const d=pending||read('garden.candle.draft')||{};name.value=typeof d.name==='string'?d.name:selfName();wish.value=typeof d.wish==='string'?d.wish:'';status.textContent='';waiting(false);listKey='!';render();if(!dialog.open)dialog.showModal();send({t:'candles_sync'});return true},
-    close(){if(dialog.open)dialog.close()},endVisit(){if(dialog.open)dialog.close();clearPending();waiting(false)},
-    connection(on){if(!on&&busy){clearTimeout(timer);waiting(false);status.textContent='연결을 다시 확인하고 있어요. 입력은 보관했어요.'}},
-    receive(m){
-      if(m.t==='candles_state'){apply(m.state);return}
-      if(m.t==='candle_lit'){
-        apply(m.state);if(!pending||m.nonce!==pending.nonce)return;
-        clearTimeout(timer);clearPending();waiting(false);name.value='';wish.value='';save('garden.candle.draft',null);
-        const record=state.items.find(c=>c.id===m.candle?.id),expires=record?.expiresAt||m.candle?.expiresAt;
-        status.textContent=expires<=now()?'이 초는 24시간이 지나 꺼졌어요.':`초를 밝혔어요. ${Number.isFinite(expires)?remaining(expires)+' · ':''}실제 시간으로 24시간 유지돼요.`;return;
-      }
-      if(m.t!=='candle_error'||(m.nonce&&m.nonce!==pending?.nonce))return;
-      clearTimeout(timer);waiting(false);const messages={far:'초함 가까이에서 다시 눌러 주세요.',full:'초함이 가득 찼어요. 초가 꺼지면 새로 켤 수 있어요.',stale:'시간이 지났어요. 적은 내용을 확인하고 다시 눌러 주세요.',expired:'이 초는 24시간이 지나 꺼졌어요. 새 초를 켤 수 있어요.',invalid:'이름과 소원을 확인해 주세요.',slow:'잠시 후 다시 눌러 주세요.',storage:'초를 확인하지 못했어요. 다시 눌러도 중복해서 켜지지 않아요.'};
-      status.textContent=messages[m.code]||'정원 연결을 확인하고 다시 눌러 주세요.';if(['stale','expired'].includes(m.code))clearPending();
-    }
-  };
+  for(const span of slots.querySelectorAll('[data-expires]'))span.textContent=remaining(Number(span.dataset.expires));
+  if(focused){const c=live.find(c=>c.id===focused);if(c)$('candleFocusTime').textContent=remaining(c.expiresAt);else{focused=null;$('candleFocus').hidden=true}}
+ }
+ function apply(s){if(!s||!Number.isInteger(s.rev)||s.rev<state.rev||!Array.isArray(s.items))return;state={rev:s.rev,items:s.items.filter(c=>P.nonce(c.id)&&Number.isInteger(c.slot)&&c.slot>=0&&c.slot<128&&typeof c.name==='string'&&typeof c.wish==='string'&&Number.isFinite(c.expiresAt)).slice(0,128)};onState(state);render()}
+ function clearPending(){pending=null;save('garden.candle.pending',null)}
+ function close(){if(dialog.open)dialog.close();vault.hidden=true;document.body.classList.remove('candle-vault-open');focused=null;$('candleFocus').hidden=true;returnFocus?.focus?.()}
+ function openEntry(){if(!near())return false;returnFocus=document.activeElement;pause();vault.hidden=true;document.body.classList.remove('candle-vault-open');const d=pending||read('garden.candle.draft')||{};name.value=typeof d.name==='string'?d.name:selfName();wish.value=typeof d.wish==='string'?d.wish:'';status.textContent=P.active(state,now()).length>=P.MAX?'초함이 가득 찼어요. 초가 꺼지면 새로 켤 수 있어요.':'';waiting(false);if(!dialog.open)dialog.showModal();send({t:'candles_sync'});return true}
+ function openVault(){if(!near())return false;returnFocus=document.activeElement;pause();if(dialog.open)dialog.close();vault.hidden=false;document.body.classList.add('candle-vault-open');focused=null;$('candleFocus').hidden=true;render();vault.tabIndex=-1;vault.focus();send({t:'candles_sync'});return true}
+ function attempt(){if(busy)return;if(!ready()){status.textContent='정원 연결이 준비되면 다시 눌러 주세요.';return}if(!near()){status.textContent='초함 가까이에서 초를 켜 주세요.';return}const n=P.clean(name.value,25).replace(/\s+/g,' '),w=P.clean(wish.value,161);if(!n||n.length>24||!w||w.length>160){status.textContent='이름은 24자, 소원은 160자 안으로 적어 주세요.';return}
+  if(!pending||pending.name!==n||pending.wish!==w||now()-pending.issuedAt>300000){const b=new Uint8Array(16);crypto.getRandomValues(b);pending={nonce:[...b].map(v=>v.toString(16).padStart(2,'0')).join(''),name:n,wish:w,issuedAt:now()}}
+  if(!save('garden.candle.pending',pending)){status.textContent='입력을 보관하지 못했어요. 다시 눌러 주세요.';return}persist();waiting(true);status.textContent='초함에 불을 밝히고 있어요…';clearTimeout(timer);timer=setTimeout(()=>{waiting(false);status.textContent='아직 확인되지 않았어요. 다시 눌러도 같은 초를 확인해요.'},8000);if(send({t:'candle_light',...pending})===false){clearTimeout(timer);waiting(false);status.textContent='연결을 확인한 뒤 다시 눌러 주세요.'}
+ }
+ for(const field of[name,wish])field.addEventListener('input',()=>{if(pending&&field.value!==pending[field===name?'name':'wish'])clearPending();persist()});
+ form.addEventListener('submit',e=>{e.preventDefault();attempt()});$('candleClose').onclick=close;$('candleVaultClose').onclick=close;$('candleVaultNew').onclick=openEntry;$('candleEntryView').onclick=openVault;
+ $('candleFocusPray').onclick=()=>{close();onPray()};
+ $('candlePrev').onclick=()=>{page=Math.max(0,page-1);render()};$('candleNext').onclick=()=>{page=Math.min(3,page+1);render()};$('candleFocusClose').onclick=()=>{focused=null;$('candleFocus').hidden=true;$('candleVaultClose').focus()};
+ dialog.addEventListener('close',()=>{clearTimeout(timer);waiting(false);persist()});vault.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(focused)$('candleFocusClose').click();else close()}if(e.key==='Tab'){const scope=focused?$('candleFocus'):vault,buttons=[...scope.querySelectorAll('button:not(:disabled)')].filter(n=>!n.closest('[hidden]'));if(!buttons.length)return;const first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===vault)){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+ return{apply,refresh:render,isOpen:()=>dialog.open||!vault.hidden,open:openEntry,openVault,close,endVisit(){close();clearPending();waiting(false)},connection(on){if(!on&&busy){clearTimeout(timer);waiting(false);status.textContent='연결을 다시 확인하고 있어요. 입력은 보관했어요.'}},receive(m){
+  if(m.t==='candles_state'){apply(m.state);return}if(m.t==='candle_lit'){apply(m.state);if(!pending||m.nonce!==pending.nonce)return;clearTimeout(timer);clearPending();waiting(false);page=Math.max(0,Math.floor(P.display(state,now()).findIndex(c=>c.id===m.candle?.id)/6));name.value=wish.value='';close();save('garden.candle.draft',null);onLit(m.candle);return}
+  if(m.t!=='candle_error'||(m.nonce&&m.nonce!==pending?.nonce))return;clearTimeout(timer);waiting(false);const messages={far:'초함 가까이에서 다시 눌러 주세요.',full:'초함이 가득 찼어요. 큰 초는 20개까지 놓을 수 있어요.',stale:'시간이 지났어요. 적은 내용을 확인하고 다시 눌러 주세요.',expired:'이 초는 24시간이 지나 꺼졌어요. 새 초를 켤 수 있어요.',invalid:'이름과 소원을 확인해 주세요.',slow:'잠시 후 다시 눌러 주세요.',storage:'초를 확인하지 못했어요. 다시 눌러도 중복해서 켜지지 않아요.'};status.textContent=messages[m.code]||'정원 연결을 확인하고 다시 눌러 주세요.';if(['stale','expired'].includes(m.code))clearPending();
+ }};
 }

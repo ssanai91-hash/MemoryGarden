@@ -27,7 +27,7 @@ const last=(s,t)=>s.messages.filter(m=>m.t===t).at(-1),nonce=i=>i.toString(16).p
  now=expiry;await room.alarm();assert.ok(!ctx.values.get('prayerCandles').items.some(c=>c.id===id));assert.ok(!last(b,'candles_state').state.items.some(c=>c.id===id));
  now+=2000;await light(a,1,{issuedAt:created});assert.equal(last(a,'candle_error').code,'stale');
  await light(a,4);assert.equal(last(a,'candle_lit').candle.slot,0);
- const full=ctx.values.get('prayerCandles');full.items=Array.from({length:128},(_,slot)=>({...full.items[0],slot,id:nonce(slot+100),by:'full',nonce:nonce(slot+100),expiresAt:now+100000}));ctx.values.set('prayerCandles',full);room=new c.Room(ctx,{});await ctx.ready;now+=2000;
- await light(a,50);assert.equal(last(a,'candle_error').code,'full');assert.equal(ctx.values.get('prayerCandles').items.length,128);
+ const full=ctx.values.get('prayerCandles');full.items=Array.from({length:20},(_,slot)=>({...full.items[0],slot,id:nonce(slot+100),by:'full',nonce:nonce(slot+100),expiresAt:now+100000}));ctx.values.set('prayerCandles',full);room=new c.Room(ctx,{});await ctx.ready;now+=2000;
+ await light(a,50);assert.equal(last(a,'candle_error').code,'full');assert.equal(ctx.values.get('prayerCandles').items.length,20);
  console.log('PASS: joined/proximity/space gates, server-authoritative 24 real hours, nonce idempotency, immutable wishes/timestamps on retry, hibernation, concurrent slot allocation, atomic rollback/retry, expiry alarm, stale retries, slot reuse, private metadata and capacity.');
 })().catch(e=>{console.error(e);process.exitCode=1});
