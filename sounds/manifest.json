@@ -1,4 +1,222 @@
 {
   "version": 1,
-  "clips": {}
+  "clips": {
+    "fire_loop": {
+      "duration": 28.0,
+      "loop": true,
+      "ogg": "./sounds/fire_loop.ogg",
+      "mp3": "./sounds/fire_loop.mp3",
+      "normalization": "RMS"
+    },
+    "wind_soft_loop": {
+      "duration": 28.0,
+      "loop": true,
+      "ogg": "./sounds/wind_soft_loop.ogg",
+      "mp3": "./sounds/wind_soft_loop.mp3",
+      "normalization": "RMS"
+    },
+    "wind_gust_loop": {
+      "duration": 28.0,
+      "loop": true,
+      "ogg": "./sounds/wind_gust_loop.ogg",
+      "mp3": "./sounds/wind_gust_loop.mp3",
+      "normalization": "RMS"
+    },
+    "leaves_loop": {
+      "duration": 28.0,
+      "loop": true,
+      "ogg": "./sounds/leaves_loop.ogg",
+      "mp3": "./sounds/leaves_loop.mp3",
+      "normalization": "RMS"
+    },
+    "crickets_loop": {
+      "duration": 28.0,
+      "loop": true,
+      "ogg": "./sounds/crickets_loop.ogg",
+      "mp3": "./sounds/crickets_loop.mp3",
+      "normalization": "RMS"
+    },
+    "frogs_loop": {
+      "duration": 28.0,
+      "loop": true,
+      "ogg": "./sounds/frogs_loop.ogg",
+      "mp3": "./sounds/frogs_loop.mp3",
+      "normalization": "RMS"
+    },
+    "fire_pop_01": {
+      "duration": 0.22599,
+      "loop": false,
+      "ogg": "./sounds/fire_pop_01.ogg",
+      "mp3": "./sounds/fire_pop_01.mp3",
+      "normalization": "peak"
+    },
+    "fire_pop_02": {
+      "duration": 0.22599,
+      "loop": false,
+      "ogg": "./sounds/fire_pop_02.ogg",
+      "mp3": "./sounds/fire_pop_02.mp3",
+      "normalization": "peak"
+    },
+    "fire_pop_03": {
+      "duration": 0.22599,
+      "loop": false,
+      "ogg": "./sounds/fire_pop_03.ogg",
+      "mp3": "./sounds/fire_pop_03.mp3",
+      "normalization": "peak"
+    },
+    "fire_pop_04": {
+      "duration": 0.22599,
+      "loop": false,
+      "ogg": "./sounds/fire_pop_04.ogg",
+      "mp3": "./sounds/fire_pop_04.mp3",
+      "normalization": "peak"
+    },
+    "step_gravel_01": {
+      "duration": 0.34,
+      "loop": false,
+      "ogg": "./sounds/step_gravel_01.ogg",
+      "mp3": "./sounds/step_gravel_01.mp3",
+      "normalization": "peak"
+    },
+    "step_gravel_02": {
+      "duration": 0.34,
+      "loop": false,
+      "ogg": "./sounds/step_gravel_02.ogg",
+      "mp3": "./sounds/step_gravel_02.mp3",
+      "normalization": "peak"
+    },
+    "step_gravel_03": {
+      "duration": 0.34,
+      "loop": false,
+      "ogg": "./sounds/step_gravel_03.ogg",
+      "mp3": "./sounds/step_gravel_03.mp3",
+      "normalization": "peak"
+    },
+    "step_gravel_04": {
+      "duration": 0.34,
+      "loop": false,
+      "ogg": "./sounds/step_gravel_04.ogg",
+      "mp3": "./sounds/step_gravel_04.mp3",
+      "normalization": "peak"
+    },
+    "step_grass_01": {
+      "duration": 0.34,
+      "loop": false,
+      "ogg": "./sounds/step_grass_01.ogg",
+      "mp3": "./sounds/step_grass_01.mp3",
+      "normalization": "peak"
+    },
+    "step_grass_02": {
+      "duration": 0.34,
+      "loop": false,
+      "ogg": "./sounds/step_grass_02.ogg",
+      "mp3": "./sounds/step_grass_02.mp3",
+      "normalization": "peak"
+    },
+    "step_grass_03": {
+      "duration": 0.34,
+      "loop": false,
+      "ogg": "./sounds/step_grass_03.ogg",
+      "mp3": "./sounds/step_grass_03.mp3",
+      "normalization": "peak"
+    },
+    "step_grass_04": {
+      "duration": 0.29066,
+      "loop": false,
+      "ogg": "./sounds/step_grass_04.ogg",
+      "mp3": "./sounds/step_grass_04.mp3",
+      "normalization": "peak"
+    },
+    "bird_01": {
+      "duration": 1.7,
+      "loop": false,
+      "ogg": "./sounds/bird_01.ogg",
+      "mp3": "./sounds/bird_01.mp3",
+      "normalization": "peak"
+    },
+    "bird_02": {
+      "duration": 1.7,
+      "loop": false,
+      "ogg": "./sounds/bird_02.ogg",
+      "mp3": "./sounds/bird_02.mp3",
+      "normalization": "peak"
+    },
+    "bird_03": {
+      "duration": 1.7,
+      "loop": false,
+      "ogg": "./sounds/bird_03.ogg",
+      "mp3": "./sounds/bird_03.mp3",
+      "normalization": "peak"
+    },
+    "bird_04": {
+      "duration": 1.7,
+      "loop": false,
+      "ogg": "./sounds/bird_04.ogg",
+      "mp3": "./sounds/bird_04.mp3",
+      "normalization": "peak"
+    },
+    "bird_05": {
+      "duration": 1.7,
+      "loop": false,
+      "ogg": "./sounds/bird_05.ogg",
+      "mp3": "./sounds/bird_05.mp3",
+      "normalization": "peak"
+    },
+    "bird_06": {
+      "duration": 1.7,
+      "loop": false,
+      "ogg": "./sounds/bird_06.ogg",
+      "mp3": "./sounds/bird_06.mp3",
+      "normalization": "peak"
+    },
+    "bird_07": {
+      "duration": 1.7,
+      "loop": false,
+      "ogg": "./sounds/bird_07.ogg",
+      "mp3": "./sounds/bird_07.mp3",
+      "normalization": "peak"
+    },
+    "bird_08": {
+      "duration": 1.7,
+      "loop": false,
+      "ogg": "./sounds/bird_08.ogg",
+      "mp3": "./sounds/bird_08.mp3",
+      "normalization": "peak"
+    },
+    "owl_01": {
+      "duration": 1.65,
+      "loop": false,
+      "ogg": "./sounds/owl_01.ogg",
+      "mp3": "./sounds/owl_01.mp3",
+      "normalization": "peak"
+    },
+    "owl_02": {
+      "duration": 1.59272,
+      "loop": false,
+      "ogg": "./sounds/owl_02.ogg",
+      "mp3": "./sounds/owl_02.mp3",
+      "normalization": "peak"
+    },
+    "crow_01": {
+      "duration": 1.25,
+      "loop": false,
+      "ogg": "./sounds/crow_01.ogg",
+      "mp3": "./sounds/crow_01.mp3",
+      "normalization": "peak"
+    },
+    "crow_02": {
+      "duration": 1.25,
+      "loop": false,
+      "ogg": "./sounds/crow_02.ogg",
+      "mp3": "./sounds/crow_02.mp3",
+      "normalization": "peak"
+    },
+    "crow_03": {
+      "duration": 1.25,
+      "loop": false,
+      "ogg": "./sounds/crow_03.ogg",
+      "mp3": "./sounds/crow_03.mp3",
+      "normalization": "peak"
+    }
+  }
 }
