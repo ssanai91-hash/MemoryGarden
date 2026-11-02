@@ -80,12 +80,14 @@ function cleanDog(d) {
   if (d.coat !== undefined && (!Number.isInteger(d.coat) || d.coat < 0 || d.coat >= 10)) return null;
   return { b: d.b, n: clean(d.n, 8), ...(d.coat === undefined ? {} : { coat: d.coat }) };
 }
+// Cosmetic completion expiry is an absolute timestamp; presence/reconnect never refreshes it.
+function cleanBowHalo(value,now=Date.now()){return Number.isFinite(value)&&value>now&&value<=now+86400000?value:0}
 function cleanState(s) {
   if (!s || typeof s !== 'object') return null;
   const x = num(s.x, -WORLD_R, WORLD_R), z = num(s.z, -WORLD_R, WORLD_R);
   if (x === null || z === null) return null;
   const space=spaceOf(s);
-  return { space,x:space==='listening'?num(x,-5.6,5.6):x,z:space==='listening'?num(z,-3,5.3):z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true };
+  return { space,x:space==='listening'?num(x,-5.6,5.6):x,z:space==='listening'?num(z,-3,5.3):z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true,haloUntil:cleanBowHalo(s.haloUntil) };
 }
 
 export class GardenRoom extends DurableObject {

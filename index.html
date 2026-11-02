@@ -773,6 +773,7 @@ import {lushTreeCrowns} from './assets/garden-foliage.js';
 import {createNatureSoundscape} from './assets/nature-soundscape.js';
 import {pavedDisk,makePrayerGarden} from './assets/prayer-garden.js';
 import {createCandleUI} from './assets/prayer-candles-ui.js';
+import {createBowHalo} from './assets/bow-halo.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -2355,6 +2356,7 @@ function makePerson(L){
   return{wood,knives,eyes,blinkT:1+Math.random()*3,dustT:0,g,rig,torso,legs,arms,head,cup,can,soda,shot,riceCup,beerGlass,sodaGlass,tag,contactMeshes,walkT:0,speed:0};
 }
 const prayerContactBounds=new THREE.Box3();
+const reduceHaloMotion=matchMedia('(prefers-reduced-motion: reduce)');
 function posePerson(P,pose,dt,t){
   const personSpace=P.g.userData.space||'garden';
   P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)-P.g.position.y)*Math.min(1,dt*12);
@@ -2412,6 +2414,8 @@ function posePerson(P,pose,dt,t){
     }
     if(Number.isFinite(lowest)&&lowest<surface+.012)P.rig.position.y+=surface+.012-lowest;
   }
+  if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.head,markBloom);
+  P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches);
   P.tag.position.y=L(P.tag.position.y,tagY);
   if(P.bubble)P.bubble.userData.baseY=P.tag.position.y+.15+P.bubble.scale.y/2;
 }
@@ -2862,11 +2866,11 @@ function goToFriend(auto){
 const lastSent={};
 function sendPresence(){
   if(!room)return;const p=me.g.position;
-  const patch={space:worldSpace,x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,u:myUmbrella,look:myLook,dog:myDog,uid:myId,nick:myNick||null};
+  const patch={space:worldSpace,x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,u:myUmbrella,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow()),look:myLook,dog:myDog,uid:myId,nick:myNick||null};
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
-function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.g.parent?.remove(e.D.g);peers.delete(k)}
+function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);e.P.halo?.dispose();disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.g.parent?.remove(e.D.g);peers.delete(k)}
 function onPeerList(change){
   const seen=new Set();
   for(const pr of change.peers){
@@ -2885,6 +2889,7 @@ function onPeerList(change){
     }
     const nextSpace=s.space==='listening'?'listening':'garden';if(e.space!==undefined&&e.space!==nextSpace){e.P.g.position.set(s.x,0,s.z);e.D.g.position.set(s.x+.8,0,s.z)}e.space=nextSpace;
     e.x=Math.max(-WORLD_R,Math.min(WORLD_R,s.x));e.z=Math.max(-WORLD_R,Math.min(WORLD_R,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
+    e.P.haloUntil=validBowHaloUntil(s.haloUntil,serverNow());
     e.nick=typeof s.nick==='string'?stripInvisible(s.nick).slice(0,12):'';e.away=!!s.away;e.umbrella=s.u===true;
     if(s.say&&typeof s.say.text==='string'&&Number.isFinite(s.say.at))rememberLastMessage(pr.peer,e.nick||e.nm||'친구',s.say.text,s.say.at);
     restoreLastBubble(pr.peer,e.nick||e.nm||'친구');
@@ -2927,7 +2932,7 @@ if(document.fonts)document.fonts.ready.then(()=>{refreshMine();resolveNames()});
 
 function applyMyLook(look,dog,save){
   const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
-  disposeUmbrella(me);me.g.parent?.remove(me.g);myDogObj.g.parent?.remove(myDogObj.g);
+  disposeUmbrella(me);me.halo?.dispose();me.g.parent?.remove(me.g);myDogObj.g.parent?.remove(myDogObj.g);
   myLook=look;myDog=dog;me=makePerson(myLook);myDogObj=makeDog(myDog);
   me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);syncListeningActors();refreshMine();restoreLastBubble('me',shownName());
   store.set('mem.look',JSON.stringify(myLook));savePetPreference(myDog);store.set('garden.pet',petKind(myDog));
@@ -3289,7 +3294,10 @@ $('goBtn').onclick=()=>goToFriend(false);
 $('rerollBtn').onclick=()=>{closeOtherMenus('pet');openNameDialog(false);$('nameForm').querySelector('input[name="entryPet"]:checked')?.focus({preventScroll:true})};
 
 /* ---------- prayer practice, local progress ---------- */
-const practice={mode:'idle',paused:false,elapsed:0,count:Math.max(0,Math.min(108,parseInt(store.get('garden.bows')||'0',10)||0))};
+const BOW_HALO_MS=24*60*60*1000;
+function validBowHaloUntil(value,now){return Number.isFinite(value)&&value>now&&value<=now+BOW_HALO_MS?value:0}
+function completeBowHalo(){practice.haloUntil=serverNow()+BOW_HALO_MS;me.haloUntil=practice.haloUntil;store.set('garden.bowHaloUntil',String(practice.haloUntil));sendDirty=true;saveVisit()}
+const practice={mode:'idle',paused:false,elapsed:0,haloUntil:validBowHaloUntil(Number(store.get('garden.bowHaloUntil')),Date.now()),count:Math.max(0,Math.min(108,parseInt(store.get('garden.bows')||'0',10)||0))};
 function bowFrame(p){
   const frames=[[0,0,0,0,0],[.18,0,-.52,0,-1.5],[.42,1.45,-.45,0,-1.5],[.58,1.45,-.45,0,-1.5],[.78,0,-.52,0,-1.5],[1,0,0,0,0]];
   for(let i=1;i<frames.length;i++)if(p<=frames[i][0]){const a=frames[i-1],b=frames[i],u=Math.max(0,(p-a[0])/(b[0]-a[0])),k=u*u*(3-2*u);return{lean:a[1]+(b[1]-a[1])*k,drop:a[2]+(b[2]-a[2])*k,reach:a[3]+(b[3]-a[3])*k,knee:a[4]+(b[4]-a[4])*k}}
@@ -3326,10 +3334,11 @@ $('resetBtn').onclick=()=>{
   if(Date.now()-resetArmed>3000){resetArmed=Date.now();$('resetBtn').textContent='한 번 더 누르면 초기화';setTimeout(()=>{if(Date.now()-resetArmed>=3000)$('resetBtn').textContent='횟수 초기화'},3100);return}
   resetArmed=0;$('resetBtn').textContent='횟수 초기화';endPractice(false);practice.count=0;store.set('garden.bows','0');practiceUI();toast('횟수를 0으로 되돌렸어요')};
 function updatePractice(dt){
+  me.haloUntil=validBowHaloUntil(practice.haloUntil,serverNow());
   if(!['auto','single'].includes(practice.mode)||practice.paused)return;
   practice.elapsed+=dt;
   if(practice.elapsed>=8){practice.elapsed-=8;practice.count=Math.min(108,practice.count+1);store.set('garden.bows',String(practice.count));
-    if(practice.count>=108||practice.mode==='single'){const complete=practice.count===108;endPractice(false);if(complete)toast('108배를 마쳤습니다. 평안한 하루 보내세요')}practiceUI();
+    if(practice.count>=108||practice.mode==='single'){const complete=practice.count===108;endPractice(false);if(complete){completeBowHalo();toast('108배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요')}}practiceUI();
   }
   me.bowPhase=practice.elapsed/8;
 }
@@ -4577,7 +4586,7 @@ function saveVisit(){
   const p=me.g.position,message=lastMessages.get('me');
   const snapshot={v:1,space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
     x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
-    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count},
+    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,haloUntil:practice.haloUntil},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
   let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
   lastVisitSave=performance.now();return stored;
@@ -4610,6 +4619,7 @@ function restoreVisit(){
   if(['beer','soda','soju','makgeolli'].includes(saved.lastDrink))me.lastDrink=saved.lastDrink;
   if(typeof saved.chatDraft==='string')$('chatInput').value=saved.chatDraft.slice(0,200);
   const pr=saved.practice||{};
+  practice.haloUntil=validBowHaloUntil(Math.max(practice.haloUntil,Number(pr.haloUntil)||0),serverNow());
   if(Number.isInteger(pr.count))practice.count=Math.min(108,Math.max(practice.count,pr.count));
   practice.mode=['pray','single','auto'].includes(pr.mode)?pr.mode:'idle';
   if(practice.count>=108&&practice.mode!=='pray')practice.mode='idle';
@@ -4745,7 +4755,7 @@ function connectRoomServer(base,code){
     send(o){if(!stop&&ws&&ws.readyState===1){try{ws.send(JSON.stringify(o));return true}catch(e){}}return false},
     onPeers(fn){peerL.push(fn)},onConnection(fn){connL.push(fn);fn(connected)},
     presence(patch){Object.assign(local,patch);
-      const st={space:local.space==='listening'?'listening':'garden',x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp,u:local.u===true},k=JSON.stringify(st);
+      const st={space:local.space==='listening'?'listening':'garden',x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp,u:local.u===true,haloUntil:validBowHaloUntil(local.haloUntil,serverNow())},k=JSON.stringify(st);
       if(k!==sentState&&Number.isFinite(st.x)&&connected&&api.send({t:'state',s:st}))sentState=k;
       if(connected&&('look' in patch||'dog' in patch||'nick' in patch))api.profile();
       return Promise.resolve()},
@@ -4796,7 +4806,7 @@ function connectRoomServer(base,code){
     let socket;try{socket=new WebSocket(base+'/room/'+code);ws=socket}catch(e){disconnected('친구 연결을 다시 시도하는 중…');return}
     handshakeTimer=setTimeout(()=>{if(ws===socket&&!connected)disconnected('친구 연결이 지연되고 있어요 · 다시 시도하는 중…')},12000);
     socket.onopen=()=>{if(stop||visitEnded||!hasEntered||ws!==socket)return;const p=me.g.position;lastReceived=Date.now();
-      api.send({t:'hello',resumeToken:visitToken,away:document.hidden,name:myNick,look:myLook,dog:myDog,s:{space:worldSpace,x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0,u:myUmbrella}});
+      api.send({t:'hello',resumeToken:visitToken,away:document.hidden,name:myNick,look:myLook,dog:myDog,s:{space:worldSpace,x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0,u:myUmbrella,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow())}});
       clearInterval(pingTimer);pingTimer=setInterval(()=>{
         if(Date.now()-lastReceived>60000){disconnected('연결이 끊어졌어요 · 다시 연결하는 중…');return}
         api.send({t:'ping',c:Date.now()});
