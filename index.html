@@ -1,4 +1,7 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><style>
+#candleDialog{box-sizing:border-box;width:min(440px,calc(100vw - 28px));max-height:82dvh;border:1px solid #b8a47f;border-radius:19px;padding:20px;background:#f7f1e5;color:#493f32;overflow-y:auto;overscroll-behavior:contain}#candleDialog::backdrop{background:#162018a8}#candleDialog h2{font:700 23px var(--display);margin:0}#candleDialog .candle-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}#candleClose{min-height:40px;min-width:48px}#candleForm{display:grid;gap:9px;margin-top:16px}#candleForm label{font-size:14px}#candleForm input,#candleForm textarea{box-sizing:border-box;width:100%;font:16px/1.5 var(--body);padding:11px;border:1px solid #c7b99c;border-radius:9px;background:#fffdf7;color:#493f32}#candleForm textarea{resize:vertical;min-height:86px}#candleSubmit,#candlePray{min-height:44px;padding:10px 15px;border-radius:10px;font-size:16px}#candleSubmit{background:#a3743a;color:#fffaf0}#candlePray{width:100%;margin-top:10px}#candleStatus{font-size:14px;line-height:1.5;min-height:1.5em;white-space:pre-line}#candleList{display:grid;gap:8px}#candleList details{padding:11px 12px;background:#fffaf0;border:1px solid #ddcaaa;border-radius:10px}#candleList summary{cursor:pointer;font-size:15px}#candleList summary span{display:block;font-size:12px;color:#8a755a;margin-top:4px}#candleList p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.6}#candleList small{color:#8a755a}#candleDialog .candle-note{font-size:12px;line-height:1.5;color:#817059}
+</style>
+</head><body>
 <title>기억의 정원</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#243e34">
@@ -741,12 +744,26 @@ document.addEventListener('error',event=>{
 </script>
 <script src="assets/campfire-rules.js?v=1"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+
+<dialog id="candleDialog" aria-labelledby="candleHeading">
+  <div class="candle-heading"><h2 id="candleHeading">소원을 밝히는 초함</h2><button id="candleClose" type="button">닫기</button></div>
+  <form id="candleForm">
+    <label for="candleName">기도할 사람의 이름</label><input id="candleName" maxlength="24" autocomplete="off" required placeholder="누구를 위해 기도하나요?">
+    <label for="candleWish">초에 붙일 소원</label><textarea id="candleWish" maxlength="160" rows="3" required placeholder="마음에 담은 소원을 적어 주세요"></textarea>
+    <p class="candle-note">이름과 소원은 초와 함께 모두에게 보여요. 불은 실제 시간으로 24시간 켜져요.</p>
+    <button id="candleSubmit" type="submit">초 켜기</button>
+  </form>
+  <p id="candleStatus" role="status" aria-live="polite"></p><button id="candlePray" type="button">초 앞에서 기도하기</button>
+  <h3 id="candleCount">켜진 초 0개</h3><div id="candleList"></div>
+</dialog>
 <script type="module" id="gardenSceneModule">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {createGardenRenderer,markBloom} from './assets/garden-renderer.js';
 import {lushTreeCrowns} from './assets/garden-foliage.js';
 import {createNatureSoundscape} from './assets/nature-soundscape.js';
+import {pavedDisk,makePrayerGarden} from './assets/prayer-garden.js';
+import {createCandleUI} from './assets/prayer-candles-ui.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -862,14 +879,15 @@ function box(w,h,d,color,x,y,z,parent){const m=new THREE.Mesh(BOX,typeof color==
 /* ---------- centrepiece: 'campfire' (night bonfire) or 'buddha' (temple garden) ---------- */
 // 불상 정원으로 되돌리려면 여기의 CENTERPIECE를 'buddha'로 바꾼다. 서버는 수행 위치를 강제하지 않는다.
 const CENTERPIECE='campfire';
-const Fire=globalThis.GardenCampfire;
+const Fire=globalThis.GardenCampfire,Prayer=globalThis.GardenPrayer;
+let candleUI=null;
 let sharedCampfire=null,fireAction=null,fireStatusKey='',fireWelcomeShown=false;
 let fireVisual={flame:0,heat:0};
 // 큰 파라솔 테이블 2개(의자 4개씩, 말풍선이 겹치지 않게 넓게). 나무·덤불·바위는 이 자리를 비운다.
 const TABLE_SPOTS=[0.95,4.4].map((a,i)=>({x:Math.round(Math.sin(a)*1420)/100,z:Math.round(Math.cos(a)*1420)/100,i}));
 const nearTable=(x,z,r)=>TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<r);
 // 주황 포장마차: 모닥불 뒤쪽 나무 아래. 앞(입구)은 모닥불을 향한다.
-const ALTAR_SPOTS=[{x:-5.5,z:-10.5},{x:5.5,z:-10.5}];
+const ALTAR_SPOTS=[Prayer.LAYOUT.buddha,Prayer.LAYOUT.mary];
 const nearAltar=(x,z,r)=>ALTAR_SPOTS.some(p=>Math.hypot(x-p.x,z-p.z)<r);
 const POCHA={x:-6.3,z:-23.4};POCHA.h=Math.atan2(-POCHA.x,-POCHA.z);
 const pochaLocal=(lx,lz)=>({x:POCHA.x+Math.cos(POCHA.h)*lx+Math.sin(POCHA.h)*lz,z:POCHA.z-Math.sin(POCHA.h)*lx+Math.cos(POCHA.h)*lz});
@@ -1052,7 +1070,7 @@ const nearWaterworks=(x,z,pad)=>lakeIn(x,z,pad)||Math.hypot(x-HUT.x,z-HUT.z)<8+p
 // 걸어 다니는 높이: 호수 데크, 농막 마루, 평상
 function groundY(x,z,space=worldSpace){
   if(space==='listening')return 0;
-  let y=0;const s=lakeS(x,z),q=lakeQ(x,z);
+  let y=Prayer.inside(x,z)?Prayer.LAYOUT.floor:0;const s=lakeS(x,z),q=lakeQ(x,z);
   if(Math.abs(q)<1.2&&s>LAKE.deckA&&s<LAKE.deckB)y=.32*Math.min(1,(s-LAKE.deckA)/1.3,(LAKE.deckB-s)/1.3);
   const l=hutToLocal(x,z);
   if(Math.abs(l.lx)<2.55&&l.lz>-.05&&l.lz<2.6)y=Math.max(y,.16);
@@ -1083,11 +1101,11 @@ function pavingTexture(){
       x.fillStyle=shades[Math.floor(rnd()*shades.length)];x.fill()}}
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;
 }
-const plaza=new THREE.Mesh(new THREE.CircleGeometry(11,96),new THREE.MeshLambertMaterial({map:pavingTexture()}));
-plaza.rotation.x=-Math.PI/2;plaza.position.y=.03;plaza.receiveShadow=true;scene.add(plaza);
+const plaza=new THREE.Mesh(pavedDisk(11),new THREE.MeshLambertMaterial({map:pavingTexture()}));
+plaza.position.y=.04;plaza.receiveShadow=true;scene.add(plaza);
 const curb=new THREE.Mesh(new THREE.RingGeometry(11,11.45,96),M(0x8f8676));curb.rotation.x=-Math.PI/2;curb.position.y=.05;curb.receiveShadow=true;scene.add(curb);
-const walk=new THREE.Mesh(new THREE.RingGeometry(17,19.2,128),M(0xcdbfa2));walk.rotation.x=-Math.PI/2;walk.position.y=.02;walk.receiveShadow=true;scene.add(walk);
-const entry=new THREE.Mesh(new THREE.PlaneGeometry(2.8,7),M(0xcdbfa2));entry.rotation.x=-Math.PI/2;entry.position.set(0,.021,14.3);entry.receiveShadow=true;scene.add(entry);
+const walk=new THREE.Mesh(new THREE.RingGeometry(17,19.2,128,4),M(0xcdbfa2));walk.rotation.x=-Math.PI/2;walk.position.y=.02;walk.receiveShadow=true;scene.add(walk);
+const entry=new THREE.Mesh(new THREE.PlaneGeometry(2.8,7,3,14),M(0xcdbfa2));entry.rotation.x=-Math.PI/2;entry.position.set(0,.021,14.3);entry.receiveShadow=true;scene.add(entry);
 
 /* ---------- distant mountains, conifer belt and clouds ---------- */
 {
@@ -1121,8 +1139,8 @@ const clouds=[];
 const MEADOWS=[{x:52,z:44,r:13},{x:-60,z:30,r:12},{x:-38,z:-62,r:11},{x:66,z:-40,r:10}];
 function meadowAt(x,z,pad){return MEADOWS.some(m=>Math.hypot(m.x-x,m.z-z)<m.r+pad)}
 {
-  const trail=new THREE.Mesh(new THREE.RingGeometry(OUTER_TRAIL-1.1,OUTER_TRAIL+1.1,160),M(0xd7c7a4));trail.rotation.x=-Math.PI/2;trail.position.y=.02;trail.receiveShadow=true;scene.add(trail);
-  for(const a of TRAIL_ANGLES){const sp=new THREE.Mesh(new THREE.PlaneGeometry(2.2,OUTER_TRAIL-19.6),M(0xd7c7a4));sp.rotation.x=-Math.PI/2;sp.rotation.z=-a;
+  const trail=new THREE.Mesh(new THREE.RingGeometry(OUTER_TRAIL-1.1,OUTER_TRAIL+1.1,360,4),M(0xd7c7a4));trail.rotation.x=-Math.PI/2;trail.position.y=.02;trail.receiveShadow=true;scene.add(trail);
+  for(const a of TRAIL_ANGLES){const sp=new THREE.Mesh(new THREE.PlaneGeometry(2.2,OUTER_TRAIL-19.6,3,Math.ceil((OUTER_TRAIL-19.6)*2)),M(0xd7c7a4));sp.rotation.x=-Math.PI/2;sp.rotation.z=-a;
     const mid=(OUTER_TRAIL+19.2)/2;sp.position.set(Math.sin(a)*mid,.021,Math.cos(a)*mid);sp.receiveShadow=true;scene.add(sp)}
 }
 // Distance to existing paved walks, including the three connecting paths.
@@ -1134,6 +1152,7 @@ function gardenWalkDistance(x,z){
   return d;
 }
 function grassClear(x,z){
+  if(Prayer.inside(x,z,1.2))return false;
   const r=Math.hypot(x,z);if(r<12||r>WORLD_R+6)return false;if(r>16.6&&r<19.6)return false;if(Math.abs(r-OUTER_TRAIL)<1.3)return false;
   if(gardenWalkDistance(x,z)<1.35)return false;if(nearWaterworks(x,z,.9))return false;
   if(nearTable(x,z,3)||nearPocha(x,z,4.4)||nearAltar(x,z,2))return false;if(MOON_GROVES.some(t=>Math.hypot(x-t.x,z-t.z)<2.6))return false;return true;
@@ -1248,7 +1267,7 @@ const waterworks={sheets:[],mist:null,foam:[],tex:null};
     instanced(new THREE.DodecahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),sst);
     const cross=new THREE.Group();const cp=atSQ(OUTER_TRAIL,streamQ(OUTER_TRAIL));cross.position.set(cp.x,0,cp.z);cross.rotation.y=Math.atan2(LAKE.ux,LAKE.uz);scene.add(cross);
     for(let k=-3;k<=3;k++)part(plank,wood,[k*.4,.08,0],[.32,.07,2.6],null,cross);
-    const path=new THREE.Mesh(new THREE.PlaneGeometry(2.2,FALLS.s-FALLS.poolR-OUTER_TRAIL-.4),M(0xd7c7a4));path.rotation.x=-Math.PI/2;path.rotation.z=-2.45;
+    const path=new THREE.Mesh(new THREE.PlaneGeometry(2.2,FALLS.s-FALLS.poolR-OUTER_TRAIL-.4,3,Math.ceil((FALLS.s-FALLS.poolR-OUTER_TRAIL-.4)*2)),M(0xd7c7a4));path.rotation.x=-Math.PI/2;path.rotation.z=-2.45;
     const mid=(OUTER_TRAIL+FALLS.s-FALLS.poolR)/2,pm=atSQ(mid,0);path.position.set(pm.x,.021,pm.z);path.receiveShadow=true;scene.add(path);}
   // ----- farm hut (농막) facing the lake -----
   const hut=new THREE.Group();hut.position.set(HUT.x,0,HUT.z);hut.rotation.y=HUT.h;scene.add(hut);
@@ -1752,6 +1771,7 @@ const arboretum={trees:[],species:new Map()};
     trunks.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:(a.z+b.z)/2,sx:r,sy:delta.length(),sz:r,rx:rotation.x,ry:rotation.y,rz:rotation.z,c:color(bark,.025)})};
   const crown=(x,y,z,rx,ry,rz,palette,items=leaves)=>items.push({x,y,z,sx:rx,sy:ry,sz:rz,ry:random()*Math.PI,rx:(random()-.5)*.18,rz:(random()-.5)*.12,c:color(choose(palette))});
   function plantable(x,z,radius){
+    if(Prayer.inside(x,z,radius+1.8))return false;
     const r=Math.hypot(x,z);if(r<13.2+radius*.2||r>WORLD_R-2)return false;
     if(gardenWalkDistance(x,z)<1.8+radius*.38||meadowAt(x,z,radius*.6))return false;
     if(z>6&&z<32&&Math.abs(x)<12+radius*.3)return false;
@@ -1813,7 +1833,7 @@ const arboretum={trees:[],species:new Map()};
     const lush=lushTreeCrowns({x,z,h,w,id,form,palette,scale},C);
     lush.tiers.forEach((items,tier)=>items.forEach(item=>{if(!lushTiers[tier].has(item.family))lushTiers[tier].set(item.family,[]);lushTiers[tier].get(item.family).push(item)}));
     for(const item of lush.understory){
-      if(gardenWalkDistance(item.x,item.z)<1.6||nearWaterworks(item.x,item.z,.7)||nearPocha(item.x,item.z,4.8))continue;
+      if(Prayer.inside(item.x,item.z,1)||gardenWalkDistance(item.x,item.z)<1.6||nearWaterworks(item.x,item.z,.7)||nearPocha(item.x,item.z,4.8))continue;
       (item.family==='fern'?understoryFerns:understoryShrubs).push(item);
     }
     const record={x,z,id,height:h,radius:w};arboretum.trees.push(record);arboretum.species.set(id,(arboretum.species.get(id)||0)+1);obstacles.push({x,z,r:Math.max(.3,trunkR+.16*scale)});
@@ -1875,7 +1895,7 @@ const arboretum={trees:[],species:new Map()};
   // Low flowering borders echo the nearby grove, leaving both loop walks and connecting paths clear.
   for(let i=0;i<210;i++){
     const a=random()*Math.PI*2,r=12.5+random()*73,x=Math.cos(a)*r,z=Math.sin(a)*r;
-    if(gardenWalkDistance(x,z)<1.8||nearWaterworks(x,z,1.5)||nearPocha(x,z,5)||nearTable(x,z,4.8)||nearAltar(x,z,3)||meadowAt(x,z,0)||(z>7&&z<31&&Math.abs(x)<10))continue;
+    if(Prayer.inside(x,z,2)||gardenWalkDistance(x,z)<1.8||nearWaterworks(x,z,1.5)||nearPocha(x,z,5)||nearTable(x,z,4.8)||nearAltar(x,z,3)||meadowAt(x,z,0)||(z>7&&z<31&&Math.abs(x)<10))continue;
     if(arboretum.trees.some(t=>Math.hypot(x-t.x,z-t.z)<1.2))continue;
     const s=.65+random()*.7,palette=random()<.2?[0xa1b2a4,0xb4c3b1]:[0x68845c,0x7a9669,0x92a778],family=speciesAt(x,z),bloom=choose(['maple','ginkgo'].includes(family)?[0xe9dfb7,0xe2c7c2]:['pine','spruce','birch'].includes(family)?[0xe4e4d7,0xd6c8e3]:[0xe5bed0,0xd6c8e3,0xf0d8df]);
     for(let k=0;k<3;k++)crown(x+(random()-.5)*s,.35*s,z+(random()-.5)*s,.65*s,.4*s,.55*s,palette,shrubs);
@@ -1885,7 +1905,7 @@ const arboretum={trees:[],species:new Map()};
   draw(new THREE.SphereGeometry(1,6,4),foliage,flowers,false,{size:40,kind:'flower',medium:roundLow,low:roundLow});
   for(let i=0;i<90;i++){
     const a=random()*Math.PI*2,r=12.5+random()*74,x=Math.cos(a)*r,z=Math.sin(a)*r;
-    if(gardenWalkDistance(x,z)<2||meadowAt(x,z,0)||nearWaterworks(x,z,1)||nearTable(x,z,4.8)||nearPocha(x,z,5)||nearAltar(x,z,3)||Math.abs(x)<9&&z>8&&z<30)continue;
+    if(Prayer.inside(x,z,2)||gardenWalkDistance(x,z)<2||meadowAt(x,z,0)||nearWaterworks(x,z,1)||nearTable(x,z,4.8)||nearPocha(x,z,5)||nearAltar(x,z,3)||Math.abs(x)<9&&z>8&&z<30)continue;
     if(arboretum.trees.some(t=>Math.hypot(x-t.x,z-t.z)<1.4))continue;
     const s=.5+random()*1.1;rocks.push({x,y:s*.35,z,sx:s*1.3,sy:s*.8,sz:s,ry:random()*Math.PI,c:color(choose([0x9b988b,0xaaa697,0x8e8b7f]))});if(s>.9)obstacles.push({x,z,r:s});
   }
@@ -1972,12 +1992,13 @@ memorial.visible=CENTERPIECE==='buddha';
 if(CENTERPIECE==='buddha')obstacles.push({x:0,z:0,r:5.75});
 
 
-/* ---------- two quiet altars behind the central bonfire ---------- */
+/* ---------- a separate east-side prayer square ---------- */
+const prayerView=makePrayerGarden({scene,stone:F,markBloom,obstacles});
 if(CENTERPIECE==='campfire'){
-  memorial.visible=true;memorial.position.set(ALTAR_SPOTS[0].x,0,ALTAR_SPOTS[0].z);memorial.scale.setScalar(.46);
+  memorial.visible=true;memorial.position.set(ALTAR_SPOTS[0].x,Prayer.LAYOUT.floor,ALTAR_SPOTS[0].z);memorial.scale.setScalar(.46);
   obstacles.push({x:ALTAR_SPOTS[0].x,z:ALTAR_SPOTS[0].z,r:2.7});
 }
-const maryStatue=new THREE.Group();maryStatue.position.set(ALTAR_SPOTS[1].x,0,ALTAR_SPOTS[1].z);scene.add(maryStatue);
+const maryStatue=new THREE.Group();maryStatue.position.set(ALTAR_SPOTS[1].x,Prayer.LAYOUT.floor,ALTAR_SPOTS[1].z);scene.add(maryStatue);
 {
   const ivory=F(0xf3eee3,{roughness:.8,emissive:C(0x38352e),emissiveIntensity:.3});
   const blue=F(0x719bc4,{roughness:.83,emissive:C(0x1c2a42),emissiveIntensity:.28}),face=F(0xeadfcd,{roughness:.85,emissive:C(0x353027),emissiveIntensity:.25});
@@ -2011,8 +2032,8 @@ const LG={base:new THREE.CylinderGeometry(.45,.56,.24,8),post:new THREE.Cylinder
   roof:new THREE.ConeGeometry(.72,.42,4),cap:new THREE.ConeGeometry(.24,.3,4),ball:new THREE.SphereGeometry(.09,6,4)};
 const glow=gardenPointLight('altar',0xffce88,1,20);glow.position.set(0,4,7);scene.add(glow);
 const lanterns=[];
-for(let k=0;k<8;k++){
-  const a=(k+.5)/8*Math.PI*2,x=Math.sin(a)*10.2,z=Math.cos(a)*10.2,g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=a;scene.add(g);
+for(let k=0;k<10;k++){
+  const a=(k+.5)/8*Math.PI*2,x=k<8?Math.sin(a)*10.2:Prayer.LAYOUT.x+(k===8?-8:8),z=k<8?Math.cos(a)*10.2:Prayer.LAYOUT.z+6.7,g=new THREE.Group();g.position.set(x,0,z);if(k>=8)g.scale.setScalar(.8);g.rotation.y=a;scene.add(g);
   part(LG.base,lanternStone,[0,.12,0],null,null,g);part(LG.post,lanternStone,[0,.74,0],null,null,g);part(LG.deck,lanternStone,[0,1.31,0],null,null,g);
   part(BOX,lanternGlow,[0,1.66,0],[.5,.48,.5],null,g);
   for(const sx of[-1,1])for(const sz of[-1,1])part(BOX,lanternStone,[sx*.27,1.66,sz*.27],[.1,.56,.1],null,g);
@@ -2039,7 +2060,7 @@ function prayerSpotAt(x,z){
     return Math.abs(lx)<=.76&&Math.abs(lz-.25)<=1.25;
   });
 }
-function prayerSurfaceAt(x,z){return CENTERPIECE==='buddha'&&prayerSpotAt(x,z)>=0?PRAYER_MAT_TOP:.035}
+function prayerSurfaceAt(x,z){if(Prayer.inside(x,z))return Prayer.LAYOUT.floor+.005;return CENTERPIECE==='buddha'&&prayerSpotAt(x,z)>=0?PRAYER_MAT_TOP:.035}
 /* ---------- log benches around the fire: 8 logs, 16 seats ---------- */
 const FIRE_SEATS=Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;return{x:Math.sin(a)*4.75,z:Math.cos(a)*4.75,a}});
 const CHAIR_SEATS=[];TABLE_SPOTS.forEach(t=>{for(let k=0;k<4;k++){const a=k*Math.PI/2+Math.PI/4;CHAIR_SEATS.push({x:t.x+Math.sin(a)*2,z:t.z+Math.cos(a)*2,table:t.i,h:a+Math.PI,k})}});
@@ -2960,6 +2981,7 @@ function surfaceAt(x,z,space=worldSpace){
   if(space==='listening')return 'wood';
   const dx=x-POCHA.x,dz=z-POCHA.z,lx=Math.cos(POCHA.h)*dx-Math.sin(POCHA.h)*dz,lz=Math.sin(POCHA.h)*dx+Math.cos(POCHA.h)*dz;
   if(groundY(x,z,space)>.1||Math.abs(lx)<3.15&&Math.abs(lz)<2.05)return 'wood';
+  if(Prayer.inside(x,z))return 'stone';
   if(streamDist(x,z)<.9)return 'water';
   const r=Math.hypot(x,z),s=lakeS(x,z),q=lakeQ(x,z);
   if(Math.abs(r-OUTER_TRAIL)<1.3||Math.hypot(x-LAKE.beach.x,z-LAKE.beach.z)<4.6||Math.abs(q)<1.15&&s>OUTER_TRAIL&&s<FALLS.s-FALLS.poolR)return 'gravel';
@@ -3197,6 +3219,7 @@ function silenceMusicOnExit(){
 /* ---------- folding menus: closed by default so the garden stays visible on phones ---------- */
 /* All expandable controls share one open menu. */
 function closeOtherMenus(keep){
+  if(keep!=='candles')candleUI?.close();
   if(keep!=='listening'&&$('listeningAudio').open)$('listeningAudio').close();
   if(keep!=='board'&&gardenBoard.isOpen())gardenBoard.close();
   if(keep!=='poses')closePoseMenu();
@@ -3275,6 +3298,7 @@ function practiceUI(){
 function endPractice(notify=true){practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
 function preparePracticeInPlace(){
   cancelFireCare();
+  if(worldSpace==='garden'&&Prayer.inside(me.g.position.x,me.g.position.z)){const p=ALTAR_SPOTS.reduce((a,b)=>Math.hypot(a.x-me.g.position.x,a.z-me.g.position.z)<Math.hypot(b.x-me.g.position.x,b.z-me.g.position.z)?a:b);me.g.rotation.y=Math.atan2(p.x-me.g.position.x,p.z-me.g.position.z)}
   // Stop walking and pending fire actions without moving the person, dog or camera.
   target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
   Object.keys(keys).forEach(key=>delete keys[key]);
@@ -4135,6 +4159,7 @@ function updateContext(dt){
   $('pFuel').title=nearWood?'장작을 집어 모닥불에 넣어요':'모닥불 오른쪽 장작 더미로 가까이 가 주세요';
   if(fireAction){b.textContent='장작 옮기기 멈추기';b.dataset.act='fireCancel';b.hidden=false;return}
   if(worldSpace==='listening'){b.hidden=true;return}
+  if(hasEntered&&Prayer.nearBox(x,z)){b.textContent='초 켜기';b.dataset.act='candles';b.hidden=false;return}
   if(hasEntered&&nearListeningDoor(x,z)){b.textContent='음악방 들어가기';b.dataset.act='listening';b.hidden=false;return}
   if(inPocha()){b.textContent='포차 나오기';b.dataset.act='leave';b.hidden=false;return}
   if(seatedNow()){b.textContent='일어나기';b.dataset.act='up';b.hidden=false;return}
@@ -4150,7 +4175,7 @@ function updateContext(dt){
 }
 $('ctxBtn').onclick=()=>{
   closePoseMenu();
-  const act=$('ctxBtn').dataset.act;if(act==='firewood'){startFireCare();return}if(act==='fireCancel'){cancelFireCare(true);return}if(act==='listening'){enterListening();return}if(act==='board'){gardenBoard.open();return}
+  const act=$('ctxBtn').dataset.act;if(act==='candles'){candleUI?.open();return}if(act==='firewood'){startFireCare();return}if(act==='fireCancel'){cancelFireCare(true);return}if(act==='listening'){enterListening();return}if(act==='board'){gardenBoard.open();return}
   if(act==='firefly'||act==='nap'||act==='meditate'){if(act==='firefly')catchFirefly();else startCalm(act);ctxTick=1;updateContext(0);return}if(act==='enter'){enterPocha();ctxTick=1;updateContext(0);return}if(act==='leave'){leavePocha();ctxTick=1;updateContext(0);return}
   if(act==='up'){const sp=me.g.position,h=me.g.rotation.y;pose='stand';const [x,z]=collide(sp.x-Math.sin(h)*.8,sp.z-Math.cos(h)*.8,.4);me.g.position.x=x;me.g.position.z=z;sendDirty=true;syncPoseButtons()}
   else setPose('sit');
@@ -4610,7 +4635,7 @@ function showExitScreen(){
 }
 function leaveGarden(closeWindow=true,notifyServer=true){
   if(worldSpace==='listening')exitListening(true);
-  gardenBoard.close(true);if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
+  candleUI?.endVisit();gardenBoard.close(true);if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
   clearVisit();visitToken='';fireWelcomeShown=false;
   const old=room;room=null;
@@ -4664,6 +4689,7 @@ $('leaveConfirm').addEventListener('keydown',event=>{if(event.key==='Escape')can
 addEventListener('popstate',event=>{
   if(visitEnded||readExitFlag())return;
   const view=event.state&&event.state.gardenView;
+  if(candleUI?.isOpen()){candleUI.close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
   if($('qualityDialog').open){$('qualityDialog').close();if(worldSpace==='listening')history.pushState({gardenView:'listening'},'',location.href);else if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if($('listeningAudio').open){$('listeningAudio').close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
   if(view==='listening'){enterListening(true);return}
@@ -4725,13 +4751,14 @@ function connectRoomServer(base,code){
   function emit(){if(emitQueued||stop)return;emitQueued=true;requestAnimationFrame(()=>{emitQueued=false;if(stop)return;
     const list=[...peersById.values()].map(p=>({peer:p.id,quiet:!!p.quiet,sameTab:false,kind:'viewer',by:null,guest:false,presence:Object.assign({},p.s||{},{look:p.look,dog:p.dog,nick:p.name,say:p.lastChat||null,away:!!p.away})}));
     peerL.forEach(fn=>fn({peers:list}))})}
-  function setConn(c,message){connected=c;if(!c)cancelFireCare();gardenBoard.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
+  function setConn(c,message){connected=c;if(!c)cancelFireCare();gardenBoard.connection(c);candleUI?.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
   function applyShared(sh){
     if(!sh)return;
     if(sh.campfire){
       sharedCampfire=sh.campfire;renderCampfireStatus();
       if(!fireWelcomeShown){fireWelcomeShown=true;if(sharedCampfire.last)toast($('campfireLastCare').textContent);else if(!Fire.frame(sharedCampfire,serverNow()).left)toast('모닥불이 꺼져 있어요. 장작을 넣으면 다시 살릴 수 있어요')}
     }
+    if(sh.candles)candleUI?.apply(sh.candles);
     if(sh.fireplay)applyFirePlay(sh.fireplay);
     if(Array.isArray(sh.flowers)){sharedFlowers=sh.flowers.filter(Number.isInteger).slice(-300);renderFlowers(sharedFlowers)}
     if(sh.music){const ok=TRACKS.some(x=>x.id===sh.music.track);applyMusic({track:ok?sh.music.track:null,startedAt:Number.isFinite(sh.music.startedAt)?sh.music.startedAt:0})}
@@ -4767,8 +4794,9 @@ function connectRoomServer(base,code){
     socket.onmessage=ev=>{if(stop||visitEnded||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;
-          api.selfId=you;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
+          api.selfId=you;api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
+        case 'candles_state':case 'candle_lit':case 'candle_error':candleUI?.receive(m);break;
         case 'listening_audio':applyListeningState(m.audio);break;
         case 'listening_error':toast(m.code==='space'?'음악방 안에서 오디오를 조작해 주세요.':m.code==='storage'?'저장을 확인하지 못했어요. 다시 눌러 주세요.':'잠시 후 다시 눌러 주세요.');break;
         case 'rps_state':applyRps(m.game);break;
@@ -4959,6 +4987,15 @@ markBloom(nightSky.mat,1.1);markBloom(meteorMaterial,1.2);markBloom(meteorHeadsM
 markBloom(lightningMaterial,1.5);markBloom(fireworkMaterial,2.5);markBloom(rocketMaterial,2);
 waterworks.sheets.forEach(material=>markBloom(material,1.3));
 
+/* ---------- shared 24-hour prayer candles ---------- */
+candleUI=createCandleUI({document,storage:store,pendingStorage:{get(k){try{return sessionStorage.getItem(k)}catch{return null}},set(k,v){try{sessionStorage.setItem(k,v);return true}catch{return false}}},now:serverNow,
+  near:()=>hasEntered&&!visitEnded&&worldSpace==='garden'&&Prayer.nearBox(me.g.position.x,me.g.position.z),
+  ready:()=>!!room?.connected()&&room.candleVersion===1,selfName:()=>shownName(),
+  send:m=>{if(!room?.connected()||room.candleVersion!==1)return false;sendPresence();return room.send(m)},
+  pause:()=>{closeOtherMenus('candles');target=null;marker.visible=false;pendingShake=null;cancelFireCare();move={x:0,y:0};me.speed=0;knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k])},
+  onState:s=>prayerView.apply(s)});
+$('candlePray').onclick=()=>{candleUI.close();startStandingPrayer()};
+let candleRefreshSecond=-1;
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);gardenPost.setSize(w,h,quality.level);camera.aspect=w/h;camera.fov=cam.sky?cam.skyFov:w/h<.8?72:55;camera.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
@@ -4990,7 +5027,7 @@ function tick(){
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
-  if(cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('listeningAudio').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
+  if(cam.sky||candleUI?.isOpen()||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('listeningAudio').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
   if(mag>0&&pose!=='stand'&&pose!=='woodcarry'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
@@ -5032,6 +5069,7 @@ function tick(){
   }
 
   updateNatureListener();
+  const candleNow=serverNow();prayerView.update(candleNow,t);if(Math.floor(candleNow/1000)!==candleRefreshSecond){candleRefreshSecond=Math.floor(candleNow/1000);if(candleUI.isOpen())candleUI.refresh()}
   sendAcc+=dt;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
   if(marker.visible)marker.material.opacity=.5+Math.sin(t*5)*.3;
   if(!reduce){const a=pg.attributes.position.array;

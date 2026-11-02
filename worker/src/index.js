@@ -3,7 +3,9 @@
 // 꽃·날씨·최근 대화는 방 저장소에 남겨 늦게 온 사람도 같은 상태를 본다.
 import { DurableObject } from 'cloudflare:workers';
 import '../../assets/campfire-rules.js';
+import '../../assets/prayer-rules.js';
 const Fire=globalThis.GardenCampfire;
+const Prayer=globalThis.GardenPrayer;
 
 // 걸을 수 있는 반경(m). index.html의 WORLD_R와 같게 둔다.
 const WORLD_R = 90;
@@ -102,8 +104,9 @@ export class GardenRoom extends DurableObject {
       this.visits=(await ctx.storage.get('visits'))||{};
       this.campfire=await ctx.storage.get('campfire');
       if(!this.campfire){this.campfire=Fire.initial(Date.now());await ctx.storage.put('campfire',this.campfire)}
+      this.candles=(await ctx.storage.get('prayerCandles'))||{rev:0,items:[]};
       // Preserve a pending alarm when waking from hibernation.
-      if ((this.rps.length||Object.keys(this.visits).length) && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
+      if ((this.rps.length||Object.keys(this.visits).length||this.candles.items.length) && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
     });
   }
 
@@ -210,6 +213,48 @@ export class GardenRoom extends DurableObject {
     }catch(e){error('storage')}
   }
 
+  async advanceCandles(now=Date.now()){
+    if(!(this.candles?.items||[]).some(c=>c.expiresAt<=now))return;
+    const next=await this.ctx.storage.transaction(async txn=>{
+      const prev=(await txn.get('prayerCandles'))||{rev:0,items:[]},live=Prayer.active(prev,now);
+      if(live.length===prev.items.length)return prev;
+      const value={rev:prev.rev+1,items:live};await txn.put('prayerCandles',value);return value;
+    });
+    if(next.rev>this.candles.rev){this.candles=next;this.broadcast({t:'candles_state',state:Prayer.publicState(next,now)})}
+  }
+  async handleCandles(ws,a,m){
+    const fail=code=>ws.send(JSON.stringify({t:'candle_error',code,nonce:Prayer.nonce(m.nonce)?m.nonce:null}));
+    if(!this.allow(a,'candles',4)){fail('slow');return}
+    const now=Date.now();
+    try{
+      if(m.t==='candles_sync'){
+        await this.advanceCandles(now);ws.send(JSON.stringify({t:'candles_state',state:Prayer.publicState(this.candles,now)}));await this.armRpsAlarm();return;
+      }
+      if(m.t!=='candle_light')return;
+      if(!Prayer.nonce(m.nonce)){fail('invalid');return}
+      const name=Prayer.clean(m.name,25).replace(/\s+/g,' '),wish=Prayer.clean(m.wish,161);
+      if(!name||name.length>24||!wish||wish.length>160){fail('invalid');return}
+      const result=await this.ctx.storage.transaction(async txn=>{
+        const prev=(await txn.get('prayerCandles'))||{rev:0,items:[]},existing=prev.items.find(c=>c.by===a.id&&c.nonce===m.nonce);
+        if(existing)return existing.expiresAt>now?{state:prev,candle:existing,added:false}:{code:'expired'};
+        // A very late retry must not light a second 24-hour candle after expiry.
+        if(!Number.isFinite(m.issuedAt)||now-m.issuedAt>300000||m.issuedAt>now+60000)return{code:'stale'};
+        if(spaceOf(a.s)!=='garden'||a.away||!a.s||!Prayer.nearBox(a.s.x,a.s.z))return{code:'far'};
+        const live=Prayer.active(prev,now);if(live.length>=Prayer.MAX)return{code:'full'};
+        const occupied=new Set(live.map(c=>c.slot));let slot=0;while(occupied.has(slot))slot++;
+        const candle={id:crypto.randomUUID().replace(/-/g,''),slot,name,wish,by:a.id,nonce:m.nonce,litBy:a.name,createdAt:now,expiresAt:now+Prayer.LIFE_MS};
+        const state={rev:prev.rev+1,items:live.concat(candle)};await txn.put('prayerCandles',state);return{state,candle,added:true};
+      });
+      if(result.code){fail(result.code);return}
+      if(result.state.rev>=this.candles.rev)this.candles=result.state;
+      // Commit before acknowledging or showing any flame, including transaction retries.
+      const state=Prayer.publicState(result.state,now),candle=state.items.find(c=>c.id===result.candle.id);
+      ws.send(JSON.stringify({t:'candle_lit',nonce:m.nonce,candle,state}));
+      if(result.added)this.broadcast({t:'candles_state',state},ws);
+      await this.armRpsAlarm();
+    }catch(e){fail('storage')}
+  }
+
   // Notes live under their own keys, independent of transient chat/shared state.
   async handleBoard(ws,a,m){
     const request=typeof m.request==='string'?m.request.slice(0,64):'';
@@ -304,6 +349,7 @@ export class GardenRoom extends DurableObject {
   }
   async armRpsAlarm() {
     const deadlines=this.rps.map(g=>g.expiresAt);
+    for(const candle of this.candles?.items||[])deadlines.push(candle.expiresAt);
     for(const visit of Object.values(this.visits)){if(visit.awayUntil)deadlines.push(visit.awayUntil);deadlines.push(visit.expiresAt)}
     const next=deadlines.length?Math.min(...deadlines):null;
     if (next !== null) await this.ctx.storage.setAlarm(Math.max(Date.now() + 1, next));
@@ -337,7 +383,7 @@ export class GardenRoom extends DurableObject {
     for (const game of changed) this.sendRps(game);
   }
   async alarm() {
-    await this.advanceRps();await this.advanceVisits();
+    await this.advanceCandles();await this.advanceRps();await this.advanceVisits();
     await this.armRpsAlarm();
   }
   async cancelRpsFor(id, reason) {
@@ -453,11 +499,12 @@ export class GardenRoom extends DurableObject {
       for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
       if(ghosts.length)await this.saveVisits();
       const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1,campfire:1},listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire)}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1,campfire:1,candles:1},listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }
     if (!a.ready) return;
+    if(['candle_light','candles_sync'].includes(m.t))return this.handleCandles(ws,a,m);
     if(['fire_begin','fire_add','fire_cancel'].includes(m.t))return this.handleFire(ws,a,m);
     if (['board_list','board_read','board_post','board_confirm'].includes(m.t)) return this.handleBoard(ws,a,m);
     if (['rps_invite', 'rps_reply', 'rps_cancel', 'rps_choose', 'rps_sync'].includes(m.t)) return this.handleRps(ws, a, m);

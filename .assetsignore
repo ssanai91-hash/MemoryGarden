@@ -18,3 +18,6 @@
 !sounds/manifest.json
 !sounds/*.ogg
 !sounds/*.mp3
+!assets/prayer-rules.js
+!assets/prayer-garden.js
+!assets/prayer-candles-ui.js

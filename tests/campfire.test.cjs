@@ -1,9 +1,9 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 let now=1793620000000;
 const c={crypto,TextEncoder,URL,Headers,Response,Request,Uint32Array,Date:class extends Date{static now(){return now}}};vm.createContext(c);
-vm.runInContext(fs.readFileSync(__dirname+'/../assets/campfire-rules.js','utf8'),c);
+vm.runInContext(fs.readFileSync(__dirname+'/../assets/campfire-rules.js','utf8'),c);vm.runInContext(fs.readFileSync(__dirname+'/../assets/prayer-rules.js','utf8'),c);
 const Fire=c.GardenCampfire;
-let source=fs.readFileSync(__dirname+'/../worker/src/index.js','utf8').replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject{constructor(ctx){this.ctx=ctx}}').replace("import '../../assets/campfire-rules.js';",'').replace('export class GardenRoom','class GardenRoom').replace('export default {','const handler={');
+let source=fs.readFileSync(__dirname+'/../worker/src/index.js','utf8').replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject{constructor(ctx){this.ctx=ctx}}').replace("import '../../assets/campfire-rules.js';",'').replace("import '../../assets/prayer-rules.js';",'').replace('export class GardenRoom','class GardenRoom').replace('export default {','const handler={');
 vm.runInContext(source+'\nthis.Room=GardenRoom;',c);
 function context(){
  const values=new Map(),sockets=[];let tail=Promise.resolve();const ctx={values,sockets,fail:false,getWebSockets:()=>sockets,blockConcurrencyWhile(fn){this.ready=fn()}};

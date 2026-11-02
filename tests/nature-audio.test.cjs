@@ -56,7 +56,7 @@ test('foot contacts, stationary poses, peer radius/teleports, pause recovery and
 test('geometry surface precedence follows actual deck, courtyard, ring, gravel, stream and grass',()=>{
  const html=fs.readFileSync(__dirname+'/../index.html','utf8');
  const start=html.indexOf('const LAKE=(()=>'),end=html.indexOf('/* ---------- ground:',start),paving=html.slice(html.indexOf('function gardenWalkDistance('),html.indexOf('function grassClear('));
- const scope={Math,worldSpace:'garden',POCHA:{x:-6.3,z:-23.4,h:0},OUTER_TRAIL:57,TRAIL_ANGLES:[.3,2.45,4.5],nearAltar:()=>false};vm.createContext(scope);
+ const scope={Math,worldSpace:'garden',POCHA:{x:-6.3,z:-23.4,h:0},OUTER_TRAIL:57,TRAIL_ANGLES:[.3,2.45,4.5],nearAltar:()=>false};vm.createContext(scope);vm.runInContext(fs.readFileSync(__dirname+'/../assets/prayer-rules.js','utf8')+'this.Prayer=GardenPrayer;',scope);
  vm.runInContext(html.slice(start,end)+paving+html.slice(html.indexOf('function surfaceAt('),html.indexOf('const natureForward='))+'this.geo={surfaceAt,atSQ,LAKE,HUT,STREAM,hutLocal};',scope);
  const g=scope.geo;assert.equal(g.surfaceAt(0,0),'stone');assert.equal(g.surfaceAt(18.1,0),'stone');assert.equal(g.surfaceAt(-57,0),'gravel');assert.equal(g.surfaceAt(-28,12),'grass');
  const deck=g.atSQ(g.LAKE.c,0);assert.equal(g.surfaceAt(deck.x,deck.z),'wood');const hut=g.hutLocal(0,1);assert.equal(g.surfaceAt(hut.x,hut.z),'wood');assert.equal(g.surfaceAt(g.STREAM[3].x,g.STREAM[3].z),'water');
