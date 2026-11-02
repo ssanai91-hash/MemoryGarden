@@ -4,7 +4,7 @@ const c={crypto,Uint8Array,console};vm.createContext(c);vm.runInContext(fs.readF
 vm.runInContext(`
 const Fire=GardenCampfire;let fireAction=null,hasEntered=true,visitEnded=false,worldSpace='garden',pose='stand',target=null,sharedCampfire=Fire.initial(Date.now()),fireStatusKey='';
 let pendingStoke=false,pendingShake=null,fuelTimer=0,move={},userMoved=false,autoJoined=false,sendDirty=false;
-const messages=[],toasts=[],elements={},knob={style:{}},keys={},marker={visible:false},me={g:{position:{x:5.5,z:0},rotation:{y:0}}},bonfire={stoke:0};
+const messages=[],toasts=[],elements={},knob={style:{}},keys={},marker={visible:false},me={g:{position:{x:5.5,z:0},rotation:{y:0}}},bonfire={stoke:0},natureAudio={engine:null};
 const $=id=>elements[id]||(elements[id]={open:false,textContent:''});
 const room={fireVersion:1,online:true,connected(){return this.online},send(m){messages.push(m)}};
 const cam={sky:false},gardenBoard={isOpen:()=>false},calm={mode:null};let rpsGame=null;

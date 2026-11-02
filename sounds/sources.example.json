@@ -1,0 +1,21 @@
+{
+  "sources": [
+    {
+      "id": "fire_loop",
+      "path": "/absolute/path/to/downloaded-campfire.wav",
+      "url": "https://freesound.org/people/AUTHOR/sounds/ID/",
+      "author": "원본 작성자명을 입력",
+      "license": "CC0-1.0",
+      "start": 0,
+      "end": 20.75
+    },
+    {
+      "id": "step_wood",
+      "path": "/absolute/path/to/wood-walking.wav",
+      "url": "https://pixabay.com/sound-effects/EXACT-SOURCE-PAGE/",
+      "author": "원본 작성자명을 입력",
+      "license": "Pixabay Content License",
+      "segments": [[0.2, 0.6], [1.0, 1.4], [1.8, 2.2], [2.6, 3.0]]
+    }
+  ]
+}

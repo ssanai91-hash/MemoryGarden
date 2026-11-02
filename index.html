@@ -746,6 +746,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {createGardenRenderer,markBloom} from './assets/garden-renderer.js';
 import {lushTreeCrowns} from './assets/garden-foliage.js';
+import {createNatureSoundscape} from './assets/nature-soundscape.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -810,10 +811,10 @@ function gardenPointLight(kind,color,strength,range){
   const light=new THREE.PointLight(color,strength*gain,range,2);light.name='garden-'+kind;light.userData.gardenLightGain=gain;return light;
 }
 function setGardenLight(light,strength){light.intensity=strength*(light.userData.gardenLightGain||Math.PI)}
-const windU={value:0};
+const windU={value:0},windStrengthU={value:1};
 function swayMaterial(mat,amp,rooted){
-  mat.onBeforeCompile=sh=>{sh.uniforms.uWind=windU;
-    sh.vertexShader='uniform float uWind;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+  mat.onBeforeCompile=sh=>{sh.uniforms.uWind=windU;sh.uniforms.uWindStrength=windStrengthU;
+    sh.vertexShader='uniform float uWind;uniform float uWindStrength;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
       #ifdef USE_INSTANCING
       vec3 ip=vec3(instanceMatrix[3]);
       #else
@@ -821,8 +822,8 @@ function swayMaterial(mat,amp,rooted){
       #endif
       float sw=sin(uWind*1.6+ip.x*.31+ip.z*.23)*.6+sin(uWind*2.7+ip.z*.47-ip.x*.2)*.4;
       float hgt=${rooted?'max(position.y,0.)':'(position.y+1.)*.5'};
-      transformed.x+=sw*hgt*${amp.toFixed(3)};transformed.z+=sw*hgt*${(amp*.55).toFixed(3)};`)};
-  mat.customProgramCacheKey=()=> 'garden-sway-r170-'+amp+'-'+(rooted?1:0);
+      transformed.x+=sw*hgt*${amp.toFixed(3)}*uWindStrength;transformed.z+=sw*hgt*${(amp*.55).toFixed(3)}*uWindStrength;`)};
+  mat.customProgramCacheKey=()=> 'garden-sway-r170-gust-'+amp+'-'+(rooted?1:0);
   return mat;
 }
 let renderer;
@@ -1156,10 +1157,10 @@ function grassClear(x,z){
   const stemGeo=new THREE.CylinderGeometry(.008,.008,1,3);stemGeo.translate(0,.5,0);
   sceneryInstanced(stemGeo,swayMaterial(new THREE.MeshLambertMaterial({color:0xffffff}),.12,true),stems,false,{kind:'flower'});
   const headGeo=moonFlowerGeometry(8);
-  const headMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,emissive:C(0x251222),emissiveIntensity:.18});headMat.onBeforeCompile=sh=>{sh.uniforms.uWind=windU;
-    sh.vertexShader='uniform float uWind;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+  const headMat=new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide,emissive:C(0x251222),emissiveIntensity:.18});headMat.onBeforeCompile=sh=>{sh.uniforms.uWind=windU;sh.uniforms.uWindStrength=windStrengthU;
+    sh.vertexShader='uniform float uWind;uniform float uWindStrength;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
       vec3 ip=vec3(instanceMatrix[3]);float sw=sin(uWind*1.6+ip.x*.31+ip.z*.23)*.6+sin(uWind*2.7+ip.z*.47-ip.x*.2)*.4;
-      transformed.x+=sw*ip.y*.12/max(.05,length(instanceMatrix[0].xyz));transformed.z+=sw*ip.y*.066/max(.05,length(instanceMatrix[2].xyz));`)};
+      transformed.x+=sw*ip.y*.12*uWindStrength/max(.05,length(instanceMatrix[0].xyz));transformed.z+=sw*ip.y*.066*uWindStrength/max(.05,length(instanceMatrix[2].xyz));`)};
   sceneryInstanced(headGeo,headMat,heads,false,{kind:'flower',medium:moonFlowerGeometry(6),low:moonFlowerGeometry(5)});
 }
 /* ---------- soft light halos for lanterns and bulbs ---------- */
@@ -2738,7 +2739,7 @@ function receiveFireMessage(m){
   const changed=!sharedCampfire||m.fire.rev>sharedCampfire.rev;
   if(changed)sharedCampfire=m.fire;
   if(fireAction?.token===m.token)cancelFireCare();
-  if(changed&&m.event){bonfire.stoke=1;toast(`${stripInvisible(m.event.name).slice(0,12)||'친구'}님이 ${m.event.kind==='relit'?'불을 다시 살렸어요':'장작을 넣었어요'}`)}
+  if(changed&&m.event){bonfire.stoke=1;natureAudio.engine?.fireAdded(m.event.kind);toast(`${stripInvisible(m.event.name).slice(0,12)||'친구'}님이 ${m.event.kind==='relit'?'불을 다시 살렸어요':'장작을 넣었어요'}`)}
   renderCampfireStatus();
 }
 function renderCampfireStatus(){
@@ -2905,11 +2906,12 @@ function applyMyLook(look,dog,save){
 }
 
 /* ---------- natural soundscape: rain, roof drops, water and birds; no automatic music ---------- */
-const natureAudio={ac:null,master:null,on:false,want:store.get('garden.natureSound')!=='0',timer:0};
+const natureAudio={ac:null,master:null,on:false,want:store.get('garden.natureSound')!=='0',timer:0,engine:null};
 const amb={ac:null,g:{},nodes:new Set(),birdAt:0,dripAt:0,effectsAt:0,label:''};
 function initNatureAudio(){
   if(natureAudio.ac)return true;const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
-  const ac=new Ctx(),master=ac.createGain(),comp=ac.createDynamicsCompressor();master.gain.value=0;
+  let ac;try{ac=new Ctx({sampleRate:44100})}catch{try{ac=new Ctx()}catch{return false}}
+  const master=ac.createGain(),comp=ac.createDynamicsCompressor();master.gain.value=0;
   comp.threshold.value=-18;comp.knee.value=18;comp.ratio.value=3;comp.attack.value=.02;comp.release.value=.4;
   master.connect(comp);comp.connect(ac.destination);natureAudio.ac=ac;natureAudio.master=master;return true;
 }
@@ -2920,10 +2922,15 @@ function ambInit(){
     const buf=ac.createBuffer(1,Math.floor(ac.sampleRate*seconds),ac.sampleRate),d=buf.getChannelData(0);let v=0;
     for(let i=0;i<d.length;i++){v=smooth*v+(1-smooth)*(Math.random()*2-1);d[i]=v*scale}buffers[name]=buf;
   }amb.noise=buffers.white;
-  const out=ac.createGain();out.gain.value=1;out.connect(natureAudio.master);amb.out=out;
+  const reservedBytes=Object.values(buffers).reduce((n,b)=>n+b.length*b.numberOfChannels*4,0);
+  const soundscape=natureAudio.engine=createNatureSoundscape(ac,{output:natureAudio.master,noise:amb.noise,reservedBytes});soundscape.start();
+  const out=soundscape.outside;amb.out=out;amb.panners={};
+  const waterPoint={falls:{x:FALLS.x,y:3,z:FALLS.z},fallsHiss:{x:FALLS.x,y:3,z:FALLS.z},stream:{x:STREAM[0].x,y:.1,z:STREAM[0].z},lake:{x:LAKE.x,y:.1,z:LAKE.z}};
   const layer=(name,colour,chain)=>{const src=ac.createBufferSource();src.buffer=buffers[colour];src.loop=true;src.playbackRate.value=.94+Math.random()*.12;let node=src;
     for(const f of chain){const q=ac.createBiquadFilter();q.type=f[0];q.frequency.value=f[1];q.Q.value=f[2]||.7;node.connect(q);node=q;if(f[3])amb[name+'F']=q}
-    const g=ac.createGain();g.gain.value=0;node.connect(g);g.connect(out);src.start(ac.currentTime,Math.random()*src.buffer.duration);amb.g[name]=g};
+    const g=ac.createGain();g.gain.value=0;node.connect(g);if(waterPoint[name]){const pan=soundscape.panner(waterPoint[name]);g.connect(pan);amb.panners[name]=pan}
+    else g.connect(name.startsWith('roof')?soundscape.roof:out);
+    src.start(ac.currentTime,Math.random()*src.buffer.duration);amb.g[name]=g};
   layer('falls','soft',[['lowpass',1300],['highpass',90]]);layer('fallsHiss','white',[['bandpass',3400,.6]]);
   layer('stream','soft',[['bandpass',1000,1.8,1],['highpass',300]]);layer('lake','deep',[['lowpass',380],['highpass',60]]);
   layer('rainFine','white',[['highpass',2300],['lowpass',7500]]);
@@ -2933,13 +2940,10 @@ function ambInit(){
   layer('roof','soft',[['bandpass',850,.8]]);layer('roofHiss','white',[['bandpass',3100,.65]]);
   const lfo=ac.createOscillator(),lg=ac.createGain();lfo.frequency.value=3.3;lg.gain.value=420;lfo.connect(lg);lg.connect(amb.streamF.frequency);lfo.start();
   const wl=ac.createOscillator(),wg=ac.createGain(),lakeMod=ac.createGain();wl.frequency.value=.18;wg.gain.value=.22;wl.connect(wg);lakeMod.gain.value=.7;wg.connect(lakeMod.gain);
-  amb.g.lake.disconnect();amb.g.lake.connect(lakeMod);lakeMod.connect(out);wl.start();
+  amb.g.lake.disconnect();amb.g.lake.connect(lakeMod);lakeMod.connect(amb.panners.lake);wl.start();
 }
 function ambTransient(source,chain,t,duration){
-  if(amb.nodes.size>=64)return false;
-  let node=source;for(const next of chain){node.connect(next);node=next}node.connect(amb.out);amb.nodes.add(source);
-  source.onended=()=>{amb.nodes.delete(source);for(const n of [source,...chain])try{n.disconnect()}catch(e){}};
-  if(source.buffer)source.start(t,Math.random()*Math.max(0,source.buffer.duration-duration));else source.start(t);source.stop(t+duration);return true;
+  return natureAudio.engine?.legacy(source,chain,t,duration)||false;
 }
 function ambClick(t,f,q,lv,dec,pan=0){
   const ac=amb.ac,n=ac.createBufferSource(),bp=ac.createBiquadFilter(),g=ac.createGain();n.buffer=amb.noise;bp.type='bandpass';bp.frequency.value=f;bp.Q.value=q;
@@ -2951,30 +2955,61 @@ function ambPlink(t,f,lv,pan=0){
   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(lv,t+.003);g.gain.exponentialRampToValueAtTime(.0001,t+.12);
   const chain=[g];if(ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.value=pan;chain.push(p)}ambTransient(o,chain,t,.15);
 }
-function ambBird(t,lv){
-  const ac=amb.ac,base=2600+Math.random()*1800,count=2+Math.floor(Math.random()*3),side=Math.random()*1.6-.8;
-  for(let i=0;i<count;i++){
-    const st=t+i*.14,dur=.08+Math.random()*.06,o=ac.createOscillator(),g=ac.createGain(),f=base*(1+(i%2)*.18);
-    o.frequency.setValueAtTime(f,st);o.frequency.exponentialRampToValueAtTime(f*(i%2?.75:1.3),st+dur);
-    g.gain.setValueAtTime(.0001,st);g.gain.exponentialRampToValueAtTime(lv,st+.01);g.gain.exponentialRampToValueAtTime(.0001,st+dur);
-    const chain=[g];if(ac.createStereoPanner){const p=ac.createStereoPanner();p.pan.value=side;chain.push(p)}ambTransient(o,chain,st,dur+.02);
+// Geometry follows the visible paving. Height/wood takes precedence over water.
+function surfaceAt(x,z,space=worldSpace){
+  if(space==='listening')return 'wood';
+  const dx=x-POCHA.x,dz=z-POCHA.z,lx=Math.cos(POCHA.h)*dx-Math.sin(POCHA.h)*dz,lz=Math.sin(POCHA.h)*dx+Math.cos(POCHA.h)*dz;
+  if(groundY(x,z,space)>.1||Math.abs(lx)<3.15&&Math.abs(lz)<2.05)return 'wood';
+  if(streamDist(x,z)<.9)return 'water';
+  const r=Math.hypot(x,z),s=lakeS(x,z),q=lakeQ(x,z);
+  if(Math.abs(r-OUTER_TRAIL)<1.3||Math.hypot(x-LAKE.beach.x,z-LAKE.beach.z)<4.6||Math.abs(q)<1.15&&s>OUTER_TRAIL&&s<FALLS.s-FALLS.poolR)return 'gravel';
+  if(r<11.5||Math.abs(r-18.1)<1.15||gardenWalkDistance(x,z)<1.1||nearAltar(x,z,2))return 'stone';
+  return 'grass';
+}
+const natureForward=new THREE.Vector3(),natureUp=new THREE.Vector3(),naturePosition=new THREE.Vector3();
+function updateNatureListener(){
+  const e=natureAudio.engine;if(!e||!natureAudio.on||!hasEntered||document.hidden)return;
+  camera.getWorldDirection(natureForward);natureUp.set(0,1,0).applyQuaternion(camera.quaternion);naturePosition.copy(camera.position);
+  if(worldSpace==='listening'){
+    // The room scene uses its own origin; map its listener back to the hut exterior.
+    const p=hutLocal(camera.position.x*.3,camera.position.z*.3);naturePosition.x=p.x;naturePosition.z=p.z;
+    natureForward.applyAxisAngle(THREE.Object3D.DEFAULT_UP,HUT.h);natureUp.applyAxisAngle(THREE.Object3D.DEFAULT_UP,HUT.h);
   }
+  e.listener(naturePosition,natureForward,natureUp);
+  const step=(P,p,self,away=false,teleport=false)=>{
+    const pos=P.g.position,space=P.g.userData.space||'garden',point=space==='listening'?hutLocal(pos.x*.3,pos.z*.3):pos;
+    return e.step(P,{x:point.x,y:pos.y,z:point.z,walkT:P.walkT,speed:P.speed,pose:p,self,space,away,surface:surfaceAt(pos.x,pos.z,space),teleport});
+  };
+  step(me,pose,true);for(const peer of peers.values())step(peer.P,peer.pose,false,peer.away,peer.P.g.userData.audioTeleported);
+  for(const peer of peers.values())peer.P.g.userData.audioTeleported=false;
 }
 function ambUpdate(){
-  if(worldSpace!=='garden'||!natureAudio.ac||!natureAudio.on||document.hidden||visitEnded||!hasEntered)return;
-  ambInit();const ac=amb.ac;if(ac.state!=='running')return;const now=ac.currentTime,x=me.g.position.x,z=me.g.position.z,time=serverNow()/1000;
+  if(!natureAudio.ac||!natureAudio.on||document.hidden||visitEnded||!hasEntered)return;
+  ambInit();const ac=amb.ac;if(ac.state!=='running')return;
+  const origin=worldSpace==='listening'?(listening.returnPoint||HUT):me.g.position;
+  const now=ac.currentTime,x=origin.x,z=origin.z,time=serverNow()/1000,indoors=worldSpace==='listening';
   const set=(k,v)=>amb.g[k].gain.setTargetAtTime(v,now,.9),near=(d,R)=>Math.max(0,1-d/R)**2;
   const dF=Math.hypot(x-FALLS.x,z-FALLS.z),dS=streamDist(x,z),dL=Math.max(0,Math.hypot(x-LAKE.x,z-LAKE.z)-lakeR(Math.atan2(z-LAKE.z,x-LAKE.x)));
-  const shelter=underHutRoof(x,z);let rain=0;try{rain=Math.max(0,Math.min(1,weatherFrame(serverNow()).rain||0))}catch(e){}
+  const shelter=!indoors&&underHutRoof(x,z);let rain=0;try{rain=Math.max(0,Math.min(1,weatherFrame(serverNow()).rain||0))}catch(e){}
   if(calm.mode==='nap')rain=Math.max(rain,.55);
-  const heavy=Math.max(0,(rain-.32)/.68),swell=.86+.08*Math.sin(time*.37)+.06*Math.sin(time*.13+1.7),outside=shelter?.32:1;
-  set('falls',.55*near(dF,60));set('fallsHiss',.18*near(dF,30));set('stream',.22*near(dS,16));set('lake',.16*near(dL,12));
+  const heavy=Math.max(0,(rain-.32)/.68),swell=.86+.08*Math.sin(time*.37)+.06*Math.sin(time*.13+1.7),outside=indoors?.15:shelter?.32:1;
+  const muffled=indoors?.15:1;
+  set('falls',.55*near(dF,60)*muffled);set('fallsHiss',.18*near(dF,30)*muffled);set('stream',.22*near(dS,16)*muffled);set('lake',.16*near(dL,12)*muffled);
+  const streamPoint=STREAM.reduce((a,b)=>Math.hypot(a.x-x,a.z-z)<Math.hypot(b.x-x,b.z-z)?a:b);
+  natureAudio.engine.position(amb.panners.stream,{x:streamPoint.x,y:.1,z:streamPoint.z});
+  const angle=Math.atan2(z-LAKE.z,x-LAKE.x),rim=lakeR(angle);
+  natureAudio.engine.position(amb.panners.lake,{x:LAKE.x+Math.cos(angle)*rim,y:.1,z:LAKE.z+Math.sin(angle)*rim});
+  const nearTrees=arboretum.trees.filter(t=>Math.hypot(t.x-x,t.z-z)<42);
+  const trees=nearTrees.filter(t=>Math.hypot(t.x-x,t.z-z)<15).length;
+  const grove=ARBORETUM_GROVES.reduce((a,b)=>Math.hypot(a.x-x,a.z-z)<Math.hypot(b.x-x,b.z-z)?a:b);
+  natureAudio.engine.update({origin:{x,z},space:worldSpace,hour:gardenHour(),rain,shelter,wind:weatherFrame(serverNow()).wind,trees,nearTrees,
+    stone:surfaceAt(x,z)==='stone',falls:dF,lake:dL,lakePosition:{x:LAKE.x,y:.1,z:LAKE.z},forestAngle:Math.atan2(grove.z-z,grove.x-x),fire:Fire.frame(sharedCampfire,serverNow())});
   set('rainFine',rain*(.11-.045*heavy)*outside*swell);set('rainBody',rain*(.08+.22*heavy)*outside*swell);
-  set('rainLeaves',rain*(.07+.035*Math.sin(time*.23)**2)*(shelter?.18:1));set('rainGust',rain*heavy*.12*outside*swell);
+  set('rainLeaves',rain*(.07+.035*Math.sin(time*.23)**2)*(indoors?.15:shelter?.18:1));set('rainGust',rain*heavy*.12*outside*swell);
   set('roof',shelter?rain*(.16+.17*heavy)*swell:0);set('roofHiss',shelter?rain*.085:0);
   amb.rainBodyF.frequency.setTargetAtTime(1900+rain*1900+250*Math.sin(time*.19),now,1.8);
   const emit=now>=amb.effectsAt;if(emit)amb.effectsAt=now+.32;
-  if(rain>.015&&emit){
+  if(rain>.015&&emit&&!indoors){
     // Leaf patter, soft puddle splashes and irregular roof ticks, never a fixed rhythm.
     const count=Math.min(7,Math.ceil(rain*(shelter?7:5)));
     for(let k=0;k<count;k++){
@@ -2984,9 +3019,8 @@ function ambUpdate(){
     }
     if(shelter&&now>amb.dripAt){amb.dripAt=now+.45+Math.random()*1.5;ambPlink(now+.08,650+Math.random()*1000,.014+rain*.012,Math.random()*1.4-.7)}
   }
-  const dH=Math.hypot(x-HUT.x,z-HUT.z),birdy=Math.max(near(dH,34),near(dF,40),near(dL,22)*.8);
-  if(birdy>.02&&rain<.4&&now>amb.birdAt){amb.birdAt=now+2+Math.random()*5;ambBird(now+.1,(.012+.025*birdy)*(1-rain))}
-  const label=rain>.7?'소나기 · 굵은 빗줄기와 물웅덩이':rain>.32?'촉촉한 비 · 나뭇잎과 빗방울':rain>.015?'잔잔한 비 · 부드러운 빗소리':'바람 쉬는 정원 · 물소리와 새소리';
+  const night=gardenHour()<6.5||gardenHour()>=19.5;
+  const label=indoors?'음악방 · 창밖의 잔잔한 자연 소리':rain>.7?'소나기 · 굵은 빗줄기와 물웅덩이':rain>.32?'촉촉한 비 · 나뭇잎과 빗방울':rain>.015?'잔잔한 비 · 부드러운 빗소리':night?'밤의 정원 · 풀벌레와 물소리':'낮의 정원 · 바람과 새소리';
   const text=label+(shelter&&rain>.015?' · 처마와 지붕에 떨어지는 비':'');if(text!==amb.label){amb.label=text;renderNatureUI()}
 }
 function renderNatureUI(){
@@ -2995,32 +3029,34 @@ function renderNatureUI(){
   if(worldSpace==='garden'){$('soundToggle').setAttribute('aria-pressed',String(on));$('soundToggle').setAttribute('aria-label',on?'자연의 소리 끄기':'자연의 소리 켜기');$('soundToggle').title=on?'자연의 소리 끄기':'자연의 소리 켜기';$('soundToggle').textContent='☂'}
 }
 function syncNatureOutput(){
-  if(!natureAudio.ac)return;const audible=worldSpace==='garden'&&natureAudio.on&&!visitEnded&&hasEntered&&!document.hidden;
+  if(!natureAudio.ac)return;const audible=natureAudio.on&&!visitEnded&&hasEntered&&!document.hidden;
+  natureAudio.engine?.setActive(audible);
   natureAudio.master.gain.setTargetAtTime(audible?vol*.9:0,natureAudio.ac.currentTime,.35);if(audible)ambUpdate();
 }
 function setNatureSound(on){
   if(on&&(visitEnded||!hasEntered||document.hidden))return;
   if(on&&!initNatureAudio()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
   natureAudio.on=on;natureAudio.want=on;store.set('garden.natureSound',on?'1':'0');clearInterval(natureAudio.timer);natureAudio.timer=0;
-  if(natureAudio.ac){if(on){natureAudio.ac.resume().then(()=>{syncNatureOutput()}).catch(()=>{});natureAudio.timer=setInterval(ambUpdate,400)}syncNatureOutput()}
+  if(natureAudio.ac){if(on){ambInit();natureAudio.engine.setActive(true);natureAudio.ac.resume().then(()=>{syncNatureOutput()}).catch(()=>{});natureAudio.timer=setInterval(ambUpdate,400)}syncNatureOutput()}
   renderNatureUI();
 }
 function natureFirstGesture(e){
   if(e&&e.target&&e.target.closest&&e.target.closest('#soundToggle, #natureSoundBtn'))return;
   if(visitEnded||!hasEntered)return;
-  if(worldSpace==='listening'){if(!listening.muted){ensureListeningAudio();syncListeningSound()}return}
+  if(worldSpace==='listening'){if(natureAudio.want&&!natureAudio.on)setNatureSound(true);if(!listening.muted){ensureListeningAudio();syncListeningSound()}return}
   if(natureAudio.want){if(!natureAudio.on)setNatureSound(true);else if(natureAudio.ac&&natureAudio.ac.state==='suspended')natureAudio.ac.resume().then(syncNatureOutput).catch(()=>{})}
 }
 function silenceNatureAudio(){
   clearInterval(natureAudio.timer);natureAudio.timer=0;natureAudio.on=false;for(const n of amb.nodes)try{n.stop()}catch(e){}amb.nodes.clear();
-  const old=natureAudio.ac;natureAudio.ac=null;natureAudio.master=null;amb.ac=null;amb.g={};amb.noise=null;amb.out=null;amb.streamF=null;amb.rainBodyF=null;amb.label='';if(old)old.close().catch(()=>{});renderNatureUI();
+  natureAudio.engine?.close();natureAudio.engine=null;
+  const old=natureAudio.ac;natureAudio.ac=null;natureAudio.master=null;amb.ac=null;amb.g={};amb.noise=null;amb.out=null;amb.panners=null;amb.streamF=null;amb.rainBodyF=null;amb.label='';if(old)old.close().catch(()=>{});renderNatureUI();
 }
 $('natureSoundBtn').onclick=()=>setNatureSound(!natureAudio.on);
 $('soundToggle').onclick=e=>{e.stopPropagation();if(worldSpace==='listening'){$('listeningMute').click();return}setNatureSound(!natureAudio.on)};
 addEventListener('pointerdown',natureFirstGesture,true);addEventListener('keydown',natureFirstGesture,true);
 document.addEventListener('visibilitychange',()=>{
   if(!natureAudio.ac)return;
-  if(document.hidden){natureAudio.master.gain.setValueAtTime(0,natureAudio.ac.currentTime);natureAudio.ac.suspend().catch(()=>{});for(const n of amb.nodes)try{n.stop()}catch(e){}}
+  if(document.hidden){natureAudio.engine?.setActive(false);natureAudio.master.gain.setValueAtTime(0,natureAudio.ac.currentTime);natureAudio.ac.suspend().catch(()=>{});for(const n of amb.nodes)try{n.stop()}catch(e){}}
   else if(natureAudio.on&&!visitEnded&&hasEntered)natureAudio.ac.resume().then(syncNatureOutput).catch(()=>{});
 });
 
@@ -3754,7 +3790,7 @@ function quietThunder(close=false){
 function playThunder(event){
   const ctx=thunderAudio.context;
   if(!thunderAudio.enabled||!ctx||ctx.state!=='running'||worldSpace!=='garden'||document.hidden||visitEnded||!hasEntered||Date.now()<thunderAudio.suppressUntil||thunderAudio.lastEvent===event.id)return;
-  thunderAudio.lastEvent=event.id;
+  thunderAudio.lastEvent=event.id;natureAudio.engine?.duck();
   const random=environmentRandom(event.id^0x59a77e13),kind=event.thunderKind,at=ctx.currentTime,duration=kind===0?3.8+random()*1.4:kind===1?5.3+random()*1.5:7+random()*1.7;
   const pan=ctx.createStereoPanner?ctx.createStereoPanner():ctx.createGain();if(pan.pan){pan.pan.setValueAtTime(Math.sin(event.az)*.65,at);pan.pan.linearRampToValueAtTime(Math.sin(event.az+.5)*.5,at+duration)}pan.connect(thunderAudio.master);
   let live=0;
@@ -4972,7 +5008,7 @@ function tick(){
 
   for(const e of peers.values()){
     const P=e.P,px=P.g.position.x,pz=P.g.position.z,k=Math.min(1,dt*6);
-    if(Math.hypot(e.x-px,e.z-pz)>4){P.g.position.x=e.x;P.g.position.z=e.z}
+    if(Math.hypot(e.x-px,e.z-pz)>4){P.g.userData.audioTeleported=true;P.g.position.x=e.x;P.g.position.z=e.z}
     else{P.g.position.x+=(e.x-px)*k;P.g.position.z+=(e.z-pz)*k}
     P.g.rotation.y=angLerp(P.g.rotation.y,e.h,k);
     const sp=Math.hypot(P.g.position.x-px,P.g.position.z-pz)/Math.max(dt,1e-4);
@@ -4995,12 +5031,13 @@ function tick(){
     camera.lookAt(ax,(pose==='lie'||pose==='prone')?.6:practice.mode!=='idle'?3.4:inPocha()?1.5:2.5,az);
   }
 
+  updateNatureListener();
   sendAcc+=dt;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
   if(marker.visible)marker.material.opacity=.5+Math.sin(t*5)*.3;
   if(!reduce){const a=pg.attributes.position.array;
     for(let i=0;i<PN;i++){a[i*3+1]-=dt*.25;a[i*3]+=Math.sin(t+i)*dt*.2;if(a[i*3+1]<0)a[i*3+1]=8}
     pg.attributes.position.needsUpdate=true}
-  layoutBubbles(dt);windU.value=t;updateMoonSanctuary();updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);
+  layoutBubbles(dt);windU.value=t;const windTarget=natureAudio.on&&natureAudio.engine?natureAudio.engine.windStrength:1+Math.min(1,Math.abs(weatherFrame(serverNow()).wind))*.8;windStrengthU.value+=(windTarget-windStrengthU.value)*Math.min(1,dt*2);updateMoonSanctuary();updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);
   if(!gardenBoard.isOpen()){
     renderer.info.reset();if(worldSpace==='listening')updateListening(dt,t);else updateScenery();
     const phase=gardenEnvironment.frame(serverNow());

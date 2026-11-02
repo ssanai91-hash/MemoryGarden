@@ -12,3 +12,9 @@
 !assets/garden-foliage.js
 !assets/campfire-rules.js
 !assets/garden-renderer.js
+
+!assets/nature-soundscape.js
+!sounds/
+!sounds/manifest.json
+!sounds/*.ogg
+!sounds/*.mp3
