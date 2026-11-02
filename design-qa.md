@@ -32,3 +32,10 @@ Node tests verify server-authoritative 24 real hours, capacity20, idempotent/con
 - Cloud browser cannot create a WebGL context, so the production garden's GPU/bloom appearance, physical phone frame rate and app switching still need the user's normal Cloudflare/device check. This limitation does not affect the captured HTML cabinet viewer.
 - The compact entry and enlarged reading views extend the selected source; they use its wood, paper and candle assets.
 - Long wishes are intentionally previewed on the small candle and fully readable by tapping it. No unresolved P0/P1/P2 findings within the captured cabinet flow. P3: compare final bloom strength in the production night scene on the phone.
+
+## Touch rail follow-up
+
+- Replaced page-by-page DOM replacement with four persistent horizontal panels (6/6/6/2). Native touch panning and scroll snap keep candles under the finger; the cabinet frame and background remain fixed.
+- Cloud browser mouse dragging traversed panels 1→2→3→4, without opening the wish overlay. Tapping a candle on panel 4 still opened its complete wish. Settled scroll position and panel bounds were checked in the DOM.
+- Node regression covers drag following/settling, post-drag click suppression, ordinary taps, native scroll counter updates, unchanged panel identity during refresh, last-panel boundary, arrow keys, close/reopen position, and touch cancellation. Existing 14 tests pass.
+- Physical Android/iOS touch feel remains a device check. No live garden records were written.

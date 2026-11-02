@@ -758,8 +758,9 @@ document.addEventListener('error',event=>{
  <div class="candle-stage">
   <h2 class="candle-sr">소원을 밝히는 초함</h2>
   <button id="candleVaultClose" class="candle-hotspot" type="button"><span class="candle-sr">닫기</span></button>
-  <nav class="candle-paging" aria-label="초함 페이지"><button id="candlePrev" type="button" aria-label="이전 초">‹ 이전</button><span id="candlePage" aria-live="polite"></span><button id="candleNext" type="button" aria-label="다음 초">다음 ›</button></nav>
-  <div id="candleSlots"></div>
+  <nav class="candle-paging" aria-label="초함 페이지"><button id="candlePrev" type="button" aria-label="이전 초함">‹</button><span id="candlePage" aria-live="polite"></span><button id="candleNext" type="button" aria-label="다음 초함">›</button></nav>
+  <span class="candle-swipe-hint" aria-hidden="true">‹ 옆으로 밀어 둘러보기 ›</span>
+  <div id="candleSlots" tabindex="0" role="region" aria-label="소원초 20자리 · 좌우로 밀거나 방향키로 둘러보기"></div>
   <section id="candleFocus" hidden aria-label="초의 소원 자세히 보기"><button id="candleFocusClose" type="button">돌아가기</button><span id="candleFocusArt"></span><button id="candleFocusPray" type="button">이 초 앞에서 기도하기</button><span id="candleFocusTime"></span></section>
   <button id="candleVaultNew" class="candle-hotspot" type="button"><span class="candle-sr">초 켜기</span></button>
  </div>

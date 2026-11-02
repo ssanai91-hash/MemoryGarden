@@ -3,6 +3,7 @@ const P=globalThis.GardenPrayer;
 export function createCandleUI({document,storage,pendingStorage=storage,now,near,send,ready,selfName,pause,onState,onLit=()=>{},onPray=()=>{}}){
  const $=id=>document.getElementById(id),dialog=$('candleDialog'),vault=$('candleVault'),form=$('candleForm'),name=$('candleName'),wish=$('candleWish'),submit=$('candleSubmit'),status=$('candleStatus');
  let state={rev:-1,items:[]},pending=null,busy=false,timer=0,page=0,focused=null,returnFocus=null;
+ const slots=$('candleSlots');let drag=null,suppressClickUntil=0;
  const backing=k=>k==='garden.candle.pending'?pendingStorage:storage;
  const read=k=>{try{return JSON.parse(backing(k).get(k)||'null')}catch{return null}},save=(k,v)=>backing(k).set(k,JSON.stringify(v));
  const cached=read('garden.candle.pending');if(cached&&P.nonce(cached.nonce)&&typeof cached.name==='string'&&typeof cached.wish==='string'&&Number.isFinite(cached.issuedAt))pending=cached;
@@ -11,20 +12,54 @@ export function createCandleUI({document,storage,pendingStorage=storage,now,near
  function remaining(expires){const mins=Math.max(1,Math.ceil((expires-now())/60000)),h=Math.floor(mins/60),m=mins%60;return h?`${h}시간${m?' '+m+'분':''}`:`${m}분`}
  function art(c,large=false){const body=document.createElement('span');body.className=large?'focus-candle':'candle-body-art';const wax=document.createElement('img'),flame=document.createElement('img'),copy=document.createElement('span'),n=document.createElement('strong'),w=document.createElement('span');wax.className='candle-wax';wax.src='./assets/candle-body.webp';wax.alt='';flame.className='candle-flame';flame.src='./assets/candle-flame.webp';flame.alt='';flame.style.animationDelay=`-${(c.displaySlot||0)*.37}s`;copy.className='candle-copy';n.textContent=c.name;w.className='wax-wish';w.textContent=c.wish;copy.append(n,w);body.append(wax,flame,copy);return body}
  function focusCandle(c){focused=c.id;$('candleFocusArt').replaceChildren(art(c,true));$('candleFocusTime').textContent=remaining(c.expiresAt);$('candleFocus').hidden=false;$('candleFocusClose').focus()}
- function render(){
+ function updatePage(){
   const live=P.display(state,now());$('candlePage').textContent=`${page+1} / 4 · ${live.length} / 20개`;$('candlePrev').disabled=page===0;$('candleNext').disabled=page===3;
-  const slots=$('candleSlots');const key=page+':'+live.map(c=>c.id+':'+c.expiresAt).join(',');
-  if(slots.dataset.key!==key){slots.dataset.key=key;slots.replaceChildren();for(let j=0;j<Math.min(6,P.MAX-page*6);j++){const i=page*6+j,c=live[i],slot=document.createElement('button'),time=document.createElement('span');slot.type='button';slot.className=`candle-slot col-${j%2} row-${Math.floor(j/2)}${c?'':' is-empty'}`;time.className='candle-time';
-    if(c){slot.append(art(c));time.dataset.expires=c.expiresAt;time.textContent=remaining(c.expiresAt);slot.setAttribute('aria-label',`${c.name} · ${c.wish} · 자세히 보기`);slot.onclick=()=>focusCandle(c)}else{time.textContent=`빈자리 ${i+1}`;slot.setAttribute('aria-label',`${i+1}번 빈자리 · 초 켜기`);slot.onclick=openEntry}slot.append(time);slots.append(slot)}
+  for(let i=0;i<slots.children.length;i++){const panel=slots.children[i];panel.inert=i!==page;panel.setAttribute('aria-hidden',String(i!==page))}
+ }
+ function movePage(next,smooth=true){
+  page=Math.max(0,Math.min(3,next));updatePage();
+  const reduced=document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  slots.scrollTo({left:page*slots.clientWidth,behavior:smooth&&!reduced?'smooth':'instant'});
+ }
+ function render(){
+  const live=P.display(state,now()),key=live.map(c=>c.id+':'+c.expiresAt).join(',');
+  if(slots.dataset.key!==key){
+   slots.dataset.key=key;slots.replaceChildren();
+   for(let p=0;p<4;p++){
+    const panel=document.createElement('div');panel.className='candle-leaf';panel.setAttribute('role','group');panel.setAttribute('aria-label',`초함 ${p+1} / 4`);
+    for(let j=0;j<Math.min(6,P.MAX-p*6);j++){
+     const i=p*6+j,c=live[i],slot=document.createElement('button'),time=document.createElement('span');slot.type='button';slot.className=`candle-slot col-${j%2} row-${Math.floor(j/2)}${c?'':' is-empty'}`;time.className='candle-time';
+     if(c){slot.append(art(c));time.dataset.expires=c.expiresAt;time.textContent=remaining(c.expiresAt);slot.setAttribute('aria-label',`${c.name} · ${c.wish} · 자세히 보기`);slot.onclick=()=>focusCandle(c)}else{time.textContent=`빈자리 ${i+1}`;slot.setAttribute('aria-label',`${i+1}번 빈자리 · 초 켜기`);slot.onclick=openEntry}slot.append(time);panel.append(slot);
+    }
+    slots.append(panel);
+   }
+   movePage(page,false);
   }
+  updatePage();
   for(const span of slots.querySelectorAll('[data-expires]'))span.textContent=remaining(Number(span.dataset.expires));
   if(focused){const c=live.find(c=>c.id===focused);if(c)$('candleFocusTime').textContent=remaining(c.expiresAt);else{focused=null;$('candleFocus').hidden=true}}
  }
+ // Touch uses the browser's native pan, momentum and scroll snap. Mouse/pen can drag the same rail.
+ slots.addEventListener('scroll',()=>{if(slots.clientWidth){page=Math.max(0,Math.min(3,Math.round(slots.scrollLeft/slots.clientWidth)));updatePage()}},{passive:true});
+ slots.addEventListener('pointerdown',e=>{if(!e.isPrimary||e.button!==0)return;drag={id:e.pointerId,type:e.pointerType,x:e.clientX,y:e.clientY,left:slots.scrollLeft,moved:false}});
+ slots.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(!drag.moved&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)){drag.moved=true;if(drag.type!=='touch'){slots.setPointerCapture(e.pointerId);slots.classList.add('is-dragging')}}
+  if(drag.moved&&drag.type!=='touch'){e.preventDefault();slots.scrollLeft=drag.left-dx}
+ });
+ function endDrag(e){if(!drag||e.pointerId!==drag.id)return;const d=drag;drag=null;slots.classList.remove('is-dragging');if(d.moved){suppressClickUntil=now()+500;if(d.type!=='touch'){const dx=e.clientX-d.x,step=Math.abs(dx)>Math.min(60,slots.clientWidth*.18)?Math.sign(-dx):0;movePage(Math.round(d.left/slots.clientWidth)+step)}}if(slots.hasPointerCapture?.(e.pointerId))slots.releasePointerCapture(e.pointerId)}
+ slots.addEventListener('pointerup',endDrag);
+ slots.addEventListener('pointercancel',e=>{if(drag?.id===e.pointerId){if(drag.moved||drag.type==='touch')suppressClickUntil=now()+500;drag=null;slots.classList.remove('is-dragging')}});
+ slots.addEventListener('pointerleave',e=>{if(drag&&!drag.moved&&e.pointerId===drag.id)drag=null});
+ slots.addEventListener('click',e=>{if(now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation()}},true);
+ slots.addEventListener('dragstart',e=>e.preventDefault());
+ slots.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();movePage(page+(e.key==='ArrowRight'?1:-1))}});
+ document.defaultView?.addEventListener('resize',()=>{if(!vault.hidden)movePage(page,false)});
  function apply(s){if(!s||!Number.isInteger(s.rev)||s.rev<state.rev||!Array.isArray(s.items))return;state={rev:s.rev,items:s.items.filter(c=>P.nonce(c.id)&&Number.isInteger(c.slot)&&c.slot>=0&&c.slot<128&&typeof c.name==='string'&&typeof c.wish==='string'&&Number.isFinite(c.expiresAt)).slice(0,128)};onState(state);render()}
  function clearPending(){pending=null;save('garden.candle.pending',null)}
  function close(){if(dialog.open)dialog.close();vault.hidden=true;document.body.classList.remove('candle-vault-open');focused=null;$('candleFocus').hidden=true;returnFocus?.focus?.()}
  function openEntry(){if(!near())return false;returnFocus=document.activeElement;pause();vault.hidden=true;document.body.classList.remove('candle-vault-open');const d=pending||read('garden.candle.draft')||{};name.value=typeof d.name==='string'?d.name:selfName();wish.value=typeof d.wish==='string'?d.wish:'';status.textContent=P.active(state,now()).length>=P.MAX?'초함이 가득 찼어요. 초가 꺼지면 새로 켤 수 있어요.':'';waiting(false);if(!dialog.open)dialog.showModal();send({t:'candles_sync'});return true}
- function openVault(){if(!near())return false;returnFocus=document.activeElement;pause();if(dialog.open)dialog.close();vault.hidden=false;document.body.classList.add('candle-vault-open');focused=null;$('candleFocus').hidden=true;render();vault.tabIndex=-1;vault.focus();send({t:'candles_sync'});return true}
+ function openVault(){if(!near())return false;returnFocus=document.activeElement;pause();if(dialog.open)dialog.close();vault.hidden=false;document.body.classList.add('candle-vault-open');focused=null;$('candleFocus').hidden=true;render();movePage(page,false);vault.tabIndex=-1;vault.focus();send({t:'candles_sync'});return true}
  function attempt(){if(busy)return;if(!ready()){status.textContent='정원 연결이 준비되면 다시 눌러 주세요.';return}if(!near()){status.textContent='초함 가까이에서 초를 켜 주세요.';return}const n=P.clean(name.value,25).replace(/\s+/g,' '),w=P.clean(wish.value,161);if(!n||n.length>24||!w||w.length>160){status.textContent='이름은 24자, 소원은 160자 안으로 적어 주세요.';return}
   if(!pending||pending.name!==n||pending.wish!==w||now()-pending.issuedAt>300000){const b=new Uint8Array(16);crypto.getRandomValues(b);pending={nonce:[...b].map(v=>v.toString(16).padStart(2,'0')).join(''),name:n,wish:w,issuedAt:now()}}
   if(!save('garden.candle.pending',pending)){status.textContent='입력을 보관하지 못했어요. 다시 눌러 주세요.';return}persist();waiting(true);status.textContent='초함에 불을 밝히고 있어요…';clearTimeout(timer);timer=setTimeout(()=>{waiting(false);status.textContent='아직 확인되지 않았어요. 다시 눌러도 같은 초를 확인해요.'},8000);if(send({t:'candle_light',...pending})===false){clearTimeout(timer);waiting(false);status.textContent='연결을 확인한 뒤 다시 눌러 주세요.'}
@@ -32,7 +67,7 @@ export function createCandleUI({document,storage,pendingStorage=storage,now,near
  for(const field of[name,wish])field.addEventListener('input',()=>{if(pending&&field.value!==pending[field===name?'name':'wish'])clearPending();persist()});
  form.addEventListener('submit',e=>{e.preventDefault();attempt()});$('candleClose').onclick=close;$('candleVaultClose').onclick=close;$('candleVaultNew').onclick=openEntry;$('candleEntryView').onclick=openVault;
  $('candleFocusPray').onclick=()=>{close();onPray()};
- $('candlePrev').onclick=()=>{page=Math.max(0,page-1);render()};$('candleNext').onclick=()=>{page=Math.min(3,page+1);render()};$('candleFocusClose').onclick=()=>{focused=null;$('candleFocus').hidden=true;$('candleVaultClose').focus()};
+ $('candlePrev').onclick=()=>movePage(page-1);$('candleNext').onclick=()=>movePage(page+1);$('candleFocusClose').onclick=()=>{focused=null;$('candleFocus').hidden=true;$('candleVaultClose').focus()};
  dialog.addEventListener('close',()=>{clearTimeout(timer);waiting(false);persist()});vault.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(focused)$('candleFocusClose').click();else close()}if(e.key==='Tab'){const scope=focused?$('candleFocus'):vault,buttons=[...scope.querySelectorAll('button:not(:disabled)')].filter(n=>!n.closest('[hidden]'));if(!buttons.length)return;const first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===vault)){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
  return{apply,refresh:render,isOpen:()=>dialog.open||!vault.hidden,open:openEntry,openVault,close,endVisit(){close();clearPending();waiting(false)},connection(on){if(!on&&busy){clearTimeout(timer);waiting(false);status.textContent='연결을 다시 확인하고 있어요. 입력은 보관했어요.'}},receive(m){
   if(m.t==='candles_state'){apply(m.state);return}if(m.t==='candle_lit'){apply(m.state);if(!pending||m.nonce!==pending.nonce)return;clearTimeout(timer);clearPending();waiting(false);page=Math.max(0,Math.floor(P.display(state,now()).findIndex(c=>c.id===m.candle?.id)/6));name.value=wish.value='';close();save('garden.candle.draft',null);onLit(m.candle);return}

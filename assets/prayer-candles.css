@@ -10,9 +10,9 @@
 .candle-paging button{min-height:44px;min-width:44px;background:transparent;border:0;padding:0 4px;color:#f8ddb0;font-size:13px}
 .candle-paging button:disabled{opacity:.28;cursor:default}
 #candlePage{white-space:nowrap;text-align:center;font-size:12px}
-.candle-slot{position:absolute;width:36%;height:18%;border:0;border-radius:0;padding:0;background:transparent;color:#4d2a13;display:block;overflow:visible;z-index:2;box-shadow:none}
-.candle-slot.col-0{left:13%}.candle-slot.col-1{left:51%}
-.candle-slot.row-0{bottom:63.9%}.candle-slot.row-1{bottom:44.3%}.candle-slot.row-2{bottom:25.3%}
+.candle-slot{position:absolute;width:45%;height:30.4569%;border:0;border-radius:0;padding:0;background:transparent;color:#4d2a13;display:block;overflow:visible;z-index:2;box-shadow:none}
+.candle-slot.col-0{left:3.75%}.candle-slot.col-1{left:51.25%}
+.candle-slot.row-0{bottom:72.5888%}.candle-slot.row-1{bottom:39.4247%}.candle-slot.row-2{bottom:7.2758%}
 .candle-body-art{position:absolute;left:14%;width:72%;bottom:-10.5%;aspect-ratio:1161/1355;display:block;pointer-events:none}
 .candle-body-art>.candle-wax,.focus-candle>.candle-wax{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;max-width:none}
 .candle-flame{position:absolute;left:50%;top:23%;width:40%;height:auto;max-width:none;transform:translate(-48%,-92%);transform-origin:48% 92%;pointer-events:none;animation:candle-dance 1.25s ease-in-out infinite alternate;will-change:transform,opacity}
@@ -59,3 +59,12 @@ body.candle-vault-open{overflow:hidden}
 #candleFocusPray{position:absolute;bottom:9%;left:18%;width:64%;min-height:38px;border:1px solid #b38243;border-radius:7px;background:#704521 url('./candle-wood.webp') center/cover;color:#ffe5b6;font:13px var(--body,sans-serif)}
 
 .candle-paging button{font-weight:700;text-shadow:0 1px 2px #35200e}
+
+/* One continuous touch rail, clipped inside the fixed wooden frame. */
+#candleSlots{position:absolute;left:10%;right:10%;top:19.9%;bottom:21%;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-x pinch-zoom;cursor:grab;-webkit-user-select:none;user-select:none}
+#candleSlots::-webkit-scrollbar{display:none}
+.candle-leaf{position:relative;flex:0 0 100%;height:100%;scroll-snap-align:start;scroll-snap-stop:always}
+#candleSlots.is-dragging{scroll-snap-type:none;cursor:grabbing}
+#candleSlots.is-dragging button{cursor:grabbing}
+#candleSlots:focus-visible{outline:2px solid #ffd77d;outline-offset:-2px}
+.candle-swipe-hint{position:absolute;top:19%;left:20%;right:20%;z-index:1;text-align:center;pointer-events:none;font:clamp(8px,2.4cqw,11px)/1 var(--body,sans-serif);color:#e8c590;text-shadow:0 1px 3px #211007}
