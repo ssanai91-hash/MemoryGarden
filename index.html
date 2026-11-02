@@ -774,6 +774,7 @@ import {createNatureSoundscape} from './assets/nature-soundscape.js';
 import {pavedDisk,makePrayerGarden} from './assets/prayer-garden.js';
 import {createCandleUI} from './assets/prayer-candles-ui.js';
 import {createBowHalo} from './assets/bow-halo.js';
+import {addAlpineRange} from './assets/garden-mountains.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -1122,9 +1123,12 @@ const entry=new THREE.Mesh(new THREE.PlaneGeometry(2.8,7,3,14),M(0xcdbfa2));entr
   const mGeo=new THREE.SphereGeometry(1,10,6,0,Math.PI*2,0,Math.PI/2);
   for(let i=0;i<22;i++){
     const a=Math.PI*(.55+i/21*1.9),far=i%2===0,r=(far?210:172)+rnd()*25,h=(far?40:28)+rnd()*18,w=48+rnd()*30;
-    const m=new THREE.Mesh(mGeo,F(far?0x6b8a86:0x4f7444,{roughness:1}));
-    m.position.set(Math.cos(a)*r,-1,Math.sin(a)*r);m.scale.set(w,h,w*.75);m.rotation.y=rnd()*3;scene.add(m);
+    const turn=rnd()*3; // Consume the same random sequence before adding the separate alpine layer.
+    if(far)continue;
+    const m=new THREE.Mesh(mGeo,F(0x4f7444,{roughness:1}));
+    m.position.set(Math.cos(a)*r,-1,Math.sin(a)*r);m.scale.set(w,h,w*.75);m.rotation.y=turn;scene.add(m);
   }
+  addAlpineRange(scene);
   const pines=[],distantCrowns=[],pineCols=[0x3d6657,0x527c68,0x648b77,0x527c72],crownCols=[0x788f69,0x9aa482,0xb29a71,0x9b8285,0x879c91];
   for(let i=0;i<420;i++){
     const a=rnd()*Math.PI*2,r=94+rnd()*40,h=5.5+rnd()*8,x=Math.cos(a)*r,z=Math.sin(a)*r,w=1.6+rnd()*1.9;
