@@ -408,7 +408,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   <p id="qualityDescription">자동으로 기기에 맞춰 화면을 조절해요.</p>
   <details id="qualityDiagnostics"><summary>성능 기록 보기</summary>
     <p id="qualityStats">입장 후 풍경을 보며 잠시 기다려 주세요.</p>
-    <table id="qualityRecords"><caption>장소별 최근 측정 · 이 접속 동안</caption><thead><tr><th scope="col">장소</th><th scope="col">품질</th><th scope="col">FPS</th></tr></thead><tbody></tbody></table>
+    <div style="overflow-x:auto"><table id="qualityRecords"><caption>장소별 최근 측정 · 이 접속 동안</caption><thead><tr><th scope="col">장소</th><th scope="col">품질</th><th scope="col">FPS/상한</th><th scope="col">그리기 ms</th><th scope="col">호출</th><th scope="col">삼각형</th><th scope="col">조명</th><th scope="col">프로그램</th></tr></thead><tbody></tbody></table></div>
     <p>같은 장소·시점·날씨에서 비교해 주세요. 게시판과 앱 전환 시간은 측정에서 제외해요.</p>
   </details>
   <div class="home-install-actions"><button id="qualityClose" type="button">닫기</button></div>
@@ -775,6 +775,7 @@ import {pavedDisk,makePrayerGarden} from './assets/prayer-garden.js';
 import {createCandleUI} from './assets/prayer-candles-ui.js';
 import {createBowHalo} from './assets/bow-halo.js';
 import {addAlpineRange} from './assets/garden-mountains.js';
+import {createFramePacer,qualityDecision} from './assets/garden-performance.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -925,23 +926,23 @@ function instanced(geo,mat,items,shadow){
 /* ---------- local rendering quality; world state and movement are unchanged ---------- */
 const QUALITY_LEVELS=[
   {name:'가볍게',pixel:.85,shadow:512,shadowReach:28,detail:18,middle:42,grass:24,flowers:46,density:.5,mist:22},
-  {name:'균형',pixel:1.25,shadow:1024,shadowReach:38,detail:28,middle:60,grass:36,flowers:64,density:.75,mist:42},
+  {name:'균형',pixel:1.1,shadow:1024,shadowReach:38,detail:28,middle:60,grass:36,flowers:64,density:.75,mist:42},
   {name:'선명하게',pixel:2,shadow:2048,shadowReach:48,detail:38,middle:78,grass:48,flowers:82,density:1,mist:70}
 ];
 const qualityModes={light:0,balanced:1,high:2};
 const sceneryChunks=[],sceneryFrustum=new THREE.Frustum(),sceneryProjection=new THREE.Matrix4();
 let sceneryVisible=0;
 const quality={mode:store.get('garden.quality.v1')||'auto',level:isTouch?1:2,previous:0,warmUntil:0,
-  frames:[],elapsed:0,work:0,calls:0,triangles:0,bad:0,good:0,recordKey:'',records:new Map(),latest:null};
+  frames:[],costs:[],elapsed:0,work:0,calls:0,triangles:0,bad:0,good:0,recordKey:'',records:new Map(),latest:null};
 if(quality.mode!=='auto'&&!Object.prototype.hasOwnProperty.call(qualityModes,quality.mode))quality.mode='auto';
 if(quality.mode!=='auto')quality.level=qualityModes[quality.mode];
 function resetQualitySampling(warm=2500){
-  quality.previous=0;quality.frames.length=0;quality.elapsed=quality.work=quality.calls=quality.triangles=0;
+  quality.previous=0;quality.frames.length=quality.costs.length=0;quality.elapsed=quality.work=quality.calls=quality.triangles=0;
   quality.bad=quality.good=0;quality.recordKey='';quality.warmUntil=performance.now()+warm;
 }
 function applyQuality(){
   const q=QUALITY_LEVELS[quality.level];
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,q.pixel));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,q.pixel,isTouch?1.5:2));
   renderer.setSize(innerWidth,innerHeight,false);
   if(sun.shadow.mapSize.x!==q.shadow){
     if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}
@@ -1014,10 +1015,10 @@ function performancePlace(){
 function renderQualityStats(){
   if(!$('qualityDialog').open||!$('qualityDiagnostics').open)return;
   const r=quality.latest;
-  $('qualityStats').textContent=r?`${r.place} · ${r.bloom} · ${r.fps} FPS · 평균 ${r.frame}ms / 느린 프레임 ${r.p90}ms · CPU 작업 ${r.work}ms · 그리기 ${r.calls}회 / 삼각형 ${r.triangles.toLocaleString()}개 · 표시 구역 ${r.chunks}/${sceneryChunks.length} · ${r.width}×${r.height} · 친구 ${r.peers}명 · 날씨 ${r.weather}`:'입장 후 같은 풍경에서 잠시 기다려 주세요.';
+  $('qualityStats').textContent=r?`${r.place} · ${r.bloom} · ${r.fps} FPS · 평균 ${r.frame}ms / 느린 프레임 ${r.p90}ms · 그리기 시간 ${r.work}ms (상위 10% ${r.drawP90}ms) · 상한 ${r.cap} FPS · 점조명 ${r.lights} / 프로그램 ${r.programs} · 그리기 ${r.calls}회 / 삼각형 ${r.triangles.toLocaleString()}개 · 표시 구역 ${r.chunks}/${sceneryChunks.length} · ${r.width}×${r.height} · 친구 ${r.peers}명 · 날씨 ${r.weather}`:'입장 후 같은 풍경에서 잠시 기다려 주세요.';
   const body=$('qualityRecords').tBodies[0];body.textContent='';
   for(const row of quality.records.values()){
-    const tr=document.createElement('tr');for(const value of [row.place+' · '+row.bloom,QUALITY_LEVELS[row.level].name,row.fps]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td)}body.appendChild(tr);
+    const tr=document.createElement('tr');for(const value of [row.place+' · '+row.bloom,QUALITY_LEVELS[row.level].name,row.fps+'/'+row.cap,row.work+'ms',row.calls,row.triangles.toLocaleString(),row.lights,row.programs]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td)}body.appendChild(tr);
   }
 }
 function sampleGardenFrame(now,work){
@@ -1029,18 +1030,19 @@ function sampleGardenFrame(now,work){
   const elapsed=now-quality.previous;quality.previous=now;
   // OS/app pauses and a resumed frame must never trigger a quality downgrade.
   if(elapsed<=0||elapsed>1000){resetQualitySampling();return}
-  quality.frames.push(elapsed);quality.elapsed+=elapsed;quality.work+=work;quality.calls+=renderer.info.render.calls;quality.triangles+=renderer.info.render.triangles;
-  if(quality.frames.length<30||quality.elapsed<2000)return;
+  quality.frames.push(elapsed);quality.costs.push(work);quality.elapsed+=elapsed;quality.work+=work;quality.calls+=renderer.info.render.calls;quality.triangles+=renderer.info.render.triangles;
+  if(quality.frames.length<20||quality.elapsed<2000)return;
   const n=quality.frames.length,sorted=quality.frames.slice().sort((a,b)=>a-b),sum=quality.elapsed,average=sum/n,p90=sorted[Math.floor((n-1)*.9)];
+  const costs=quality.costs.slice().sort((a,b)=>a-b),costP90=costs[Math.floor((n-1)*.9)];
   const size=renderer.getDrawingBufferSize(new THREE.Vector2());
-  const r={place:performancePlace(),level:quality.level,bloom:gardenPost.label,fps:Math.round(1000/average),frame:+average.toFixed(1),p90:+p90.toFixed(1),work:+(quality.work/n).toFixed(1),calls:Math.round(quality.calls/n),triangles:Math.round(quality.triangles/n),chunks:sceneryVisible,width:size.x,height:size.y,peers:peers.size,weather:weatherMode+' · 비 '+Math.round(weatherFrame(serverNow()).rain*100)+'% / 눈 '+Math.round(weatherFrame(serverNow()).snow*100)+'%'};
+  let lights=0;(worldSpace==='listening'?listening.scene:scene).traverseVisible(o=>{if(o.isPointLight&&o.intensity>0)lights++});
+  const r={place:performancePlace(),level:quality.level,bloom:gardenPost.label,fps:Math.round(1000/average),frame:+average.toFixed(1),p90:+p90.toFixed(1),work:+(quality.work/n).toFixed(1),drawP90:+costP90.toFixed(1),cap:currentFrameCap,lights,programs:renderer.info.programs?.length||0,calls:Math.round(quality.calls/n),triangles:Math.round(quality.triangles/n),chunks:sceneryVisible,width:size.x,height:size.y,peers:peers.size,weather:weatherMode+' · 비 '+Math.round(weatherFrame(serverNow()).rain*100)+'% / 눈 '+Math.round(weatherFrame(serverNow()).snow*100)+'%'};
   quality.latest=r;quality.records.set(r.place+':'+r.level+':'+r.bloom,r);renderQualityStats();
-  quality.frames.length=0;quality.elapsed=quality.work=quality.calls=quality.triangles=0;
+  quality.frames.length=quality.costs.length=0;quality.elapsed=quality.work=quality.calls=quality.triangles=0;
   if(quality.mode!=='auto')return;
-  quality.bad=average>34||p90>55?quality.bad+sum:0;
-  quality.good=average<19.5&&p90<26?quality.good+sum:0;
-  if(quality.bad>=6000&&quality.level>0){quality.level--;applyQuality()}
-  else if(quality.good>=30000&&quality.level<2){quality.level++;applyQuality()}
+  const decision=qualityDecision({level:quality.level,touch:isTouch,mean:r.work,p90:costP90,bad:quality.bad,good:quality.good,elapsed:sum});
+  quality.bad=decision.bad;quality.good=decision.good;
+  if(decision.level!==quality.level){quality.level=decision.level;applyQuality()}
 }
 $('qualityBtn').onclick=()=>{
   if(typeof $('qualityDialog').showModal!=='function'){toast('이 브라우저에서는 화면 품질 메뉴를 열 수 없어요.');return}
@@ -1483,9 +1485,9 @@ function listeningRequest(action,value){
   const old=listening.state,now=serverNow();applyListeningState({track:action==='track'?value:old.track,power:action==='track'?true:!!value,offsetMs:action==='track'?0:listeningPositionMs(),startedAt:now,rev:old.rev+1});
 }
 function ensureListeningAudio(){
-  if(listening.audio){listening.audio.ac.resume().catch(()=>{});return true}const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
+  if(listening.audio){if(!listening.audio.timer)listening.audio.timer=setInterval(scheduleListeningAudio,120);listening.audio.ac.resume().catch(()=>{});return true}const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
   const ac=new Ctx(),gain=ac.createGain(),eq=ac.createBiquadFilter(),analyser=ac.createAnalyser();eq.type='lowpass';eq.frequency.value=10000;analyser.fftSize=128;gain.gain.value=0;eq.connect(gain);gain.connect(analyser);analyser.connect(ac.destination);
-  listening.audio={ac,gain,eq,analyser,data:new Uint8Array(analyser.frequencyBinCount),seen:new Set(),nodes:new Set()};ac.resume().catch(()=>{});return true;
+  listening.audio={ac,gain,eq,analyser,data:new Uint8Array(analyser.frequencyBinCount),seen:new Set(),nodes:new Set()};listening.audio.timer=setInterval(scheduleListeningAudio,120);ac.resume().catch(()=>{});return true;
 }
 function silenceListeningNotes(){
   const a=listening.audio;if(!a)return;a.seen.clear();for(const n of a.nodes)try{n.stop()}catch(e){}a.nodes.clear();
@@ -1527,7 +1529,6 @@ function updateListening(dt,t){
   const level=QUALITY_LEVELS[quality.level];if(listening.light.shadow.mapSize.x!==level.shadow){if(listening.light.shadow.map){listening.light.shadow.map.dispose();listening.light.shadow.map=null}listening.light.shadow.mapSize.set(level.shadow,level.shadow);renderer.shadowMap.needsUpdate=true}
   listening.exitDoor.visible=camera.position.z<5.3;
   for(const wall of listening.walls)wall.mesh.visible=wall.axis==='x'?wall.sign*camera.position.x<5.7:wall.sign*camera.position.z<5.3;
-  listening.audioTick=(listening.audioTick||0)+dt;if(listening.audioTick>.12){listening.audioTick=0;scheduleListeningAudio()}
   let energy=0;const a=listening.audio;if(a&&!listening.muted){a.analyser.getByteFrequencyData(a.data);energy=a.data.reduce((sum,v)=>sum+v,0)/a.data.length/255}
   listening.needles.forEach((n,i)=>n.rotation.z=THREE.MathUtils.lerp(n.rotation.z,-.65+energy*(2.4+i*.12),Math.min(1,dt*12)));
   listening.led.color.setHex(listening.state.power?0x84b9a1:0x263c34);
@@ -3348,7 +3349,7 @@ function updatePractice(dt){
 }
 practiceUI();
 // Background time never counts as completed bows. Explicit pause remains paused on return.
-let appHidden=document.hidden;document.addEventListener('visibilitychange',()=>{appHidden=document.hidden;clock.getDelta();if(appHidden){cancelFireCare();Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''}});
+let appHidden=document.hidden;document.addEventListener('visibilitychange',()=>{appHidden=document.hidden;clock.getDelta();if(!appHidden){framePacer.reset();requestGardenFrame()}if(appHidden){cancelFireCare();Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''}});
 addEventListener('blur',()=>{Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''});
 
 /* ---------- shared garden clock and independent weather fronts (pure, testable maths) ---------- */
@@ -5030,11 +5031,27 @@ for(let i=0;i<PN;i++){pp[i*3]=(rnd()-.5)*60;pp[i*3+1]=rnd()*8+.5;pp[i*3+2]=(rnd(
 pg.setAttribute('position',new THREE.BufferAttribute(pp,3));
 scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0xfff2e0,size:.09,transparent:true,opacity:.85})));
 const clock=new THREE.Clock();let sendAcc=0;
+const framePacer=createFramePacer(performance.now());let currentFrameCap=30;
+function performanceInput(e){
+ const editing=!!e.target.closest?.('input,textarea,select,[contenteditable=true]'),world=e.target===canvas||!!e.target.closest?.('#joy');
+ const motion=!editing&&(e.type==='keydown'?/^(Key[WASDQE]|Arrow)/.test(e.code):world);
+ framePacer.input(performance.now(),motion);
+}
+for(const type of['pointerdown','wheel','keydown','input','change'])document.addEventListener(type,performanceInput,{capture:true,passive:true});
+document.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')performanceInput(e)},{capture:true,passive:true});
+function targetFrameCap(now){
+ const moving=Math.hypot(move.x,move.y)>.08||!!target||me.speed>.3||Object.values(keys).some(Boolean),when=serverNow();
+ const resting=cam.sky||!!calm.mode||['sit','lie','prone','pray','bow','standing_pray','yoga'].includes(pose);
+ const effect=['cheers','shake','pray2','woodpick','woodfeed'].includes(pose)||rpsActive()||firePlayState.auroraUntil>when||(firePlayState.fireworks&&when-firePlayState.fireworks.startedAt<FIREWORK_DURATION);
+ return framePacer.cap(now,{moving,resting,effect});
+}
 function requestGardenFrame(){if(!visitEnded&&animationFrameId===null)animationFrameId=requestAnimationFrame(tick)}
 function tick(){
   const frameStart=performance.now();
   animationFrameId=null;if(visitEnded)return;
-  const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;if(appHidden){requestGardenFrame();return}
+  if(appHidden){framePacer.reset();return}
+  currentFrameCap=targetFrameCap(frameStart);if(!framePacer.due(frameStart,currentFrameCap)){requestGardenFrame();return}
+  const elapsed=clock.getDelta(),dt=Math.min(elapsed,.05),visualDt=Math.min(elapsed,.1),t=clock.elapsedTime;
   if(hasEntered&&performance.now()-lastVisitSave>2000)saveVisit();
   let f=move.y,s=move.x;
   if(keys.KeyW||keys.ArrowUp)f=1;if(keys.KeyS||keys.ArrowDown)f=-1;
@@ -5059,10 +5076,10 @@ function tick(){
     me.g.rotation.y=angLerp(me.g.rotation.y,Math.atan2(vx,vz),Math.min(1,dt*10))}
   const moved=Math.hypot(me.g.position.x-ox,me.g.position.z-oz)/Math.max(dt,1e-4);
   me.speed+=(moved-me.speed)*Math.min(1,dt*10);
-  updatePractice(dt);updateFireCare(dt);
+  updatePractice(visualDt);updateFireCare(visualDt);
   posePerson(me,pose,dt,t);
-  if(worldSpace==='garden'){updateEnvironment(dt,t);updateWaterworks(dt,t)}else updateUmbrellas();
-  if(worldSpace==='garden'){updateCampfire(dt);updateBonfire(dt,t);updateOwner(dt,t)}updateContext(dt);updateRps(dt);syncListeningActors();
+  if(worldSpace==='garden'){updateEnvironment(visualDt,t);updateWaterworks(visualDt,t)}else updateUmbrellas();
+  if(worldSpace==='garden'){updateCampfire(visualDt);updateBonfire(visualDt,t);updateOwner(visualDt,t)}updateContext(visualDt);updateRps(visualDt);syncListeningActors();
   if(worldSpace==='garden'&&pendingStoke&&!target&&Math.hypot(me.g.position.x,me.g.position.z)<4)doStoke();
   if(pendingShake&&!target){const e=peers.get(pendingShake);if(e&&Math.hypot(e.x-me.g.position.x,e.z-me.g.position.z)<2.6)doShake(pendingShake,true);else pendingShake=null}
   if(inPocha()){const st=STOOLS[mySeatIndex()],o=pochaLocal(st&&st.lx>0?3.7:-3.7,2.3);updateDog(myDogObj,o.x,o.z,POCHA.h,'sit',false,dt,t)}
@@ -5095,7 +5112,7 @@ function tick(){
 
   updateNatureListener();
   const candleNow=serverNow();prayerView.update(candleNow,t);if(Math.floor(candleNow/1000)!==candleRefreshSecond){candleRefreshSecond=Math.floor(candleNow/1000);if(candleUI.isOpen())candleUI.refresh()}
-  sendAcc+=dt;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
+  sendAcc+=elapsed;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
   if(marker.visible)marker.material.opacity=.5+Math.sin(t*5)*.3;
   if(!reduce){const a=pg.attributes.position.array;
     for(let i=0;i<PN;i++){a[i*3+1]-=dt*.25;a[i*3]+=Math.sin(t+i)*dt*.2;if(a[i*3+1]<0)a[i*3+1]=8}

@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const c={};vm.createContext(c);vm.runInContext(fs.readFileSync(__dirname+'/../assets/garden-performance.js','utf8').replaceAll('export function','function')+';this.api={frameLimit,createFramePacer,qualityDecision};',c);
+const {frameLimit,createFramePacer,qualityDecision}=c.api;
+for(const [state,cap]of[[{},30],[{resting:true},20],[{idle:true},15],[{moving:true},60],[{recentMotion:true,resting:true},60],[{idle:true,effect:true},30],[{moving:true,power:true},30],[{resting:true,power:true},15],[{resting:true,effect:true,power:true},30]])assert.equal(frameLimit(state),cap);
+for(const cap of[15,20,30,60]){const p=createFramePacer();let count=0;for(let i=0;i<1200;i++)if(p.due(i*1000/120,cap))count++;assert.equal(count,cap*10,cap+' cap on a 120Hz screen')}
+const p=createFramePacer();assert.equal(p.cap(0,{resting:true}),20);p.input(1,true);assert.equal(p.cap(1500,{resting:true}),60);assert.equal(p.cap(1501,{resting:true}),20);assert.equal(p.cap(60001,{resting:true}),15);p.input(60002,false);assert.equal(p.cap(60002,{resting:true}),20);
+let d=qualityDecision({level:1,touch:true,mean:3,p90:5,bad:0,good:30000,elapsed:2000});assert.equal(d.level,1);d=qualityDecision({level:1,touch:false,mean:3,p90:5,bad:0,good:30000,elapsed:2000});assert.equal(d.level,2);d=qualityDecision({level:1,touch:true,mean:28,p90:36,bad:4000,good:0,elapsed:2000});assert.equal(d.level,0);
+const html=fs.readFileSync(__dirname+'/../index.html','utf8'),tick=html.slice(html.indexOf('function tick(){'));
+assert.ok(tick.indexOf('framePacer.due(')<tick.indexOf('clock.getDelta()'));assert.ok(tick.includes('sendAcc+=elapsed'));assert.ok(html.includes('quality.costs.push(work)'));assert.ok(html.includes('isTouch?1.5:2'));assert.ok(html.includes("name:'균형',pixel:1.1"));
+console.log('PASS: 120Hz pacing at 15/20/30/60, interaction/idle/effect priorities, render-cost quality with touch ceiling, no skipped-frame clock reads and wall-time presence cadence.');
