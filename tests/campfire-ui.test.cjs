@@ -1,16 +1,16 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const html=fs.readFileSync(__dirname+'/../index.html','utf8'),start=html.indexOf('function cancelFireCare('),end=html.indexOf("$('pWave').onclick",start);
-const c={crypto,Uint8Array,console};vm.createContext(c);vm.runInContext(fs.readFileSync(__dirname+'/../assets/campfire-rules.js','utf8'),c);
+const c={crypto,Uint8Array,console,document:{createElement(){return {}}}};vm.createContext(c);vm.runInContext(fs.readFileSync(__dirname+'/../assets/campfire-rules.js','utf8'),c);
 vm.runInContext(`
 const Fire=GardenCampfire;let fireAction=null,hasEntered=true,visitEnded=false,worldSpace='garden',pose='stand',target=null,sharedCampfire=Fire.initial(Date.now()),fireStatusKey='';
 let pendingStoke=false,pendingShake=null,fuelTimer=0,move={},userMoved=false,autoJoined=false,sendDirty=false;
 const messages=[],toasts=[],elements={},knob={style:{}},keys={},marker={visible:false},me={g:{position:{x:5.5,z:0},rotation:{y:0}}},bonfire={stoke:0},natureAudio={engine:null};
-const $=id=>elements[id]||(elements[id]={open:false,textContent:''});
+const $=id=>elements[id]||(elements[id]={open:false,textContent:'',children:[],replaceChildren(){this.children=[]},append(n){this.children.push(n)},showModal(){this.open=true},close(){this.open=false}});
 const room={fireVersion:1,online:true,connected(){return this.online},send(m){messages.push(m)}};
 const cam={sky:false},gardenBoard={isOpen:()=>false},calm={mode:null};let rpsGame=null;
 const closePoseMenu=()=>{},endPractice=()=>{pose='stand'},clearTimeout=()=>{},syncPoseButtons=()=>{},sendPresence=()=>messages.push({t:'presence',p:pose}),toast=t=>toasts.push(t),serverNow=()=>Date.now(),stripInvisible=s=>s;
-`+html.slice(start,end)+`
-this.ui={startFireCare,updateFireCare,receiveFireMessage,cancelFireCare,messages,toasts,me,room,elements,marker,
+`+html.slice(html.indexOf('function openFireLoad('),html.indexOf("$('fireLoadClose').onclick"))+html.slice(start,end)+`
+this.ui={openFireLoad,startFireCare,updateFireCare,receiveFireMessage,cancelFireCare,messages,toasts,me,room,elements,marker,
  get action(){return fireAction},get pose(){return pose},get fire(){return sharedCampfire},get target(){return target},
  arrive(){Object.assign(me.g.position,target);target=null},setPose(p){pose=p},setSpace(s){worldSpace=s}};
 `,c);
@@ -31,3 +31,5 @@ for(const stop of [()=>ui.setPose('sit'),()=>ui.setSpace('listening'),()=>ui.roo
 // Far-away and disconnected players cannot start the animation.
 ui.room.online=true;ui.setSpace('garden');ui.me.g.position.x=30;ui.startFireCare();assert.equal(ui.action,null);ui.me.g.position.x=5.5;ui.room.online=false;ui.startFireCare();assert.equal(ui.action,null);
 console.log('PASS: approach/pick/carry/feed/server-confirm sequence, shared avatar poses, presence before commit, stale acknowledgement ignored, durable caretaker text, interruption/space/offline cancellation, and contextual distance gate.');
+
+ui.room.online=true;ui.setSpace('garden');ui.setPose('stand');ui.me.g.position.x=5.5;ui.me.g.position.z=0;ui.openFireLoad();assert.equal(ui.elements.fireLoadChoices.children.length,5);assert.equal(ui.elements.fireLoadChoices.children[1].disabled,false);assert.equal(ui.elements.fireLoadChoices.children[2].disabled,true);ui.elements.fireLoadChoices.children[1].onclick();assert.equal(ui.elements.fireLoadDialog.open,false);assert.equal(ui.action.count,2);ui.arrive();ui.updateFireCare(.1);const batch=ui.messages.filter(m=>m.t==='fire_begin').at(-1);assert.equal(batch.count,2);ui.receiveFireMessage({t:'fire_ready',request:batch.request,token:'bundle',count:2});assert.equal(ui.action.count,2);console.log('PASS: five-button capacity picker, immediate selection, batch request and server-authoritative carried quantity.');

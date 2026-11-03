@@ -106,6 +106,7 @@ export class GardenRoom extends DurableObject {
       this.visits=(await ctx.storage.get('visits'))||{};
       this.campfire=await ctx.storage.get('campfire');
       if(!this.campfire){this.campfire=Fire.initial(Date.now());await ctx.storage.put('campfire',this.campfire)}
+      if(this.campfire.fuelUntil>Date.now()+Fire.MAX_MS){this.campfire={...this.campfire,fuelUntil:Date.now()+Fire.MAX_MS};await ctx.storage.put('campfire',this.campfire)}
       this.candles=(await ctx.storage.get('prayerCandles'))||{rev:0,items:[]};
       // Preserve a pending alarm when waking from hibernation.
       if ((this.rps.length||Object.keys(this.visits).length||this.candles.items.length) && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
@@ -183,10 +184,11 @@ export class GardenRoom extends DurableObject {
     if(m.t==='fire_begin'){
       if(typeof m.request!=='string'||!/^[a-f0-9]{32}$/.test(m.request)){error('invalid');return}
       if(Math.hypot(a.s.x-Fire.PILE.x,a.s.z-Fire.PILE.z)>Fire.PILE.r){error('pile');return}
-      if(Fire.frame(this.campfire,now).left>=Fire.MAX_MS-60000){error('full');return}
+      const count=m.count===undefined?1:m.count;if(!Number.isInteger(count)||count<1||count>Fire.MAX_LOGS){error('invalid');return}
+      if(!Fire.canAdd(this.campfire,now,count)){error('full');return}
       if(this.campfire.recent?.[a.id]?.at>now-Fire.COOLDOWN_MS){error('cooldown');return}
       if(!a.fireCarry||a.fireCarry.request!==m.request||now-a.fireCarry.at>45000)
-        a.fireCarry={request:m.request,token:crypto.randomUUID(),at:now};
+        a.fireCarry={request:m.request,token:crypto.randomUUID(),at:now,count};
       ws.serializeAttachment(a);ws.send(JSON.stringify({t:'fire_ready',...a.fireCarry}));return;
     }
     if(m.t!=='fire_add')return;
@@ -203,8 +205,8 @@ export class GardenRoom extends DurableObject {
         const prev=(await txn.get('campfire'))||Fire.initial(now);
         if(prev.recent?.[a.id]?.token===m.token)return{fire:prev,added:false};
         if(prev.recent?.[a.id]?.at>now-Fire.COOLDOWN_MS)return{code:'cooldown'};
-        if(Fire.frame(prev,now).left>=Fire.MAX_MS-60000)return{code:'full'};
-        const fire=Fire.add(prev,now,a,carry.token);await txn.put('campfire',fire);return{fire,added:true};
+        if(!Fire.canAdd(prev,now,carry.count||1))return{code:'full'};
+        const fire=Fire.add(prev,now,a,carry.token,carry.count||1);await txn.put('campfire',fire);return{fire,added:true};
       });
       if(result.code){error(result.code);return}
       if(result.fire.rev>=this.campfire.rev)this.campfire=result.fire;
@@ -528,6 +530,7 @@ export class GardenRoom extends DurableObject {
         if (!s) return;
         if(spaceOf(s)!=='garden'||a.fireCarry&&Date.now()-a.fireCarry.at>45000)delete a.fireCarry;
         if(s.p.startsWith('wood')&&!a.fireCarry)s.p='stand';
+        s.wc=s.p.startsWith('wood')?a.fireCarry?.count||1:0;
         a.s = s;
         ws.serializeAttachment(a);
         this.broadcast({ t: 'state', id: a.id, s: a.s }, ws);

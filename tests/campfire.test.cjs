@@ -26,7 +26,7 @@ let nonce=0;const request=()=> (++nonce).toString(16).padStart(32,'0');
  const a=socket(ctx,'A','숭열'),b=socket(ctx,'B','현주'),unready=socket(ctx,'X','입장 전',false);
  const send=(ws,m)=>room.webSocketMessage(ws,JSON.stringify(m));
  const state=async(ws,x,z,p='stand',space='garden')=>send(ws,{t:'state',s:{space,x,z,h:0,p}});
- const begin=async ws=>{now+=2000;await state(ws,5.9,0);await send(ws,{t:'fire_begin',request:request()});return last(ws,'fire_ready').token};
+ const begin=async(ws,count=1)=>{now+=2000;await state(ws,5.9,0);await send(ws,{t:'fire_begin',request:request(),count});return last(ws,'fire_ready').token};
  const deposit=async(ws,token)=>{now+=3000;await state(ws,3.1,0,'woodfeed');await send(ws,{t:'fire_add',token,name:'가짜 이름',fuelUntil:now+999999999})};
  const before=ctx.values.get('campfire').fuelUntil;
  await send(unready,{t:'fire_begin',request:request()});assert.equal(last(unready,'fire_ready'),undefined);
@@ -49,7 +49,7 @@ let nonce=0;const request=()=> (++nonce).toString(16).padStart(32,'0');
  await Promise.all([send(a,{t:'fire_add',token:ta}),send(b,{t:'fire_add',token:tb}),send(a,{t:'fire_add',token:ta})]);
  saved=ctx.values.get('campfire');assert.equal(saved.rev,3);assert.equal(saved.fuelUntil,fuelBefore+Fire.LOG_MS*2);
  // Storage errors roll back and leave the same action eligible for retry.
- now+=Fire.COOLDOWN_MS;token=await begin(a);ctx.fail=true;await deposit(a,token);assert.equal(last(a,'fire_error').code,'storage');assert.equal(ctx.values.get('campfire').rev,3);
+ now+=Fire.LOG_MS+Fire.COOLDOWN_MS;token=await begin(a);ctx.fail=true;await deposit(a,token);assert.equal(last(a,'fire_error').code,'storage');assert.equal(ctx.values.get('campfire').rev,3);
  ctx.fail=false;now+=2000;await send(a,{t:'fire_add',token});assert.equal(ctx.values.get('campfire').rev,4);
  // Absence and object restart do not refill the fire. The last caretaker survives.
  saved=ctx.values.get('campfire');now=saved.fuelUntil+1000;room=new c.Room(ctx,{});await ctx.ready;
@@ -60,7 +60,16 @@ let nonce=0;const request=()=> (++nonce).toString(16).padStart(32,'0');
  assert.equal(last(newcomer,'welcome').features.campfire,1);assert.equal(last(newcomer,'welcome').shared.campfire.last.name,'현주');assert.ok(!Object.hasOwn(last(newcomer,'welcome').shared.campfire,'recent'));assert.equal(newcomer.a.s.p,'stand');
  now+=Fire.COOLDOWN_MS;room.campfire.fuelUntil=now+Fire.MAX_MS;ctx.values.set('campfire',structuredClone(room.campfire));await state(a,5.9,0);await send(a,{t:'fire_begin',request:request()});assert.equal(last(a,'fire_error').code,'full');
  // Full capacity also holds if others add while this person is carrying.
- room.campfire.fuelUntil=now+Fire.MAX_MS-Fire.LOG_MS/2;ctx.values.set('campfire',structuredClone(room.campfire));token=await begin(a);await deposit(a,token);assert.equal(Fire.frame(ctx.values.get('campfire'),now).left,Fire.MAX_MS);
+ room.campfire.fuelUntil=now+Fire.MAX_MS-Fire.LOG_MS*2;ctx.values.set('campfire',structuredClone(room.campfire));token=await begin(a);
+ const filled=Fire.add(room.campfire,now,{id:'other',name:'친구'},'other',2);room.campfire=filled;ctx.values.set('campfire',structuredClone(filled));await deposit(a,token);assert.equal(last(a,'fire_error').code,'full');assert.equal(Fire.frame(ctx.values.get('campfire'),now).logs,5);
+ // Batch count is server-validated and one concurrent batch cannot overfill another.
+ now+=Fire.COOLDOWN_MS;room.campfire={...Fire.initial(now),fuelUntil:now};ctx.values.set('campfire',structuredClone(room.campfire));
+ const a3=await begin(a,3),b3=await begin(b,3);assert.equal(last(a,'fire_ready').count,3);assert.equal(last(b,'fire_ready').count,3);now+=3000;await state(a,3.1,0,'woodfeed');await state(b,3.1,0,'woodfeed');assert.equal(a.a.s.wc,3);
+ await Promise.all([send(a,{t:'fire_add',token:a3}),send(b,{t:'fire_add',token:b3})]);assert.equal(Fire.frame(room.campfire,now).logs,3);assert.equal(last(b,'fire_error').code,'full');assert.equal(room.campfire.last.count,3);
+ const b2=await begin(b,2);await deposit(b,b2);assert.equal(Fire.frame(room.campfire,now).logs,5);assert.equal(room.campfire.last.count,2);const revision=room.campfire.rev;await send(b,{t:'fire_add',token:b2,count:999});assert.equal(room.campfire.rev,revision);
+ now+=2000;await state(a,5.9,0);await send(a,{t:'fire_begin',request:request(),count:6});assert.equal(last(a,'fire_error').code,'invalid');
+ // Legacy six-log fuel is clipped to the new five-log ceiling at wake, without losing last care.
+ const legacy={...room.campfire,fuelUntil:now+Fire.LOG_MS*6};ctx.values.set('campfire',legacy);room=new c.Room(ctx,{});await ctx.ready;assert.equal(room.campfire.fuelUntil,now+Fire.MAX_MS);assert.equal(room.campfire.last.name,'현주');
  await send(a,{t:'stoke'});assert.equal(last(a,'fire_error').code,'refresh');
- console.log('PASS: real-time burn/embers/out, gradual fuel intensity, shared durable fuel, proximity/pose/timing gates, actor identity, one-log cap, cooldown, cancellation/background/expiry, idempotent concurrent adds, storage rollback/retry, restart without refilling, relighting and newcomer last-care text.');
+ console.log('PASS: real-time burn/embers/out, gradual fuel intensity, shared durable fuel, proximity/pose/timing gates, actor identity, validated 1–5 log batches / five-log capacity, cooldown, cancellation/background/expiry, idempotent concurrent adds, storage rollback/retry, restart without refilling, relighting and newcomer last-care text.');
 })().catch(e=>{console.error(e);process.exitCode=1});
