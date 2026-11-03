@@ -32,3 +32,14 @@ export function createShadowBudget(){
   return{update,x,z};
  },reset(){last=-Infinity;key=''}};
 }
+
+export function powerSavingState(mode,battery){return mode==='on'||mode==='auto'&&!!battery&&!battery.charging&&Number.isFinite(battery.level)&&battery.level<=.3}
+export function createPowerSaving({storage,getBattery,onChange=()=>{},notify=()=>{}}){
+ const key='garden.powerSaving.v1',valid=v=>['auto','on','off'].includes(v),saved=storage.get(key);let mode=valid(saved)?saved:'auto',battery=null,active=mode==='on',notified=false,disposed=false;
+ function announce(){if(active&&!notified){notified=true;notify()}}
+ function refresh(){const next=powerSavingState(mode,battery);if(next!==active){active=next;onChange(active)}announce()}
+ const api={get mode(){return mode},get active(){return active},get supported(){return !!battery},setMode(value){if(!valid(value))return;mode=value;storage.set(key,value);refresh()},
+ async start(){announce();if(typeof getBattery!=='function')return;try{const value=await getBattery();if(disposed)return;battery=value;for(const type of['levelchange','chargingchange'])battery.addEventListener(type,refresh);refresh()}catch{}},
+ dispose(){disposed=true;if(battery)for(const type of['levelchange','chargingchange'])battery.removeEventListener(type,refresh)}};
+ return api;
+}

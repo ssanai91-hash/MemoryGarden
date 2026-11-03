@@ -12,5 +12,5 @@ for(const form of ['round','maple','flower','magnolia','column','pine','spire','
  if(['pine','spire'].includes(form))assert.equal(a.extra,2);
 }
 assert.ok(!source.includes('Math.random'));
-const html=fs.readFileSync(__dirname+'/../index.html','utf8');assert.ok(html.includes('quality.level<c.minQuality'));assert.ok(html.includes("kind:'understory'"));
+const html=fs.readFileSync(__dirname+'/../index.html','utf8');assert.ok(html.includes('effectiveLevel<c.minQuality'));assert.ok(html.includes("kind:'understory'"));
 console.log('PASS: deterministic independent tree RNG, 1.4×/2× rounded crown budgets, two pine layers, willow curtains, finite bounds, colour layers, understory and quality-tier gating.');
