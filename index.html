@@ -1350,10 +1350,12 @@ const waterworks={sheets:[],mist:null,foam:[],tex:null};
   const can=new THREE.Mesh(new THREE.CylinderGeometry(.14,.16,.3,12),M(0x4f8a6b));can.position.set(2.0,.31,1.9);hut.add(can);
   for(const [x,z,c] of [[2.75,2.4,0xc96d4a],[-2.75,2.5,0xb9643f],[2.75,1.6,0xc96d4a]]){const pot=new THREE.Mesh(new THREE.CylinderGeometry(.2,.15,.3,12),M(c));pot.position.set(x,.15,z);hut.add(pot);
     const leaf=new THREE.Mesh(new THREE.SphereGeometry(.28,10,8),M(0x5f9a45));leaf.position.set(x,.48,z);hut.add(leaf)}
-  for(let r=0;r<4;r++){const ridge=new THREE.Mesh(new THREE.BoxGeometry(.55,.18,3.6),M(0x6b4b33));ridge.position.set(4.0+r*.9,.09,-1.2);hut.add(ridge);
-    for(let k=0;k<6;k++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.1,.26,5),M(r%2?0x7cb24c:0x5f9a3c));sp.position.set(4.0+r*.9,.3,-2.7+k*.6);hut.add(sp)}}
-  for(let k=0;k<=7;k++){const pst=new THREE.Mesh(new THREE.BoxGeometry(.07,.55,.07),F(0x8a6240));pst.position.set(3.4+k*.62,.27,.8);hut.add(pst)}
-  part(plank,F(0x8a6240),[5.57,.42,.8],[4.4,.05,.05],null,hut);
+  // Move the complete patch to the hut's left, clear of the prayer square.
+  const vegetablePatch=new THREE.Group();vegetablePatch.name='hut-vegetable-patch';vegetablePatch.position.set(-5.57,0,0);hut.add(vegetablePatch);
+  for(let r=0;r<4;r++){const ridge=new THREE.Mesh(new THREE.BoxGeometry(.55,.18,3.6),M(0x6b4b33));ridge.position.set(-1.57+r*.9,.09,-1.2);vegetablePatch.add(ridge);
+    for(let k=0;k<6;k++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.1,.26,5),M(r%2?0x7cb24c:0x5f9a3c));sp.position.set(-1.57+r*.9,.3,-2.7+k*.6);vegetablePatch.add(sp)}}
+  for(let k=0;k<=7;k++){const pst=new THREE.Mesh(new THREE.BoxGeometry(.07,.55,.07),F(0x8a6240));pst.position.set(-2.17+k*.62,.27,.8);vegetablePatch.add(pst)}
+  part(plank,F(0x8a6240),[0,.42,.8],[4.4,.05,.05],null,vegetablePatch);
   for(let lx=-2.2;lx<=2.21;lx+=.55)for(let lz=-3.1;lz<=-.3;lz+=.55){const p=hutLocal(lx,lz);obstacles.push({x:p.x,z:p.z,r:.42})}
   for(const lx of[-2.45,2.45]){const p=hutLocal(lx,2.45);obstacles.push({x:p.x,z:p.z,r:.2})}
   {const p=hutLocal(1.98,.6);obstacles.push({x:p.x,z:p.z,r:.55})}
