@@ -1372,7 +1372,8 @@ function updateWaterworks(dt,t){
   if(sh&&!waterworks.toldHut&&hasEntered){waterworks.toldHut=true;toast('농막 처마 아래예요 · 평상에서 낮잠을 자 보세요')}
 }
 /* ---------- lakeside listening room: built only on first entry ---------- */
-const LISTENING_SEATS=[{x:-2.1,z:1.8},{x:.1,z:2.6},{x:2.35,z:1.8},{x:3.9,z:3.5}];
+const LISTENING_SEATS=[-2.1,0,2.1].map(x=>({x,z:2.2}));
+const LISTENING_TV=Object.freeze({x:0,y:3.18,z:-4.55,width:4.55,height:2.35,depth:.15,gap:.18});
 const LISTENING_RECORDS=[{id:'bluehour',name:'블루 아워',desc:'느긋한 전자 피아노와 베이스',color:0x477f91},{id:'rainwood',name:'나무에 내리는 비',desc:'맑은 건반과 따뜻한 화음',color:0x9b7550},{id:'starlight',name:'별빛의 잔향',desc:'천천히 번지는 신시사이저',color:0x7771a6}];
 function listeningSeatAt(x,z){return LISTENING_SEATS.findIndex(p=>Math.hypot(p.x-x,p.z-z)<.32)}
 function nearListeningDoor(x,z){const p=hutToLocal(x,z);return Math.abs(p.lx-.6)<1.15&&p.lz>0&&p.lz<1.8}
@@ -1396,10 +1397,15 @@ function makeListeningScene(){
   const blocks=[];
   for(let side=0;side<3;side++)for(let i=0;i<12;i++)for(let j=0;j<7;j++){
     const depth=.12+((i*7+j*11+side*3)%9)*.045,c=C([0xc7a775,0xb68b58,0xd3b884][(i+j)%3]);
-    if(side===0){if(i>3&&i<8&&j<4)continue;blocks.push({x:-5.2+i*.94,y:1.55+j*.4,z:-5.16+depth/2,sx:.85,sy:.34,sz:depth,c})}
+    if(side===0){
+      const x=-5.2+i*.94,y=1.55+j*.4,tv=LISTENING_TV;
+      // Reserve the entire TV frame plus a border, at every tile row.
+      if(Math.abs(x-tv.x)<(tv.width+.85)/2+tv.gap&&Math.abs(y-tv.y)<(tv.height+.34)/2+tv.gap)continue;
+      blocks.push({x,y,z:-5.16+depth/2,sx:.85,sy:.34,sz:depth,c});
+    }
     else blocks.push({x:(side===1?-1:1)*(5.94-depth/2),y:1.5+j*.4,z:-4.5+i*.73,sx:depth,sy:.34,sz:.65,c});
   }
-  const diffuser=instanced(BOX,new THREE.MeshStandardMaterial({color:0xffffff,roughness:.85}),blocks,false);sc.add(diffuser);
+  const diffuser=instanced(BOX,new THREE.MeshStandardMaterial({color:0xffffff,roughness:.85}),blocks,false);diffuser.name='listening-acoustic-diffuser';sc.add(diffuser);
   const ceiling=new THREE.Group();ceiling.position.set(0,4.4,-1.7);sc.add(ceiling);
   for(let x=-1.8;x<=1.8;x+=.45)for(let z=-1;z<=1;z+=.4)cube(x,((Math.round(x*10)+Math.round(z*10))%3)*.04,z,.34,.2,.3,fabric,ceiling);
   // Full-height floorstanding speakers, driver surrounds and cones.
@@ -1430,8 +1436,10 @@ function makeListeningScene(){
   cube(.27,.012,0,.025,.02,.025,fabric,record);cube(.54,.24,-.2,.035,.04,.57,silver,deck);rounded(.54,.26,.1,.1,.07,.12,black,deck);
   const screenCanvas=document.createElement('canvas');screenCanvas.width=1024;screenCanvas.height=512;listening.screenCanvas=screenCanvas;
   listening.screenTexture=new THREE.CanvasTexture(screenCanvas);listening.screenTexture.colorSpace=THREE.SRGBColorSpace;
-  cube(0,3.18,-5.06,4.55,2.35,.15,black);
-  const screen=new THREE.Mesh(new THREE.PlaneGeometry(4.35,2.15),new THREE.MeshBasicMaterial({map:listening.screenTexture,toneMapped:false}));screen.position.set(0,3.18,-4.965);sc.add(screen);listening.audioTargets.push(screen,deck);
+  const tv=LISTENING_TV;
+  // The complete TV sits in front of the deepest acoustic blocks.
+  cube(tv.x,tv.y,tv.z-tv.depth/2-.02,tv.width,tv.height,tv.depth,black);
+  const screen=new THREE.Mesh(new THREE.PlaneGeometry(tv.width-.2,tv.height-.2),new THREE.MeshBasicMaterial({map:listening.screenTexture,toneMapped:false}));screen.name='listening-screen';screen.position.set(tv.x,tv.y,tv.z);sc.add(screen);listening.audioTargets.push(screen,deck);
   // Record/book shelves, filled spines, a small coffee table and a lake picture window.
   for(const x of[-5.45,-3.9])cube(x,1.85,2.9,.1,3.7,2.45,walnut);
   for(const y of[.22,1.18,2.14,3.1,3.7])cube(-4.67,y,2.9,1.65,.08,2.45,walnut);
@@ -4719,6 +4727,7 @@ function restoreVisit(){
   if(practice.mode==='pray')pose='pray';
   else if(['single','auto'].includes(practice.mode))pose='bow';
   else if(pose==='pray'||pose==='bow')pose='stand';
+  if(worldSpace==='listening'&&pose==='sit'&&listeningSeatAt(me.g.position.x,me.g.position.z)<0)pose='stand';
   me.bowPhase=practice.elapsed/8;me.speed=0;
   myDogObj.g.position.set(me.g.position.x-Math.cos(me.g.rotation.y),0,me.g.position.z+Math.sin(me.g.rotation.y));
   userMoved=true;autoJoined=true;target=null;marker.visible=false;sendDirty=true;
@@ -5196,7 +5205,12 @@ function tick(){
   for(const [id,peer] of peers)syncStandingPrayerBubble(id,peer.P,peer.pose,peer.nick||peer.nm||'친구');
   const ax=me.g.position.x,az=me.g.position.z,cp=Math.cos(cam.pitch);
   if(worldSpace==='listening'){
-    camera.position.set(THREE.MathUtils.clamp(ax+sy*cam.dist*cp,-5.8,5.8),Math.min(4.25,1.65+Math.sin(cam.pitch)*cam.dist),THREE.MathUtils.clamp(az+cy*cam.dist*cp,-5.2,6.5));camera.lookAt(ax,1.5,az);
+    camera.position.set(THREE.MathUtils.clamp(ax+sy*cam.dist*cp,-5.8,5.8),Math.min(4.25,1.65+Math.sin(cam.pitch)*cam.dist),THREE.MathUtils.clamp(az+cy*cam.dist*cp,-5.2,6.5));
+    if(pose==='sit'){
+      // Center the TV at the default angle while preserving the user's camera orbit.
+      const orbit=Math.hypot(camera.position.x-ax,camera.position.z-az),focus=(LISTENING_TV.x-ax)*orbit/(orbit+az-LISTENING_TV.z);
+      camera.lookAt(ax+focus*cy,2.25,az-focus*sy);
+    }else camera.lookAt(ax,1.5,az);
   }else if(cam.sky){
     const elevation=cam.skyPitch;
     camera.position.set(ax,2.1,az);
