@@ -147,6 +147,13 @@ button:disabled{opacity:.5;cursor:default}
 .calm-orb{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(235,250,255,.8),rgba(150,210,235,.3) 58%,rgba(150,210,235,0) 72%);box-shadow:0 0 40px rgba(190,235,255,.35)}
 .calm-say{font-size:21px}.calm-time{font-size:14px;opacity:.9;font-family:var(--body);font-variant-numeric:tabular-nums}.calm-total{font-size:11px;opacity:.8;font-family:var(--body)}
 .jar-btn{position:fixed;left:14px;bottom:calc(205px + env(safe-area-inset-bottom,0px));z-index:4;padding:6px 11px;border-radius:999px;background:rgba(30,40,22,.82);color:#eaffb0;border-color:rgba(220,255,140,.5);box-shadow:0 0 calc(26px * var(--glow,.3)) rgba(210,255,110,var(--glow,.3));font-size:14px}
+#speechLayer{position:fixed;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.speech-bubble{position:absolute;box-sizing:border-box;transform:translate(-50%,-50%);font-family:"Gowun Dodum",sans-serif;text-align:center}
+.speech-card{position:relative;width:100%;height:calc(100% - 10 * var(--bubble-unit));box-sizing:border-box;padding:calc(16 * var(--bubble-unit));border:1px solid rgba(60,52,40,.3);border-radius:calc(14 * var(--bubble-unit));background:rgba(255,252,244,.97);box-shadow:0 2px 7px #17120c20}
+.speech-card::after{content:"";position:absolute;left:50%;bottom:calc(-10 * var(--bubble-unit));transform:translateX(-50%);border-left:calc(9 * var(--bubble-unit)) solid transparent;border-right:calc(9 * var(--bubble-unit)) solid transparent;border-top:calc(10 * var(--bubble-unit)) solid rgba(255,252,244,.97)}
+.speech-name{display:block;font-size:calc(49.5 * var(--bubble-unit));font-weight:700;line-height:calc(72 * var(--bubble-unit));margin-bottom:calc(8 * var(--bubble-unit));color:#a36a37;white-space:pre}
+.speech-text{display:block;font-size:calc(58.5 * var(--bubble-unit));line-height:calc(72 * var(--bubble-unit));color:#2b2a33;white-space:pre}
+.sky-view #speechLayer,.visit-ended #speechLayer{display:none}
 .bow-counter{position:fixed;left:12px;bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:4;max-width:calc(100vw - 24px);box-sizing:border-box;padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--paper);backdrop-filter:blur(6px)}
 .bow-counter .count-line{margin:0;gap:6px;font-size:11px}
 .bow-counter .count-line b{font-size:15px;font-weight:700}
@@ -507,6 +514,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
 <div class="toast" id="toast"></div>
+<div id="speechLayer" class="bubbles" aria-label="말풍선"></div>
 <div class="calm-dim" id="calmDim" hidden></div><section class="calm-panel" id="calmPanel" hidden aria-live="polite"><div class="calm-orb" id="calmOrb"></div><div class="calm-say" id="calmSay">들이쉬고…</div><div class="calm-time" id="calmTime">0:00</div><div class="calm-total" id="calmTotal"></div><button id="calmEnd" type="button">마치기</button></section><button class="jar-btn" id="jarBtn" type="button" hidden aria-label="반딧불이 병 · 눌러서 놓아주기">🫙 ✨<span id="jarCount">0</span></button>
 <section class="order-panel menu-book" id="orderPanel" hidden aria-label="기억 포차 메뉴판"><div class="mb-rings" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="mb-head"><div class="mb-title"><small>SINCE 오늘 밤</small>기억 포차</div><button id="orderClose" type="button">닫기</button></div><div class="mb-tabs" role="tablist"><button id="orderTabFood" type="button" role="tab" aria-selected="true" aria-controls="orderFood">안주</button><button id="orderTabDrink" type="button" role="tab" aria-selected="false" aria-controls="orderDrink">술 · 음료</button></div><div class="mb-grid" id="orderFood" role="tabpanel"></div><div class="mb-grid" id="orderDrink" role="tabpanel" hidden></div><div class="mb-memo" id="orderMemo" hidden>📌 <b>사장님 한마디</b> — 술은 한 병씩, 잔은 같이 드는 거예요. 짠은 다 같이!</div><div class="mb-foot"><span>사장님 손맛 · <b>오늘도 정성껏</b></span><button id="orderFlip" type="button">술 · 음료 ▶</button></div></section>
 <section class="chat-history" id="chatHistory" aria-labelledby="chatHistoryTitle" hidden>
@@ -4379,9 +4387,10 @@ $('nameCancel').onclick=closeNameDialog;
 /* ---------- separate chat history and a persistent last-message bubble ---------- */
 const bubbles=new Map(),lastMessages=new Map(),historyKeys=new Set();
 const MAX_CHAT_HISTORY=50;
+const bubbleMeasure=document.createElement('canvas').getContext('2d');
 function bubbleFor(key){if(key==='me')return me;if(bubbleForExtra[key])return bubbleForExtra[key]();const e=peers.get(key);return e?e.P:null}
 function disposeBubble(key,keepMessage=false){
-  const b=bubbles.get(key);if(b){if(b.parent)b.parent.remove(b);b.material.map.dispose();b.material.dispose();bubbles.delete(key)}
+  const b=bubbles.get(key);if(b){if(b.parent)b.parent.remove(b);b.userData.el.remove();bubbles.delete(key)}
   if(!keepMessage)lastMessages.delete(key);
 }
 function rememberLastMessage(key,name,text,at){
@@ -4424,43 +4433,34 @@ function showBubble(key,name,text){
   if(P.standingPrayer)text='기도중...';
   let b=bubbles.get(key);
   if(!b){
-    const c=document.createElement('canvas');c.width=80;c.height=96;
-    const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
-    b=gardenPost.registerLabel(new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,transparent:true,toneMapped:false})));
-    b.renderOrder=11;b.userData.c=c;bubbles.set(key,b);
+    b=new THREE.Object3D();
+    const el=document.createElement('div'),card=document.createElement('div'),who=document.createElement('span'),body=document.createElement('span');
+    el.className='speech-bubble';el.hidden=true;card.className='speech-card';who.className='speech-name';body.className='speech-text';
+    card.append(who,body);el.append(card);$('speechLayer').append(el);
+    Object.assign(b.userData,{el,who,body});bubbles.set(key,b);
   }
   if(b.parent!==P.g){if(b.parent)b.parent.remove(b);P.g.add(b)}
   P.bubble=b;P.tag.visible=false;b.userData.tag=P.tag;
   const signature=name+'\n'+text;
   if(b.userData.signature!==signature){
-    b.userData.signature=signature;
-    const c=b.userData.c,x=c.getContext('2d');
-    const nameFont='bold 49.5px "Gowun Dodum", sans-serif',textFont='58.5px "Gowun Dodum", sans-serif';
+    Object.assign(b.userData,{signature,name,text});
+    const x=bubbleMeasure,nameFont='bold 49.5px "Gowun Dodum", sans-serif',textFont='58.5px "Gowun Dodum", sans-serif';
     const padding=16,lineHeight=72,tailHeight=10,unitsPerPixel=.0043;
     x.font=textFont;
-    // Longer messages use a wider card, and every wrapped line gets its own space.
     const maxTextWidth=Math.min(1100,Math.max(340,Math.sqrt(x.measureText(text).width*lineHeight)));
-    const lines=wrapBubbleText(text,x,maxTextWidth);
-    const textWidth=Math.max(0,...lines.map(ln=>x.measureText(ln).width));
+    const lines=wrapBubbleText(text,x,maxTextWidth),textWidth=Math.max(0,...lines.map(ln=>x.measureText(ln).width));
     x.font=nameFont;
-    const contentWidth=Math.max(40,textWidth,x.measureText(name).width);
-    const width=Math.ceil(contentWidth+padding*2+4),bodyHeight=112.5+lines.length*lineHeight,height=bodyHeight+tailHeight+4;
-    c.width=width;c.height=height;
-    const l=2,tp=2,w=width-4,h=bodyHeight,cx=width/2,r=14;
-    x.fillStyle='rgba(255,252,244,.96)';x.strokeStyle='rgba(60,52,40,.25)';x.lineWidth=1.5;
-    x.beginPath();x.moveTo(l+r,tp);x.arcTo(l+w,tp,l+w,tp+h,r);x.arcTo(l+w,tp+h,l,tp+h,r);
-    x.lineTo(cx+9,tp+h);x.lineTo(cx,tp+h+tailHeight);x.lineTo(cx-9,tp+h);
-    x.arcTo(l,tp+h,l,tp,r);x.arcTo(l,tp,l+w,tp,r);x.closePath();x.fill();x.stroke();
-    x.textAlign='center';x.textBaseline='middle';x.fillStyle='#a36a37';x.font=nameFont;
-    x.fillText(name,cx,57);
-    x.fillStyle='#2b2a33';x.font=textFont;
-    lines.forEach((ln,i)=>x.fillText(ln,cx,126+i*lineHeight));
-    b.material.map.needsUpdate=true;
-    // 글자 크기는 유지하고, 실제 내용이 차지하는 가로·세로만 줄이거나 늘린다.
-    b.userData.bw=width*unitsPerPixel;b.userData.bh=height*unitsPerPixel;b.scale.set(b.userData.bw,b.userData.bh,1);
+    const width=Math.ceil(Math.max(40,textWidth,x.measureText(name).width)+padding*2+4),height=112.5+lines.length*lineHeight+tailHeight+4;
+    b.userData.who.textContent=name;b.userData.body.textContent=lines.join('\n');
+    Object.assign(b.userData,{width,height,bw:width*unitsPerPixel,bh:height*unitsPerPixel});b.scale.set(b.userData.bw,b.userData.bh,1);
   }
   b.userData.baseY=P.tag.position.y+.15+b.scale.y/2;b.position.set(0,b.userData.baseY,0);
 }
+// Browser text stays sharp at the phone's native resolution, independent of 3D quality.
+if(document.fonts)document.fonts.ready.then(()=>{
+  for(const [key,b]of bubbles){b.userData.signature=null;showBubble(key,b.userData.name,b.userData.text)}
+});
+
 function appendChatHistory(message){
   const text=stripInvisible(message.text).slice(0,200);if(!text)return;
   const name=stripInvisible(message.name).slice(0,12)||'친구',at=Number.isFinite(message.at)?message.at:serverNow();
@@ -5010,18 +5010,21 @@ installGardenHistory();
 /* ---------- keep complete speech bubbles inside the viewport and separate nearby cards ---------- */
 const _bv=new THREE.Vector3();
 function layoutBubbles(dt){
-  if(cam.sky){for(const b of bubbles.values())b.visible=false;return}
+  if(cam.sky){for(const b of bubbles.values()){b.visible=false;b.userData.el.hidden=true}return}
   camera.updateMatrixWorld();
   const list=[],placed=[],tanH=Math.tan(THREE.MathUtils.degToRad(camera.fov)/2);
   const gapX=16/Math.max(1,innerWidth),gapY=16/Math.max(1,innerHeight);
   for(const b of bubbles.values()){
+    b.visible=false;
     if(!b.parent||!b.parent.parent||!b.userData.tag)continue;
+    let visible=true;for(let node=b.parent;node;node=node.parent)if(!node.visible){visible=false;break}if(!visible)continue;
     if((b.parent.userData.space||'garden')!==worldSpace){b.visible=false;continue}
     const g=b.parent,headY=b.userData.tag.position.y+.15;
     _bv.set(g.position.x,g.position.y+headY,g.position.z).applyMatrix4(camera.matrixWorldInverse);
     const depth=-_bv.z,dist=_bv.length();
     if(depth<=.1){b.visible=false;continue}
-    _bv.set(g.position.x,g.position.y+headY,g.position.z).project(camera);
+    const curveDistance=Math.min(Math.hypot(_bv.x,_bv.z),70);_bv.y-=curveDistance*curveDistance*CURVE_K;
+    _bv.applyMatrix4(camera.projectionMatrix);
     if(Math.abs(_bv.x)>1.1||Math.abs(_bv.y)>1.2){b.visible=false;continue}
     b.visible=true;
     const f=Math.min(1,Math.max(.4,dist/9)),bw=b.userData.bw*f,bh=b.userData.bh*f;
@@ -5031,6 +5034,7 @@ function layoutBubbles(dt){
     const anchor={x:_bv.x,y:_bv.y+hh,z:_bv.z};
     list.push({b,g,dist,hw,hh,anchor});
   }
+  for(const b of bubbles.values())b.userData.el.hidden=!b.visible;
   list.sort((a,b)=>a.dist-b.dist);
   for(const it of list){
     const {b,g,hw,hh,anchor}=it;
@@ -5061,6 +5065,9 @@ function layoutBubbles(dt){
     placed.push({x0:center.x-hw,x1:center.x+hw,y0:center.y-hh,y1:center.y+hh});
     _bv.set(center.x,center.y,anchor.z).unproject(camera);
     g.updateMatrixWorld(true);g.worldToLocal(_bv);b.position.copy(_bv);
+    const cssWidth=hw*innerWidth,cssHeight=hh*innerHeight,el=data.el;
+    el.style.left=((center.x+1)*innerWidth/2)+'px';el.style.top=((1-center.y)*innerHeight/2)+'px';
+    el.style.width=cssWidth+'px';el.style.height=cssHeight+'px';el.style.setProperty('--bubble-unit',(cssWidth/data.width)+'px');
   }
 }
 
