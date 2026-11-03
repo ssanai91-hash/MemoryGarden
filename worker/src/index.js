@@ -218,15 +218,17 @@ export class GardenRoom extends DurableObject {
     const error=code=>ws.send(JSON.stringify({t:'bow_error',code,request:m.request||m.id}));
     if(!this.allow(a,'bows',8)){error('slow');return}
     if(m.t==='bow_sync'){await this.advanceBows();ws.send(JSON.stringify({t:'bow_state',id:a.id,job:this.bows[a.id]||null}));return}
-    if(m.t==='bow_start'&&(!Prayer.nonce(m.request)||!['auto','single'].includes(m.mode)||!Number.isInteger(m.count)||m.count<0||m.count>108)){error('invalid');return}
+    const target=m.target===undefined?108:m.target;
+    if(m.t==='bow_start'&&(![108,3000].includes(target)||!Prayer.nonce(m.request)||!['auto','single'].includes(m.mode)||!Number.isInteger(m.count)||m.count<0||m.count>target)){error('invalid');return}
     if(m.t!=='bow_start'&&(!Prayer.nonce(m.id)||!['pause','resume','stop','reset'].includes(m.action))){error('invalid');return}
     const now=Date.now();
     try{
       await this.editBow(a.id,old=>{
         if(m.t==='bow_start'){
           if(old?.id===m.request)return old; // retry never restarts or grants a second reward
-          const f=Prayer.bowProgress(old,now),count=m.restart?0:Math.max(m.count,f?.count||0);
-          return{id:m.request,rev:(old?.rev||0)+1,mode:m.mode,count:m.mode==='auto'&&count>=108?0:count,elapsed:0,at:now,paused:false,
+          const f=Prayer.bowProgress(old,now),progress={...(old?.progress||{})};if(f)progress[f.target]=f.count;
+          const count=m.restart?0:Math.max(m.count,progress[target]||0);
+          return{id:m.request,rev:(old?.rev||0)+1,mode:m.mode,target,progress,count:m.mode==='auto'&&count>=target?0:count,elapsed:0,at:now,paused:false,
             position:{space:spaceOf(a.s),x:a.s.x,z:a.s.z,h:a.s.h},haloUntil:Math.max(f?.haloUntil||0,a.s.haloUntil||0),expiresAt:now+VISIT_MEMORY_MS*2};
         }
         if(!old||old.id!==m.id)return old; // stale controls cannot cancel a newer practice
@@ -573,7 +575,7 @@ export class GardenRoom extends DurableObject {
       for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
       if(ghosts.length)await this.saveVisits();
       const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1,campfire:1,candles:1,bows:1},bow:this.bows[a.id]||null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }

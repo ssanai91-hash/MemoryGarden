@@ -507,9 +507,9 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 
 <aside class="visitors" aria-label="들어온 친구"><div class="visitors-title"><span>들어온 친구</span><button id="visitorToggle" class="visitor-toggle" type="button" aria-expanded="true" aria-controls="visitorNames">접기 ▴</button></div><div id="visitorNames" class="visitor-names" aria-live="polite"></div></aside>
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
-  <div class="count-line"><span role="status"><b id="bowCount">0</b> / 108배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
+  <div class="count-line"><span role="status"><b id="bowCount">0</b> / <span id="bowTarget">108</span>배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subDrink" aria-expanded="false" aria-controls="subDrink">마시기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button><button id="lookBtn" type="button">모습 바꾸기 🎲</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 접기</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subDrink" class="action-sub" role="group" aria-label="마시기" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button class="sub-back" type="button" data-back="subDrink">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subDrink" aria-expanded="false" aria-controls="subDrink">마시기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button><button id="lookBtn" type="button">모습 바꾸기 🎲</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 접기</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subDrink" class="action-sub" role="group" aria-label="마시기" hidden><button id="pCoffee" type="button" aria-pressed="false">커피 마시기</button><button id="pBeer" type="button" aria-pressed="false">캔맥주</button><button class="sub-back" type="button" data-back="subDrink">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="auto3000Btn" type="button">3000배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
 <div class="dock-actions" id="dockActions" role="group" aria-label="대화 목록과 동작" hidden><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
@@ -3367,13 +3367,16 @@ $('rerollBtn').onclick=()=>{closeOtherMenus('pet');openNameDialog(false);$('name
 const BOW_HALO_MS=24*60*60*1000;
 function validBowHaloUntil(value,now){return Number.isFinite(value)&&value>now&&value<=now+BOW_HALO_MS?value:0}
 function completeBowHalo(){practice.haloUntil=serverNow()+BOW_HALO_MS;me.haloUntil=practice.haloUntil;store.set('garden.bowHaloUntil',String(practice.haloUntil));sendDirty=true;saveVisit()}
-const practice={mode:'idle',paused:false,elapsed:0,remote:null,pendingStart:null,pendingControl:null,stoppedId:null,serverRev:0,haloUntil:validBowHaloUntil(Number(store.get('garden.bowHaloUntil')),Date.now()),count:Math.max(0,Math.min(108,parseInt(store.get('garden.bows')||'0',10)||0))};
+const savedBowTarget=store.get('garden.bowTarget')==='3000'?3000:108;
+const practice={mode:'idle',target:savedBowTarget,paused:false,elapsed:0,remote:null,pendingStart:null,pendingControl:null,stoppedId:null,serverRev:0,haloUntil:validBowHaloUntil(Number(store.get('garden.bowHaloUntil')),Date.now()),count:Math.max(0,Math.min(savedBowTarget,parseInt(store.get(savedBowTarget===3000?'garden.bows.3000':'garden.bows')||'0',10)||0))};
+function practiceCountKey(target=practice.target){return target===3000?'garden.bows.3000':'garden.bows'}
+function readPracticeCount(target){return Math.max(0,Math.min(target,parseInt(store.get(practiceCountKey(target))||'0',10)||0))}
 function serverPracticeReady(){return typeof room!=='undefined'&&room?.bowVersion===1&&room.connected()}
 function requestPracticeStart(restart=false){
-  if(!serverPracticeReady()||!['auto','single'].includes(practice.mode))return false;
+  if(typeof room==='undefined'||room?.bowVersion!==1||!['auto','single'].includes(practice.mode))return false;
   const request=Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');
-  practice.pendingControl=null;practice.pendingStart={t:'bow_start',request,mode:practice.mode,count:practice.count,restart};practice.remote=null;
-  sendPresence();const sent=room.send(practice.pendingStart);saveVisit();return sent;
+  practice.pendingControl=null;practice.pendingStart={t:'bow_start',request,mode:practice.mode,target:practice.target,count:practice.count,restart};practice.remote=null;
+  let sent=false;if(serverPracticeReady()){sendPresence();sent=room.send(practice.pendingStart)}saveVisit();return sent;
 }
 function requestPracticeControl(action){
   const id=practice.remote?.id||practice.pendingStart?.request||(action==='reset'?practice.stoppedId:null);
@@ -3388,13 +3391,13 @@ function requestPracticeControl(action){
 }
 function syncRemotePractice(){
   if(!practice.remote)return;
-  const f=Prayer.bowProgress(practice.remote,serverNow()),changed=practice.count!==f.count||practice.mode!==f.mode||practice.paused!==f.paused;
-  practice.count=f.count;practice.elapsed=f.elapsed/1000;practice.mode=f.mode;practice.paused=f.paused;
+  const f=Prayer.bowProgress(practice.remote,serverNow()),changed=practice.target!==f.target||practice.count!==f.count||practice.mode!==f.mode||practice.paused!==f.paused;
+  practice.target=f.target;practice.count=f.count;practice.elapsed=f.elapsed/1000;practice.mode=f.mode;practice.paused=f.paused;
   practice.haloUntil=validBowHaloUntil(f.haloUntil,serverNow());me.haloUntil=practice.haloUntil;me.bowPhase=practice.elapsed/8;
   if(['auto','single'].includes(f.mode))pose='bow';else if(pose==='bow'){pose='stand';sendDirty=true;syncPoseButtons()}
-  if(changed){store.set('garden.bows',String(practice.count));store.set('garden.bowHaloUntil',String(practice.haloUntil));practiceUI();saveVisit()}
-  if(f.completedAt&&f.count===108&&store.get('garden.bowNotified')!==f.id){
-    store.set('garden.bowNotified',f.id);toast('108배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요');saveVisit();
+  if(changed){store.set('garden.bowTarget',String(practice.target));store.set(practiceCountKey(),String(practice.count));store.set('garden.bowHaloUntil',String(practice.haloUntil));practiceUI();saveVisit()}
+  if(f.completedAt&&f.count===f.target&&store.get('garden.bowNotified')!==f.id){
+    store.set('garden.bowNotified',f.id);toast(practice.target+'배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요');saveVisit();
   }
 }
 function receivePractice(job,restore=false){
@@ -3417,7 +3420,7 @@ function receivePractice(job,restore=false){
 }
 function practiceVisitorLabel(job,away=false){
   const f=Prayer.bowProgress(job,serverNow());
-  if(f&&['auto','single'].includes(f.mode))return ' · '+(f.paused?'절하기 잠시 멈춤':f.mode==='auto'?'108배 중':'절하는 중')+' '+f.count+'/108';
+  if(f&&['auto','single'].includes(f.mode))return ' · '+(f.paused?'절하기 잠시 멈춤':f.mode==='auto'?f.target+'배 중':'절하는 중')+' '+f.count+'/'+f.target;
   return away?' · 잠시 자리 비움':'';
 }
 let bowRosterAt=0;
@@ -3427,13 +3430,16 @@ function bowFrame(p){
   return{lean:0,drop:0,reach:0,knee:0};
 }
 function practiceUI(){
-  $('bowCount').textContent=practice.count;$('bowCounter').hidden=!['auto','single'].includes(practice.mode);
+  $('bowCount').textContent=practice.count;$('bowTarget').textContent=practice.target;$('bowCounter').hidden=!['auto','single'].includes(practice.mode);
   $('resetBtn').hidden=practice.count===0;
   $('pauseBtn').hidden=!['auto','single'].includes(practice.mode);$('pauseBtn').textContent=practice.paused?'이어 하기':'잠시 멈춤';
   $('finishBtn').hidden=practice.mode==='idle';$('prayBtn').setAttribute('aria-pressed',String(practice.mode==='pray'));
   $('prayBtn').textContent=practice.mode==='pray'?'기도 마치기':'합장 기도';
-  $('autoBowBtn').textContent=practice.count>=108?'108배 다시 하기':practice.count?'108배 이어 하기':'108배 하기';
-  $('autoBowBtn').disabled=false;$('bowBtn').disabled=false;
+  for(const [target,id]of [[108,'autoBowBtn'],[3000,'auto3000Btn']]){
+    const count=practice.target===target?practice.count:readPracticeCount(target);
+    $(id).textContent=target+(count>=target?'배 다시 하기':count?'배 이어 하기':'배 하기');$(id).disabled=false;
+  }
+  $('bowBtn').disabled=false;
 }
 function endPractice(notify=true){if(practice.remote)syncRemotePractice();requestPracticeControl('stop');practice.remote=null;practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
 function preparePracticeInPlace(){
@@ -3444,28 +3450,31 @@ function preparePracticeInPlace(){
   Object.keys(keys).forEach(key=>delete keys[key]);
   pendingStoke=false;clearTimeout(fuelTimer);me.speed=0;userMoved=true;sendDirty=true;
 }
-function startPractice(mode){
+function startPractice(mode,target=practice.target){
+  if(mode==='auto'&&target===3000&&typeof room!=='undefined'&&room?.bowVersion===1&&!room.bowTargets?.includes(3000)){toast('3000배를 지원하는 최신 정원에 연결한 뒤 다시 눌러 주세요');return}
   if(mode==='pray'&&practice.mode==='pray'){endPractice();closePoseMenu();return}
   if(practice.remote)syncRemotePractice();
-  if(mode==='pray'){requestPracticeControl('stop');practice.remote=null}
-  const restart=mode==='auto'&&practice.count>=108;
-  if(restart){practice.count=0;store.set('garden.bows','0')}
+  if(mode==='pray'||target!==practice.target){requestPracticeControl('stop');practice.remote=null}
+  if(target!==practice.target){store.set(practiceCountKey(),String(practice.count));practice.target=target===3000?3000:108;practice.count=readPracticeCount(practice.target)}
+  store.set('garden.bowTarget',String(practice.target));
+  const restart=mode==='auto'&&practice.count>=practice.target;
+  if(restart){practice.count=0;store.set(practiceCountKey(),'0')}
   preparePracticeInPlace();
   practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();requestPracticeStart(restart);if(restart)saveVisit();
 }
-$('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
+$('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto',108);$('auto3000Btn').onclick=()=>startPractice('auto',3000);
 $('pauseBtn').onclick=()=>{if(practice.remote)syncRemotePractice();practice.paused=!practice.paused;requestPracticeControl(practice.paused?'pause':'resume');practiceUI();saveVisit()};$('finishBtn').onclick=()=>endPractice();
 let resetArmed=0;
 $('resetBtn').onclick=()=>{
   if(Date.now()-resetArmed>3000){resetArmed=Date.now();$('resetBtn').textContent='한 번 더 누르면 초기화';setTimeout(()=>{if(Date.now()-resetArmed>=3000)$('resetBtn').textContent='횟수 초기화'},3100);return}
-  resetArmed=0;$('resetBtn').textContent='횟수 초기화';endPractice(false);practice.count=0;store.set('garden.bows','0');requestPracticeControl('reset');practiceUI();saveVisit();toast('횟수를 0으로 되돌렸어요')};
+  resetArmed=0;$('resetBtn').textContent='횟수 초기화';endPractice(false);practice.count=0;store.set(practiceCountKey(),'0');requestPracticeControl('reset');practiceUI();saveVisit();toast('횟수를 0으로 되돌렸어요')};
 function updatePractice(dt){
   if(practice.remote){syncRemotePractice();return}
   me.haloUntil=validBowHaloUntil(practice.haloUntil,serverNow());
   if(!['auto','single'].includes(practice.mode)||practice.paused)return;
   practice.elapsed+=dt;
-  if(practice.elapsed>=8){const previous=practice.count;practice.elapsed-=8;practice.count=Math.min(108,practice.count+1);store.set('garden.bows',String(practice.count));
-    if(practice.count>=108||practice.mode==='single'){const complete=previous<108&&practice.count===108;endPractice(false);if(complete){completeBowHalo();toast('108배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요')}}practiceUI();
+  if(practice.elapsed>=8){const previous=practice.count;practice.elapsed-=8;practice.count=Math.min(practice.target,practice.count+1);store.set(practiceCountKey(),String(practice.count));
+    if(practice.count>=practice.target||practice.mode==='single'){const complete=previous<practice.target&&practice.count===practice.target;endPractice(false);if(complete){completeBowHalo();toast(practice.target+'배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요')}}practiceUI();
   }
   me.bowPhase=practice.elapsed/8;
 }
@@ -4349,7 +4358,7 @@ function updateContext(dt){
   if(inPocha()){b.textContent='포차 나오기';b.dataset.act='leave';b.hidden=false;return}
   if(seatedNow()){b.textContent='일어나기';b.dataset.act='up';b.hidden=false;return}
   if(pose!=='stand'&&pose!=='wave'){b.hidden=true;return}
-  if(hasEntered&&nearWood&&room?.connected()&&room.fireVersion===1){b.textContent='모닥불에 장작 넣기';b.dataset.act='firewood';b.hidden=false;return}
+  if(hasEntered&&nearWood&&room?.connected()&&room.fireVersion===1){b.textContent='장작 넣기';b.dataset.act='firewood';b.hidden=false;return}
   if(hasEntered&&nearBulletin(x,z,2.7)){b.textContent='게시판 보기';b.dataset.act='board';b.hidden=false;return}
   if(hasEntered&&underHutRoof(x,z)){b.textContent='평상에서 낮잠';b.dataset.act='nap';b.hidden=false;return}
   if(hasEntered&&nearestFirefly(2.2)>=0){b.textContent='반딧불이 잡기 ✨';b.dataset.act='firefly';b.hidden=false;return}
@@ -4744,7 +4753,7 @@ function saveVisit(){
   const p=me.g.position,message=lastMessages.get('me');
   const snapshot={v:1,space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
     x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
-    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,haloUntil:practice.haloUntil,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
+    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,target:practice.target,haloUntil:practice.haloUntil,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
   let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
   lastVisitSave=performance.now();return stored;
@@ -4778,9 +4787,10 @@ function restoreVisit(){
   if(typeof saved.chatDraft==='string')$('chatInput').value=saved.chatDraft.slice(0,200);
   const pr=saved.practice||{};
   practice.haloUntil=validBowHaloUntil(Math.max(practice.haloUntil,Number(pr.haloUntil)||0),serverNow());
-  if(Number.isInteger(pr.count))practice.count=Math.min(108,Math.max(practice.count,pr.count));
+  const savedTarget=pr.target===3000?3000:108;if(practice.target!==savedTarget){practice.target=savedTarget;practice.count=readPracticeCount(savedTarget)}
+  if(Number.isInteger(pr.count))practice.count=Math.min(practice.target,Math.max(practice.count,pr.count));
   practice.mode=['pray','single','auto'].includes(pr.mode)?pr.mode:'idle';
-  if(practice.count>=108&&practice.mode==='auto')practice.mode='idle';
+  if(practice.count>=practice.target&&practice.mode==='auto')practice.mode='idle';
   practice.elapsed=Number.isFinite(pr.elapsed)?Math.max(0,Math.min(7.999,pr.elapsed)):0;
   practice.paused=!!pr.paused;
   if(practice.mode==='pray')pose='pray';
@@ -4976,7 +4986,7 @@ function connectRoomServer(base,code){
     socket.onmessage=ev=>{if(stop||visitEnded||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;
-          api.selfId=you;api.bowVersion=m.features?.bows===1?1:0;api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
+          api.selfId=you;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});if(api.bowVersion){practice.serverRev=0;if(practice.pendingStart)api.send(practice.pendingStart);else if(m.bow)receivePractice(m.bow,true);else if(['auto','single'].includes(practice.mode)){const paused=practice.paused;requestPracticeStart();if(paused)requestPracticeControl('pause')}if(practice.pendingControl)api.send(practice.pendingControl)}break;
         case 'bow_state':if(m.id===you){receivePractice(m.job)}else if(m.peer){peersById.set(m.id,{...m.peer,quiet:true});emit()}else{const p=peersById.get(m.id);if(p){p.bow=m.job;emit()}}break;
         case 'bow_error':toast(m.code==='storage'?'수행 저장을 확인하지 못했어요. 다시 연결해 확인해 주세요.':'수행 상태를 다시 확인하고 있어요');if(m.code==='invalid')api.send({t:'bow_sync'});break;
