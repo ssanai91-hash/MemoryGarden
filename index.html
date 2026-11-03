@@ -776,6 +776,7 @@ import {createCandleUI} from './assets/prayer-candles-ui.js';
 import {createBowHalo} from './assets/bow-halo.js';
 import {addAlpineRange} from './assets/garden-mountains.js';
 import {createFramePacer,qualityDecision} from './assets/garden-performance.js';
+import {createGardenLightSlots} from './assets/garden-light-slots.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -834,10 +835,12 @@ for(const name of ['lights_physical_pars_fragment','lights_lambert_pars_fragment
 }
 THREE.ShaderLib.sprite.vertexShader=patchShader(THREE.ShaderLib.sprite.vertexShader,'vec4 mvPosition = modelViewMatrix[ 3 ];','vec4 mvPosition = modelViewMatrix[ 3 ];\n'+CURVE_GLSL,'curved sprites');
 // r170 uses physical attenuation. Each fixture has its own reference-distance calibration.
-const GARDEN_LIGHT_GAIN=Object.freeze({falls:42,porch:8,listeningWarm:13,altar:61,lantern:13,table:9,fireModel:12.5,fireMain:45,fireFill:7,bulletin:8,pochaCeiling:7,pochaEntrance:13});
+const GARDEN_LIGHT_GAIN=Object.freeze({falls:42,porch:8,listeningWarm:13,altar:61,lantern:13,table:9,fireModel:12.5,fireMain:45,fireFill:7,bulletin:8,pochaCeiling:7,pochaEntrance:13,prayer:1});
+let gardenLights=null;
 function gardenPointLight(kind,color,strength,range){
   const gain=GARDEN_LIGHT_GAIN[kind];if(!gain)throw new Error('Unknown garden light: '+kind);
-  const light=new THREE.PointLight(color,strength*gain,range,2);light.name='garden-'+kind;light.userData.gardenLightGain=gain;return light;
+  const light=kind==='listeningWarm'?new THREE.PointLight(color,strength*gain,range,2):Object.assign(new THREE.Object3D(),{isVirtualPointLight:true,color:new THREE.Color(color),intensity:strength*gain,distance:range,decay:2});
+  light.name='garden-'+kind;light.userData.gardenLightGain=gain;light.userData.gardenLightKind=kind;if(light.isVirtualPointLight)gardenLights?.register(light);return light;
 }
 function setGardenLight(light,strength){light.intensity=strength*(light.userData.gardenLightGain||Math.PI)}
 const windU={value:0},windStrengthU={value:1};
@@ -867,7 +870,7 @@ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.info.autoReset=false;
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;
 const gardenPost=createGardenRenderer(renderer);
-const scene=new THREE.Scene();
+const scene=new THREE.Scene();gardenLights=createGardenLightSlots(scene);
 let worldSpace='garden',listeningDoor=null,pendingShake=null,shakeTimer=0;
 const listening={scene:null,returnPoint:null,state:{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0},audio:null,
   muted:store.get('garden.listening.muted')==='1',volume:Math.max(0,Math.min(1,Number(store.get('garden.listening.volume')??'.65')))||0};
@@ -2008,7 +2011,7 @@ if(CENTERPIECE==='buddha')obstacles.push({x:0,z:0,r:5.75});
 
 
 /* ---------- a separate east-side prayer square ---------- */
-const prayerView=makePrayerGarden({scene,stone:F,markBloom,obstacles});
+const prayerView=makePrayerGarden({scene,stone:F,markBloom,obstacles,pointLight:(color,strength,range)=>gardenPointLight('prayer',color,strength,range)});
 if(CENTERPIECE==='campfire'){
   memorial.visible=true;memorial.position.set(ALTAR_SPOTS[0].x,Prayer.LAYOUT.floor,ALTAR_SPOTS[0].z);memorial.scale.setScalar(.46);
   obstacles.push({x:ALTAR_SPOTS[0].x,z:ALTAR_SPOTS[0].z,r:2.7});
@@ -5119,6 +5122,7 @@ function tick(){
     pg.attributes.position.needsUpdate=true}
   layoutBubbles(dt);windU.value=t;const windTarget=natureAudio.on&&natureAudio.engine?natureAudio.engine.windStrength:1+Math.min(1,Math.abs(weatherFrame(serverNow()).wind))*.8;windStrengthU.value+=(windTarget-windStrengthU.value)*Math.min(1,dt*2);updateMoonSanctuary();updateDust(dt);sun.position.copy(sunOffset).add(me.g.position);sun.target.position.copy(me.g.position);
   if(!gardenBoard.isOpen()){
+    if(worldSpace==='garden')gardenLights.update(frameStart/1000,camera.position,me.g.position);
     renderer.info.reset();if(worldSpace==='listening')updateListening(dt,t);else updateScenery();
     const phase=gardenEnvironment.frame(serverNow());
     gardenPost.draw(worldSpace==='listening'?listening.scene:scene,camera,dt,{...phase,rain:weatherFrame(serverNow()).rain,space:worldSpace,level:hasEntered?quality.level:0});

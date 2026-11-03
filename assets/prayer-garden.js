@@ -11,7 +11,7 @@ export function pavedDisk(radius,sectors=96){
   for(let j=1;j<rings;j++)for(let i=0;i<sectors;i++){const a=1+(j-1)*sectors+i,b=1+(j-1)*sectors+(i+1)%sectors,c=1+j*sectors+i,d=1+j*sectors+(i+1)%sectors;indices.push(a,b,c,b,d,c)}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();return g;
 }
-export function makePrayerGarden({scene,stone,markBloom,obstacles}){
+export function makePrayerGarden({scene,stone,markBloom,obstacles,pointLight=(color,intensity,range)=>new THREE.PointLight(color,intensity,range,2)}){
   const L=Prayer.LAYOUT,group=new THREE.Group();group.name='prayer-square';scene.add(group);
   const tiles=document.createElement('canvas');tiles.width=tiles.height=512;const paint=tiles.getContext('2d');paint.fillStyle='#a29886';paint.fillRect(0,0,512,512);
   const palette=['#c9c0ae','#c2b9a7','#d0c7b6','#c5bcaa'];for(let row=0;row<12;row++)for(let col=0;col<16;col++){paint.fillStyle=palette[(row*19+col*23)%palette.length];paint.fillRect(col*32+1,row*512/12+1,30,512/12-2)}
@@ -44,7 +44,7 @@ export function makePrayerGarden({scene,stone,markBloom,obstacles}){
   const signTex=new THREE.CanvasTexture(signCanvas);signTex.colorSpace=THREE.SRGBColorSpace;
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.8,.59),new THREE.MeshBasicMaterial({map:signTex,transparent:true,toneMapped:false}));sign.position.set(B.x,4.57,B.z+.58);group.add(sign);
   obstacles.push({x:B.x-1.65,z:B.z,r:.75},{x:B.x,z:B.z,r:.75},{x:B.x+1.65,z:B.z,r:.75});
-  const glow=new THREE.PointLight(0xffb55f,0,8,2);glow.position.set(B.x,2.5,B.z+1.3);group.add(glow);
+  const glow=pointLight(0xffb55f,0,8);glow.position.set(B.x,2.5,B.z+1.3);group.add(glow);
   let snapshot={rev:0,items:[]},seen='',lastSecond=-1,nextExpiry=Infinity,live=[];const matrix=new THREE.Object3D();
   function refresh(now){
     live=Prayer.display(snapshot,now);const key=live.map(c=>c.id).join(',');if(key===seen)return;seen=key;nextExpiry=live.length?Math.min(...live.map(c=>c.expiresAt)):Infinity;
