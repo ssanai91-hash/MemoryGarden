@@ -5,7 +5,7 @@ function client(saved=new Map()){
  const c={Date:class extends Date{static now(){return now}},Number,Math,parseInt,me:{},sendDirty:false,store:{get:k=>saved.get(k),set(k,v){saved.set(k,v)}},serverNow:()=>now,saveVisit(){saves++},toast(){},practiceUI(){},setTimeout(){},$:id=>{if(!buttons.has(id))buttons.set(id,{});return buttons.get(id)}};
  vm.createContext(c);
  const init=html.slice(html.indexOf('const BOW_HALO_MS='),html.indexOf('function bowFrame('));
- const update=html.slice(html.indexOf('function updatePractice(dt){'),html.indexOf('// Background time never counts'));
+ const update=html.slice(html.indexOf('function updatePractice(dt){'),html.indexOf('// Background rendering sleeps'));
  const reset=html.slice(html.indexOf('let resetArmed=0;'),html.indexOf('function updatePractice(dt){'));
  vm.runInContext(init+"\nfunction endPractice(){practice.mode='idle';practice.elapsed=0;practice.paused=false}\n"+reset+update+';this.practice=practice;this.update=updatePractice;this.valid=validBowHaloUntil;',c);
  return{c,saved,buttons,setNow:n=>now=n,get now(){return now},get saves(){return saves}};

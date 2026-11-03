@@ -12,5 +12,17 @@
   const publicState=(state,now)=>({rev:state?.rev||0,items:active(state,now).map(({id,slot,name,wish,litBy,createdAt,expiresAt})=>({id,slot,name,wish,litBy,createdAt,expiresAt}))});
   const display=(state,now)=>active(state,now).slice(0,MAX).map((c,i)=>({...c,displaySlot:i}));
   const nonce=s=>typeof s==='string'&&/^[a-f0-9]{32}$/.test(s);
-  root.GardenPrayer=Object.freeze({LAYOUT,LIFE_MS,MAX,clean,inside,nearBox,active,display,publicState,nonce});
+  const BOW_MS=8000;
+  // A compact clock anchor, shared by server, returning participant and watching friends.
+  function bowProgress(job,now){
+    if(!job)return null;
+    const active=['auto','single'].includes(job.mode),limit=job.mode==='single'?1:Math.max(0,108-job.count);
+    const total=(job.elapsed||0)+(active&&!job.paused?Math.max(0,now-job.at):0),steps=active?Math.min(limit,Math.floor(total/BOW_MS)):0;
+    const done=active&&steps>=limit,finishedAt=active&&!job.paused?job.at+Math.max(0,limit*BOW_MS-(job.elapsed||0)):null;
+    const count=Math.min(108,job.count+steps),earned=done&&job.count<108&&count===108;
+    return{...job,count,mode:done?'idle':job.mode,paused:done?false:!!job.paused,elapsed:done||!active?0:total%BOW_MS,
+      haloUntil:earned?finishedAt+LIFE_MS:job.haloUntil||0,completedAt:earned?finishedAt:job.completedAt||0,finishedAt,done};
+  }
+  function settleBow(job,now){const f=bowProgress(job,now);if(!f)return null;const {done,finishedAt,...value}=f;return{...value,at:now,rev:job.rev+1}}
+  root.GardenPrayer=Object.freeze({LAYOUT,LIFE_MS,MAX,BOW_MS,bowProgress,settleBow,clean,inside,nearBox,active,display,publicState,nonce});
 })(globalThis);

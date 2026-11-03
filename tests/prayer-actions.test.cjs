@@ -4,7 +4,7 @@ function client(count=0){
  let now=1800000000000,saves=0;const saved=new Map([['garden.bows',String(count)]]),buttons=new Map();
  const c={Date:class extends Date{static now(){return now}},Number,Math,parseInt,me:{g:{position:{x:24,z:-3},rotation:{y:0}},speed:2},sendDirty:false,pose:'stand',worldSpace:'garden',move:{x:1,y:1},keys:{KeyW:true},target:{x:25,z:-2},marker:{visible:true},knob:{style:{}},pendingStoke:true,fuelTimer:0,userMoved:false,store:{get:k=>saved.get(k),set:(k,v)=>saved.set(k,v)},serverNow:()=>now,saveVisit(){saves++},toast(){},setTimeout(){},clearTimeout(){},cancelFireCare(){},closePoseMenu(){},syncPoseButtons(){},$:id=>{if(!buttons.has(id))buttons.set(id,{setAttribute(){}});return buttons.get(id)}};
  vm.createContext(c);vm.runInContext(fs.readFileSync(__dirname+'/../assets/prayer-rules.js','utf8')+';this.Prayer=GardenPrayer;this.ALTAR_SPOTS=[Prayer.LAYOUT.buddha,Prayer.LAYOUT.mary];',c);
- vm.runInContext(html.slice(html.indexOf('const BOW_HALO_MS='),html.indexOf('// Background time never counts'))+';this.practice=practice;',c);
+ vm.runInContext(html.slice(html.indexOf('const BOW_HALO_MS='),html.indexOf('// Background rendering sleeps'))+';this.practice=practice;',c);
  return{c,saved,buttons,get saves(){return saves},get now(){return now}};
 }
 // Reproduce the reported return visit with 108 already saved: neither action may stay locked.

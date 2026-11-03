@@ -2959,6 +2959,7 @@ function onPeerList(change){
     const nextSpace=s.space==='listening'?'listening':'garden';if(e.space!==undefined&&e.space!==nextSpace){e.P.g.position.set(s.x,0,s.z);e.D.g.position.set(s.x+.8,0,s.z)}e.space=nextSpace;
     e.x=Math.max(-WORLD_R,Math.min(WORLD_R,s.x));e.z=Math.max(-WORLD_R,Math.min(WORLD_R,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
     e.P.woodCount=Number.isInteger(s.wc)?Math.max(1,Math.min(5,s.wc)):1;e.P.haloUntil=validBowHaloUntil(s.haloUntil,serverNow());
+    e.bow=s.bow||null;
     e.nick=typeof s.nick==='string'?stripInvisible(s.nick).slice(0,12):'';e.away=!!s.away;e.umbrella=s.u===true;
     if(s.say&&typeof s.say.text==='string'&&Number.isFinite(s.say.at))rememberLastMessage(pr.peer,e.nick||e.nm||'친구',s.say.text,s.say.at);
     restoreLastBubble(pr.peer,e.nick||e.nm||'친구');
@@ -2976,7 +2977,7 @@ function updateWho(){
   $('dot').classList.toggle('off',!connected);renderVisitors();
 }
 function renderVisitors(){
-  const names=[...(hasEntered?[shownName()==='나'?'나':shownName()+' (나)']:[]),...[...peers.values()].map(p=>(p.nick||p.nm||'친구')+(p.space==='listening'?' · 음악방':'')+(p.away?' · 잠시 자리 비움':''))];
+  const names=[...(hasEntered?[shownName()==='나'?'나':shownName()+' (나)'+practiceVisitorLabel(practice.remote)]:[]),...[...peers.values()].map(p=>(p.nick||p.nm||'친구')+(p.space==='listening'?' · 음악방':'')+practiceVisitorLabel(p.bow,p.away))];
   const key=JSON.stringify(names);if(renderVisitors.key===key)return;renderVisitors.key=key;
   const list=$('visitorNames');list.textContent='';
   for(const name of names){const item=document.createElement('span');item.textContent=name;list.appendChild(item)}
@@ -3362,11 +3363,64 @@ $('gardenToggle').onclick=()=>setGardenExpanded($('gardenDetails').hidden);
 $('goBtn').onclick=()=>goToFriend(false);
 $('rerollBtn').onclick=()=>{closeOtherMenus('pet');openNameDialog(false);$('nameForm').querySelector('input[name="entryPet"]:checked')?.focus({preventScroll:true})};
 
-/* ---------- prayer practice, local progress ---------- */
+/* ---------- prayer practice: durable server clock, lightweight local animation ---------- */
 const BOW_HALO_MS=24*60*60*1000;
 function validBowHaloUntil(value,now){return Number.isFinite(value)&&value>now&&value<=now+BOW_HALO_MS?value:0}
 function completeBowHalo(){practice.haloUntil=serverNow()+BOW_HALO_MS;me.haloUntil=practice.haloUntil;store.set('garden.bowHaloUntil',String(practice.haloUntil));sendDirty=true;saveVisit()}
-const practice={mode:'idle',paused:false,elapsed:0,haloUntil:validBowHaloUntil(Number(store.get('garden.bowHaloUntil')),Date.now()),count:Math.max(0,Math.min(108,parseInt(store.get('garden.bows')||'0',10)||0))};
+const practice={mode:'idle',paused:false,elapsed:0,remote:null,pendingStart:null,pendingControl:null,stoppedId:null,serverRev:0,haloUntil:validBowHaloUntil(Number(store.get('garden.bowHaloUntil')),Date.now()),count:Math.max(0,Math.min(108,parseInt(store.get('garden.bows')||'0',10)||0))};
+function serverPracticeReady(){return typeof room!=='undefined'&&room?.bowVersion===1&&room.connected()}
+function requestPracticeStart(restart=false){
+  if(!serverPracticeReady()||!['auto','single'].includes(practice.mode))return false;
+  const request=Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');
+  practice.pendingControl=null;practice.pendingStart={t:'bow_start',request,mode:practice.mode,count:practice.count,restart};practice.remote=null;
+  sendPresence();const sent=room.send(practice.pendingStart);saveVisit();return sent;
+}
+function requestPracticeControl(action){
+  const id=practice.remote?.id||practice.pendingStart?.request||(action==='reset'?practice.stoppedId:null);
+  if(action==='stop'){if(id)practice.stoppedId=id;practice.pendingStart=null}
+  if(!id)return;
+  practice.pendingControl={t:'bow_control',id,action};
+  if(serverPracticeReady())room.send(practice.pendingControl);
+  if(['pause','resume'].includes(action)&&practice.remote){
+    const {done,finishedAt,...frame}=Prayer.bowProgress(practice.remote,serverNow());
+    practice.remote={...frame,at:serverNow(),paused:action==='pause'};
+  }
+}
+function syncRemotePractice(){
+  if(!practice.remote)return;
+  const f=Prayer.bowProgress(practice.remote,serverNow()),changed=practice.count!==f.count||practice.mode!==f.mode||practice.paused!==f.paused;
+  practice.count=f.count;practice.elapsed=f.elapsed/1000;practice.mode=f.mode;practice.paused=f.paused;
+  practice.haloUntil=validBowHaloUntil(f.haloUntil,serverNow());me.haloUntil=practice.haloUntil;me.bowPhase=practice.elapsed/8;
+  if(['auto','single'].includes(f.mode))pose='bow';else if(pose==='bow'){pose='stand';sendDirty=true;syncPoseButtons()}
+  if(changed){store.set('garden.bows',String(practice.count));store.set('garden.bowHaloUntil',String(practice.haloUntil));practiceUI();saveVisit()}
+  if(f.completedAt&&f.count===108&&store.get('garden.bowNotified')!==f.id){
+    store.set('garden.bowNotified',f.id);toast('108배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요');saveVisit();
+  }
+}
+function receivePractice(job,restore=false){
+  if(!job)return;
+  if(practice.pendingStart&&job.id!==practice.pendingStart.request)return;
+  if(job.rev<practice.serverRev)return;
+  const f=Prayer.bowProgress(job,serverNow()),pending=practice.pendingControl;
+  if(pending?.id===job.id){
+    const active=['auto','single'].includes(f.mode);
+    if(pending.action==='reset'&&(active||f.count!==0))return;
+    if(active&&(pending.action==='stop'||pending.action==='pause'&&!f.paused||pending.action==='resume'&&f.paused))return;
+    practice.pendingControl=null;
+  }
+  if(job.id===practice.stoppedId&&['auto','single'].includes(f.mode))return;
+  practice.serverRev=job.rev;practice.remote=job;practice.pendingStart=null;
+  if(restore&&['auto','single'].includes(f.mode)&&job.position?.space===worldSpace){
+    me.g.position.set(job.position.x,0,job.position.z);me.g.rotation.y=job.position.h;target=null;marker.visible=false;me.speed=0;
+  }
+  syncRemotePractice();practiceUI();sendDirty=true;
+}
+function practiceVisitorLabel(job,away=false){
+  const f=Prayer.bowProgress(job,serverNow());
+  if(f&&['auto','single'].includes(f.mode))return ' · '+(f.paused?'절하기 잠시 멈춤':f.mode==='auto'?'108배 중':'절하는 중')+' '+f.count+'/108';
+  return away?' · 잠시 자리 비움':'';
+}
+let bowRosterAt=0;
 function bowFrame(p){
   const frames=[[0,0,0,0,0],[.18,0,-.52,0,-1.5],[.42,1.45,-.45,0,-1.5],[.58,1.45,-.45,0,-1.5],[.78,0,-.52,0,-1.5],[1,0,0,0,0]];
   for(let i=1;i<frames.length;i++)if(p<=frames[i][0]){const a=frames[i-1],b=frames[i],u=Math.max(0,(p-a[0])/(b[0]-a[0])),k=u*u*(3-2*u);return{lean:a[1]+(b[1]-a[1])*k,drop:a[2]+(b[2]-a[2])*k,reach:a[3]+(b[3]-a[3])*k,knee:a[4]+(b[4]-a[4])*k}}
@@ -3381,7 +3435,7 @@ function practiceUI(){
   $('autoBowBtn').textContent=practice.count>=108?'108배 다시 하기':practice.count?'108배 이어 하기':'108배 하기';
   $('autoBowBtn').disabled=false;$('bowBtn').disabled=false;
 }
-function endPractice(notify=true){practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
+function endPractice(notify=true){if(practice.remote)syncRemotePractice();requestPracticeControl('stop');practice.remote=null;practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
 function preparePracticeInPlace(){
   cancelFireCare();
   if(worldSpace==='garden'&&Prayer.inside(me.g.position.x,me.g.position.z)){const p=ALTAR_SPOTS.reduce((a,b)=>Math.hypot(a.x-me.g.position.x,a.z-me.g.position.z)<Math.hypot(b.x-me.g.position.x,b.z-me.g.position.z)?a:b);me.g.rotation.y=Math.atan2(p.x-me.g.position.x,p.z-me.g.position.z)}
@@ -3392,18 +3446,21 @@ function preparePracticeInPlace(){
 }
 function startPractice(mode){
   if(mode==='pray'&&practice.mode==='pray'){endPractice();closePoseMenu();return}
+  if(practice.remote)syncRemotePractice();
+  if(mode==='pray'){requestPracticeControl('stop');practice.remote=null}
   const restart=mode==='auto'&&practice.count>=108;
   if(restart){practice.count=0;store.set('garden.bows','0')}
   preparePracticeInPlace();
-  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();if(restart)saveVisit();
+  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();requestPracticeStart(restart);if(restart)saveVisit();
 }
 $('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
-$('pauseBtn').onclick=()=>{practice.paused=!practice.paused;practiceUI()};$('finishBtn').onclick=()=>endPractice();
+$('pauseBtn').onclick=()=>{if(practice.remote)syncRemotePractice();practice.paused=!practice.paused;requestPracticeControl(practice.paused?'pause':'resume');practiceUI();saveVisit()};$('finishBtn').onclick=()=>endPractice();
 let resetArmed=0;
 $('resetBtn').onclick=()=>{
   if(Date.now()-resetArmed>3000){resetArmed=Date.now();$('resetBtn').textContent='한 번 더 누르면 초기화';setTimeout(()=>{if(Date.now()-resetArmed>=3000)$('resetBtn').textContent='횟수 초기화'},3100);return}
-  resetArmed=0;$('resetBtn').textContent='횟수 초기화';endPractice(false);practice.count=0;store.set('garden.bows','0');practiceUI();toast('횟수를 0으로 되돌렸어요')};
+  resetArmed=0;$('resetBtn').textContent='횟수 초기화';endPractice(false);practice.count=0;store.set('garden.bows','0');requestPracticeControl('reset');practiceUI();saveVisit();toast('횟수를 0으로 되돌렸어요')};
 function updatePractice(dt){
+  if(practice.remote){syncRemotePractice();return}
   me.haloUntil=validBowHaloUntil(practice.haloUntil,serverNow());
   if(!['auto','single'].includes(practice.mode)||practice.paused)return;
   practice.elapsed+=dt;
@@ -3413,8 +3470,8 @@ function updatePractice(dt){
   me.bowPhase=practice.elapsed/8;
 }
 practiceUI();
-// Background time never counts as completed bows. Explicit pause remains paused on return.
-let appHidden=document.hidden;document.addEventListener('visibilitychange',()=>{appHidden=document.hidden;clock.getDelta();if(!appHidden){framePacer.reset();requestGardenFrame()}if(appHidden){cancelFireCare();Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''}});
+// Background rendering sleeps; server-clock practice continues. Explicit pause remains paused on return.
+let appHidden=document.hidden;document.addEventListener('visibilitychange',()=>{appHidden=document.hidden;if(practice.remote)syncRemotePractice();clock.getDelta();if(!appHidden){framePacer.reset();requestGardenFrame()}if(appHidden){cancelFireCare();Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''}});
 addEventListener('blur',()=>{Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''});
 
 /* ---------- shared garden clock and independent weather fronts (pure, testable maths) ---------- */
@@ -4687,7 +4744,7 @@ function saveVisit(){
   const p=me.g.position,message=lastMessages.get('me');
   const snapshot={v:1,space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
     x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
-    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,haloUntil:practice.haloUntil},
+    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,haloUntil:practice.haloUntil,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
   let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
   lastVisitSave=performance.now();return stored;
@@ -4730,6 +4787,8 @@ function restoreVisit(){
   else if(['single','auto'].includes(practice.mode))pose='bow';
   else if(pose==='pray'||pose==='bow')pose='stand';
   if(worldSpace==='listening'&&pose==='sit'&&listeningSeatAt(me.g.position.x,me.g.position.z)<0)pose='stand';
+  practice.pendingStart=pr.pendingStart&&Prayer.nonce(pr.pendingStart.request)?pr.pendingStart:null;practice.pendingControl=pr.pendingControl&&Prayer.nonce(pr.pendingControl.id)?pr.pendingControl:null;practice.stoppedId=pr.stoppedId||null;
+  if(pr.remote&&Prayer.nonce(pr.remote.id)){practice.remote=pr.remote;syncRemotePractice()}
   me.bowPhase=practice.elapsed/8;me.speed=0;
   myDogObj.g.position.set(me.g.position.x-Math.cos(me.g.rotation.y),0,me.g.position.z+Math.sin(me.g.rotation.y));
   userMoved=true;autoJoined=true;target=null;marker.visible=false;sendDirty=true;
@@ -4872,7 +4931,7 @@ function connectRoomServer(base,code){
       peersById.clear();setConn(false,'정원 연결을 종료했어요');
     }};
   function emit(){if(emitQueued||stop)return;emitQueued=true;requestAnimationFrame(()=>{emitQueued=false;if(stop)return;
-    const list=[...peersById.values()].map(p=>({peer:p.id,quiet:!!p.quiet,sameTab:false,kind:'viewer',by:null,guest:false,presence:Object.assign({},p.s||{},{look:p.look,dog:p.dog,nick:p.name,say:p.lastChat||null,away:!!p.away})}));
+    const list=[...peersById.values()].map(p=>({peer:p.id,quiet:!!p.quiet,sameTab:false,kind:'viewer',by:null,guest:false,presence:Object.assign({},p.s||{},{look:p.look,dog:p.dog,nick:p.name,say:p.lastChat||null,away:!!p.away,bow:p.bow||null})}));
     peerL.forEach(fn=>fn({peers:list}))})}
   function setConn(c,message){connected=c;if(!c)cancelFireCare();gardenBoard.connection(c);candleUI?.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
   function applyShared(sh){
@@ -4917,8 +4976,10 @@ function connectRoomServer(base,code){
     socket.onmessage=ev=>{if(stop||visitEnded||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;
-          api.selfId=you;api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
-          applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});break;
+          api.selfId=you;api.bowVersion=m.features?.bows===1?1:0;api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
+          applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});if(api.bowVersion){practice.serverRev=0;if(practice.pendingStart)api.send(practice.pendingStart);else if(m.bow)receivePractice(m.bow,true);else if(['auto','single'].includes(practice.mode)){const paused=practice.paused;requestPracticeStart();if(paused)requestPracticeControl('pause')}if(practice.pendingControl)api.send(practice.pendingControl)}break;
+        case 'bow_state':if(m.id===you){receivePractice(m.job)}else if(m.peer){peersById.set(m.id,{...m.peer,quiet:true});emit()}else{const p=peersById.get(m.id);if(p){p.bow=m.job;emit()}}break;
+        case 'bow_error':toast(m.code==='storage'?'수행 저장을 확인하지 못했어요. 다시 연결해 확인해 주세요.':'수행 상태를 다시 확인하고 있어요');if(m.code==='invalid')api.send({t:'bow_sync'});break;
         case 'candles_state':case 'candle_lit':case 'candle_error':candleUI?.receive(m);break;
         case 'listening_audio':applyListeningState(m.audio);break;
         case 'listening_error':toast(m.code==='space'?'음악방 안에서 오디오를 조작해 주세요.':m.code==='storage'?'저장을 확인하지 못했어요. 다시 눌러 주세요.':'잠시 후 다시 눌러 주세요.');break;
@@ -4967,7 +5028,7 @@ function connectRoomServer(base,code){
   function schedule(){if(stop||visitEnded||readExitFlag()||!hasEntered||retryTimer)return;const wait=Math.min(15000,1000*Math.pow(2,retry++));retryTimer=setTimeout(()=>{retryTimer=null;open()},wait)}
   function wake(){
     if(stop||visitEnded||readExitFlag()||!hasEntered||navigator.onLine===false)return;
-    if(document.hidden){saveVisit();if(connected)api.send({t:'background'});return}
+    if(document.hidden){if(practice.remote)syncRemotePractice();saveVisit();if(connected){sendPresence();api.send({t:'background'})}return}
     if(connected&&ws&&ws.readyState===1&&Date.now()-lastReceived<=60000&&api.send({t:'foreground'})){api.send({t:'ping',c:Date.now()});return}
     if(ws&&!connected&&ws.readyState<2&&Date.now()-connectionStartedAt<12000)return;
     if(ws)disconnected('정원에 다시 연결하는 중…');
@@ -5184,6 +5245,7 @@ function tick(){
   const moved=Math.hypot(me.g.position.x-ox,me.g.position.z-oz)/Math.max(dt,1e-4);
   me.speed+=(moved-me.speed)*Math.min(1,dt*10);
   updatePractice(visualDt);updateFireCare(visualDt);
+  if(bowRosterAt!==Math.floor(serverNow()/1000)){bowRosterAt=Math.floor(serverNow()/1000);renderVisitors()}
   posePerson(me,pose,dt,t);
   if(worldSpace==='garden'){updateEnvironment(visualDt,t);updateWaterworks(visualDt,t)}else updateUmbrellas();
   if(worldSpace==='garden'){updateCampfire(visualDt);updateBonfire(visualDt,t);updateOwner(visualDt,t)}updateContext(visualDt);updateRps(visualDt);syncListeningActors();
@@ -5199,6 +5261,7 @@ function tick(){
     P.g.rotation.y=angLerp(P.g.rotation.y,e.h,k);
     const sp=Math.hypot(P.g.position.x-px,P.g.position.z-pz)/Math.max(dt,1e-4);
     P.speed+=(Math.min(sp,4)-P.speed)*Math.min(1,dt*8);
+    const bow=Prayer.bowProgress(e.bow,serverNow());if(bow){if(['auto','single'].includes(bow.mode)){e.pose='bow';P.bowPhase=bow.elapsed/Prayer.BOW_MS}else if(e.pose==='bow')e.pose='stand';P.haloUntil=validBowHaloUntil(bow.haloUntil,serverNow())}
     posePerson(P,e.pose,dt,t);
     {const si=seatAt(P.g.position.x,P.g.position.z,e.space||'garden');if(si>=200&&P.speed<.3){const o=pochaLocal(STOOLS[si-200].lx>0?3.7:-3.7,2.3+((si-200)%4)*.5);updateDog(e.D,o.x,o.z,POCHA.h,'sit',false,dt,t)}else updateDog(e.D,P.g.position.x,P.g.position.z,P.g.rotation.y,e.pose,P.speed>.3,dt,t)}
   }

@@ -104,12 +104,22 @@ export class GardenRoom extends DurableObject {
       this.listeningAudio=(await ctx.storage.get('listeningAudio'))||{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0};
       this.rps = (await ctx.storage.get('rpsGames')) || [];
       this.visits=(await ctx.storage.get('visits'))||{};
+      this.bows=(await ctx.storage.get('bowPractices'))||{};this.bowQueue=new Map();
       this.campfire=await ctx.storage.get('campfire');
       if(!this.campfire){this.campfire=Fire.initial(Date.now());await ctx.storage.put('campfire',this.campfire)}
       if(this.campfire.fuelUntil>Date.now()+Fire.MAX_MS){this.campfire={...this.campfire,fuelUntil:Date.now()+Fire.MAX_MS};await ctx.storage.put('campfire',this.campfire)}
       this.candles=(await ctx.storage.get('prayerCandles'))||{rev:0,items:[]};
-      // Preserve a pending alarm when waking from hibernation.
-      if ((this.rps.length||Object.keys(this.visits).length||this.candles.items.length) && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
+      // Re-arm durable practices even after a restart between their commit and alarm setup.
+      let restoredBows=false;const live=new Set(this.readyPeers().map(p=>p.a.id));
+      for(const [id,job]of Object.entries(this.bows)){
+        const f=Prayer.bowProgress(job,Date.now()),visit=this.visits[id];
+        if(f.finishedAt&&['auto','single'].includes(f.mode)&&visit?.peer&&!visit.revoked&&!live.has(id)){
+          const until=f.finishedAt+VISIT_AWAY_MS;if(!(visit.awayUntil>=until)){visit.awayUntil=until;restoredBows=true}
+        }
+      }
+      if(restoredBows)await ctx.storage.put('visits',this.visits);
+      if(Object.keys(this.bows).length)await this.armRpsAlarm();
+      else if ((this.rps.length||Object.keys(this.visits).length||this.candles.items.length) && await ctx.storage.getAlarm() === null) await this.armRpsAlarm();
     });
   }
 
@@ -125,7 +135,9 @@ export class GardenRoom extends DurableObject {
     return this.ctx.getWebSockets().map((ws) => ({ ws, a: ws.deserializeAttachment() })).filter((p) => p.ws.readyState === 1 && p.a && p.a.ready);
   }
   peerInfo(a) {
-    return { id: a.id, name: a.name, look: a.look, dog: a.dog, lastChat: a.lastChat || null, away:!!a.away, s: a.s };
+    const job=this.bows?.[a.id]||null,f=Prayer.bowProgress(job,Date.now()),s={...a.s};
+    if(f){if(['auto','single'].includes(f.mode)){Object.assign(s,job.position,{p:'bow',bp:f.elapsed/Prayer.BOW_MS})}else if(s.p==='bow')s.p='stand';s.haloUntil=Math.max(s.haloUntil||0,f.haloUntil||0)}
+    return { id: a.id, name: a.name, look: a.look, dog: a.dog, lastChat: a.lastChat || null, away:!!a.away, bow:job, s };
   }
 
   visiblePeers(exceptId){
@@ -133,7 +145,7 @@ export class GardenRoom extends DurableObject {
     const peers=live.filter(p=>p.a.id!==exceptId).map(p=>this.peerInfo(p.a));
     const away=Object.values(this.visits).filter(v=>v.peer&&!v.revoked&&!ids.has(v.peer.id)&&v.awayUntil>Date.now()&&v.peer.id!==exceptId);
     away.sort((a,b)=>b.lastSeen-a.lastSeen);
-    return peers.concat(away.map(v=>({...v.peer,away:true}))).slice(0,MAX_PEERS-1);
+    return peers.concat(away.map(v=>({...this.peerInfo({...v.peer,s:v.peer.s}),away:true}))).slice(0,MAX_PEERS-1);
   }
   async saveVisits(){
     const live=new Set(this.readyPeers().map(p=>p.a.id));
@@ -172,6 +184,62 @@ export class GardenRoom extends DurableObject {
   }
   async save() {
     await this.ctx.storage.put('shared', this.shared);
+  }
+
+  async editBow(id,change){
+    const result=await this.ctx.storage.transaction(async txn=>{
+      const jobs=(await txn.get('bowPractices'))||{};
+      const value=change(jobs[id]||null);if(value)jobs[id]=value;else delete jobs[id];
+      await txn.put('bowPractices',jobs);return jobs;
+    });
+    this.bows=result;return result[id]||null;
+  }
+  publishBow(id){
+    const live=this.readyPeers().find(p=>p.a.id===id),visit=this.visits[id];
+    const a=live?.a||(visit?.peer?{...visit.peer,s:visit.peer.s,away:true}:null);
+    if(!a)return;
+    const peer=this.peerInfo(a);a.s=peer.s;if(live)live.ws.serializeAttachment(a);
+    if(visit?.peer)visit.peer=peer;
+    this.broadcast({t:'bow_state',id,job:this.bows[id]||null,peer});
+  }
+  async advanceBows(now=Date.now()){
+    const ids=Object.keys(this.bows||{}).filter(id=>Prayer.bowProgress(this.bows[id],now).done||this.bows[id].expiresAt<=now);
+    for(const id of ids){await this.editBow(id,job=>!job||job.expiresAt<=now?null:Prayer.bowProgress(job,now).done?Prayer.settleBow(job,now):job);this.publishBow(id)}
+    if(ids.length)await this.saveVisits();
+  }
+  handleBows(ws,a,m){
+    // Control commands from the same socket retain their order across storage awaits.
+    this.bowQueue=this.bowQueue||new Map();const previous=this.bowQueue.get(a.id)||Promise.resolve();
+    const task=previous.catch(()=>{}).then(()=>this.performBowControl(ws,a,m));this.bowQueue.set(a.id,task);
+    return task.finally(()=>{if(this.bowQueue.get(a.id)===task)this.bowQueue.delete(a.id)});
+  }
+  async performBowControl(ws,a,m){
+    a=ws.deserializeAttachment()||a;if(!a.ready)return;
+    const error=code=>ws.send(JSON.stringify({t:'bow_error',code,request:m.request||m.id}));
+    if(!this.allow(a,'bows',8)){error('slow');return}
+    if(m.t==='bow_sync'){await this.advanceBows();ws.send(JSON.stringify({t:'bow_state',id:a.id,job:this.bows[a.id]||null}));return}
+    if(m.t==='bow_start'&&(!Prayer.nonce(m.request)||!['auto','single'].includes(m.mode)||!Number.isInteger(m.count)||m.count<0||m.count>108)){error('invalid');return}
+    if(m.t!=='bow_start'&&(!Prayer.nonce(m.id)||!['pause','resume','stop','reset'].includes(m.action))){error('invalid');return}
+    const now=Date.now();
+    try{
+      await this.editBow(a.id,old=>{
+        if(m.t==='bow_start'){
+          if(old?.id===m.request)return old; // retry never restarts or grants a second reward
+          const f=Prayer.bowProgress(old,now),count=m.restart?0:Math.max(m.count,f?.count||0);
+          return{id:m.request,rev:(old?.rev||0)+1,mode:m.mode,count:m.mode==='auto'&&count>=108?0:count,elapsed:0,at:now,paused:false,
+            position:{space:spaceOf(a.s),x:a.s.x,z:a.s.z,h:a.s.h},haloUntil:Math.max(f?.haloUntil||0,a.s.haloUntil||0),expiresAt:now+VISIT_MEMORY_MS*2};
+        }
+        if(!old||old.id!==m.id)return old; // stale controls cannot cancel a newer practice
+        const next=Prayer.settleBow(old,now);if(m.action==='stop'||m.action==='reset'){next.mode='idle';next.paused=false;next.elapsed=0;if(m.action==='reset')next.count=0}
+        else if(['auto','single'].includes(next.mode))next.paused=m.action==='pause';return next;
+      });
+      // Visibility/disconnection may have changed the attachment while storage was pending.
+      a=ws.deserializeAttachment()||a;const oldVisit=this.visits[a.id],f=Prayer.bowProgress(this.bows[a.id],now);
+      this.publishBow(a.id);
+      if(a.ready)await this.rememberVisit(ws.deserializeAttachment()||a);
+      else if(oldVisit?.peer){oldVisit.awayUntil=Math.max(oldVisit.awayUntil||0,f?.finishedAt?f.finishedAt+VISIT_AWAY_MS:now+VISIT_AWAY_MS);await this.saveVisits()}
+      await this.armRpsAlarm();
+    }catch(e){error('storage')}
   }
 
   async handleFire(ws,a,m){
@@ -353,6 +421,7 @@ export class GardenRoom extends DurableObject {
   }
   async armRpsAlarm() {
     const deadlines=this.rps.map(g=>g.expiresAt);
+    for(const job of Object.values(this.bows||{})){const f=Prayer.bowProgress(job,Date.now());if(f.finishedAt&&f.mode!=='idle')deadlines.push(f.finishedAt);else if(f.done)deadlines.push(Date.now()+1);deadlines.push(job.expiresAt)}
     for(const candle of this.candles?.items||[])deadlines.push(candle.expiresAt);
     for(const visit of Object.values(this.visits)){if(visit.awayUntil)deadlines.push(visit.awayUntil);deadlines.push(visit.expiresAt)}
     const next=deadlines.length?Math.min(...deadlines):null;
@@ -387,7 +456,7 @@ export class GardenRoom extends DurableObject {
     for (const game of changed) this.sendRps(game);
   }
   async alarm() {
-    await this.advanceCandles();await this.advanceRps();await this.advanceVisits();
+    await this.advanceBows();await this.advanceCandles();await this.advanceRps();await this.advanceVisits();
     await this.armRpsAlarm();
   }
   async cancelRpsFor(id, reason) {
@@ -471,7 +540,7 @@ export class GardenRoom extends DurableObject {
         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.resumeToken));
         a.id = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('').slice(0, 20);
       }
-      await this.advanceVisits();
+      await this.advanceBows();await this.advanceVisits();
       const previous=this.visits[a.id];
       if(previous&&previous.revoked){ws.send(JSON.stringify({t:'visit_ended'}));ws.close(4003,'visit ended');return}
       const duplicates = this.readyPeers().filter(p => p.a.id === a.id);
@@ -494,6 +563,7 @@ export class GardenRoom extends DurableObject {
       a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0, u:false };
       if(a.s.p.startsWith('wood'))a.s.p='stand';
       a.ready = true;a.away=!!m.away;
+      const continuing=Prayer.bowProgress(this.bows[a.id],Date.now());if(continuing&&['auto','single'].includes(continuing.mode))a.s=this.peerInfo(a).s;
       a.handshaking = false;
       ws.serializeAttachment(a);
       await this.advanceRps();
@@ -503,11 +573,12 @@ export class GardenRoom extends DurableObject {
       for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
       if(ghosts.length)await this.saveVisits();
       const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1,campfire:1,candles:1},listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1,campfire:1,candles:1,bows:1},bow:this.bows[a.id]||null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }
     if (!a.ready) return;
+    if(['bow_start','bow_control','bow_sync'].includes(m.t))return this.handleBows(ws,a,m);
     if(['candle_light','candles_sync'].includes(m.t))return this.handleCandles(ws,a,m);
     if(['fire_begin','fire_add','fire_cancel'].includes(m.t))return this.handleFire(ws,a,m);
     if (['board_list','board_read','board_post','board_confirm'].includes(m.t)) return this.handleBoard(ws,a,m);
@@ -518,7 +589,7 @@ export class GardenRoom extends DurableObject {
         if(!this.allow(a,'visibility',4))return;
         const away=m.t==='background';if(a.away===away)return;
         a.away=away;if(away){delete a.fireCarry;if(a.s?.p.startsWith('wood'))a.s.p='stand'}ws.serializeAttachment(a);await this.rememberVisit(a);
-        this.broadcast({t:away?'away':'resume',peer:this.peerInfo(a)},ws);return;
+        this.broadcast({t:away?'away':'resume',peer:this.peerInfo(a)},ws);if(!away)ws.send(JSON.stringify({t:'bow_state',id:a.id,job:this.bows[a.id]||null}));return;
       }
       case 'leave': {
         await this.departVisit(ws,true);
@@ -531,6 +602,8 @@ export class GardenRoom extends DurableObject {
         if(spaceOf(s)!=='garden'||a.fireCarry&&Date.now()-a.fireCarry.at>45000)delete a.fireCarry;
         if(s.p.startsWith('wood')&&!a.fireCarry)s.p='stand';
         s.wc=s.p.startsWith('wood')?a.fireCarry?.count||1:0;
+        const activeBow=Prayer.bowProgress(this.bows[a.id],Date.now());
+        if(activeBow&&['auto','single'].includes(activeBow.mode)&&(s.p!=='bow'||spaceOf(s)!==spaceOf(a.s)||Math.hypot(s.x-a.s.x,s.z-a.s.z)>.15))await this.handleBows(ws,a,{t:'bow_control',id:activeBow.id,action:'stop'});
         a.s = s;
         ws.serializeAttachment(a);
         this.broadcast({ t: 'state', id: a.id, s: a.s }, ws);
@@ -666,10 +739,11 @@ export class GardenRoom extends DurableObject {
       a.ready=false;ws.serializeAttachment(a);
       if(!this.readyPeers().some(p=>p.a.id===a.id)){
         if(explicit){
+          await this.editBow(a.id,job=>job?{...Prayer.settleBow(job,Date.now()),mode:'idle',paused:false,elapsed:0}:null);
           this.visits[a.id]={revoked:true,lastSeen:Date.now(),expiresAt:Date.now()+VISIT_MEMORY_MS};
           await this.saveVisits();this.broadcast({t:'leave',id:a.id});
         }else{
-          a.away=true;await this.rememberVisit(a,Date.now()+VISIT_AWAY_MS);
+          const f=Prayer.bowProgress(this.bows[a.id],Date.now());a.away=true;await this.rememberVisit(a,Math.max(Date.now()+VISIT_AWAY_MS,f?.finishedAt&&['auto','single'].includes(f.mode)?f.finishedAt+VISIT_AWAY_MS:0));
           this.broadcast({t:'away',peer:this.peerInfo(a)});
         }
         await this.cancelRpsFor(a.id,'disconnected');
