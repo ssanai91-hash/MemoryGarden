@@ -28,7 +28,7 @@ const RPS_BEATS = { scissors: 'paper', rock: 'scissors', paper: 'rock' };
 const activeRps = g => g.status === 'invited' || g.status === 'playing';
 
 const POSES = ['stand', 'standing_pray', 'pray2', 'shake', 'sit', 'lie', 'prone', 'wave', 'pray', 'bow', 'coffee', 'beer', 'fuel', 'woodpick', 'woodcarry', 'woodfeed', 'yoga', 'soda', 'soju', 'cheers', 'makgeolli'];
-const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'soju', 'beer', 'makgeolli', 'cider'];
+const POCHA_ITEMS = ['odeng', 'dakbal', 'egg', 'golbaeng', 'jeon', 'tteok', 'udon', 'guksu', 'soju', 'beer', 'makgeolli', 'cider'];
 
 const POCHA_CENTER={x:-6.3,z:-23.4};
 const POCHA_HEADING=Math.atan2(-POCHA_CENTER.x,-POCHA_CENTER.z);
