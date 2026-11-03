@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "characters": [
     {
       "id": "soongyeol",
@@ -7,49 +7,199 @@
       "boundName": "숭열",
       "file": "chars/soongyeol.png",
       "size": [
-        96,
-        144
+        576,
+        584
       ],
       "frames": {
+        "walk_front_0": [
+          0,
+          0,
+          96,
+          146
+        ],
+        "walk_front_1": [
+          96,
+          0,
+          96,
+          146
+        ],
+        "walk_front_2": [
+          192,
+          0,
+          96,
+          146
+        ],
+        "walk_front_3": [
+          288,
+          0,
+          96,
+          146
+        ],
+        "walk_front_4": [
+          384,
+          0,
+          96,
+          146
+        ],
+        "walk_front_5": [
+          480,
+          0,
+          96,
+          146
+        ],
+        "walk_back_0": [
+          0,
+          146,
+          96,
+          146
+        ],
+        "walk_back_1": [
+          96,
+          146,
+          96,
+          146
+        ],
+        "walk_back_2": [
+          192,
+          146,
+          96,
+          146
+        ],
+        "walk_back_3": [
+          288,
+          146,
+          96,
+          146
+        ],
+        "walk_back_4": [
+          384,
+          146,
+          96,
+          146
+        ],
+        "walk_back_5": [
+          480,
+          146,
+          96,
+          146
+        ],
+        "walk_side_0": [
+          0,
+          292,
+          96,
+          146
+        ],
+        "walk_side_1": [
+          96,
+          292,
+          96,
+          146
+        ],
+        "walk_side_2": [
+          192,
+          292,
+          96,
+          146
+        ],
+        "walk_side_3": [
+          288,
+          292,
+          96,
+          146
+        ],
+        "walk_side_4": [
+          384,
+          292,
+          96,
+          146
+        ],
+        "walk_side_5": [
+          480,
+          292,
+          96,
+          146
+        ],
         "front": [
           0,
-          0,
-          48,
-          72
+          438,
+          96,
+          146
         ],
         "back": [
-          48,
-          0,
-          48,
-          72
+          96,
+          438,
+          96,
+          146
         ],
         "side": [
-          0,
-          72,
-          48,
-          72
+          192,
+          438,
+          96,
+          146
         ],
         "sit": [
-          48,
-          72,
-          48,
-          72
+          288,
+          438,
+          96,
+          146
+        ],
+        "sit_back": [
+          384,
+          438,
+          96,
+          146
+        ],
+        "sit_side": [
+          480,
+          438,
+          96,
+          146
         ]
       },
-      "feetBaseline": 70,
+      "feetBaseline": 142,
       "source": {
         "release": "chars-src",
-        "url": "https://github.com/ssanai91-hash/MemoryGarden/releases/download/chars-src/soongyeol-sheet.png",
-        "filename": "soongyeol-sheet.png",
-        "sha256": "f284217f31ae5de474b8555f05390252705fb1fa48ea35ffb4b2a3cefdf2c6b3"
+        "filename": "soongyeol-walk-v2-sheet.png",
+        "sha256": "b625c382841f8fbdc9402dcfc8ca3161cf40826237e62eb06c054bd5d6e22468",
+        "url": "https://github.com/ssanai91-hash/MemoryGarden/releases/download/chars-src/soongyeol-walk-v2-sheet.png"
       },
       "conversion": {
-        "height": 68,
-        "colors": 28,
+        "height": 136,
+        "colors": 64,
         "dithering": false,
         "greenPixels": 0,
-        "standingHeightSpread": 0
-      }
+        "walkHeightSpread": 4,
+        "registration": "shared-scale-head-center-feet-baseline"
+      },
+      "animations": {
+        "walk": {
+          "front": [
+            "walk_front_0",
+            "walk_front_1",
+            "walk_front_2",
+            "walk_front_3",
+            "walk_front_4",
+            "walk_front_5"
+          ],
+          "back": [
+            "walk_back_0",
+            "walk_back_1",
+            "walk_back_2",
+            "walk_back_3",
+            "walk_back_4",
+            "walk_back_5"
+          ],
+          "side": [
+            "walk_side_0",
+            "walk_side_1",
+            "walk_side_2",
+            "walk_side_3",
+            "walk_side_4",
+            "walk_side_5"
+          ]
+        }
+      },
+      "revision": "walk-v2-b625c382841f"
     }
   ]
 }

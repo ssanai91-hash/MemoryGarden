@@ -2,10 +2,10 @@ import * as THREE from 'three';
 export const POSE_FRAMES=Object.freeze({sit:'sit',coffee:'sit',beer:'sit',soda:'sit',soju:'sit',makgeolli:'sit',cheers:'sit',pray:'sit',bow:'sit',lie:'sit',prone:'sit',woodpick:'sit',fuel:'sit',standing_pray:'front',pray2:'front',wave:'front',shake:'front',woodfeed:'front'});
 export function pixelLookForName(name,look){const next={...look};delete next.px;if(String(name||'').trim().normalize('NFC')==='숭열')next.px='soongyeol';return next}
 export function directionFrame(heading,viewHeading){const angle=Math.atan2(Math.sin(heading-viewHeading),Math.cos(heading-viewHeading)),a=Math.abs(angle);return a<Math.PI/4?{frame:'front',flip:false}:a>Math.PI*.75?{frame:'back',flip:false}:{frame:'side',flip:angle<0}}
-export function createPixelCharacters({manifestUrl='./chars/manifest.json',loadTexture=url=>new THREE.TextureLoader().loadAsync(url),getManifest=()=>fetch(manifestUrl).then(r=>{if(!r.ok)throw Error('manifest');return r.json()})}={}){
+export function createPixelCharacters({manifestUrl='./chars/manifest.json',loadTexture=url=>new THREE.TextureLoader().loadAsync(url),getManifest=()=>fetch(manifestUrl,{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('manifest');return r.json()})}={}){
   const textures=new Map(),warm=new THREE.Color(0xffd4a1),point=new THREE.Vector3();
   const ready=Promise.resolve().then(getManifest).then(m=>new Map((m.characters||[]).filter(c=>/^[a-z0-9_-]{1,24}$/.test(c.id)&&c.file==='chars/'+c.id+'.png'&&c.size?.length===2&&['front','back','side','sit'].every(k=>Array.isArray(c.frames?.[k])&&c.frames[k].length===4&&c.frames[k].every(Number.isFinite))).map(c=>[c.id,c]))).catch(()=>new Map());
-  async function textureFor(entry){if(!textures.has(entry.id))textures.set(entry.id,Promise.resolve().then(()=>loadTexture('./'+entry.file)).then(texture=>{texture.magFilter=texture.minFilter=THREE.NearestFilter;texture.generateMipmaps=false;texture.colorSpace=THREE.SRGBColorSpace;return texture}));return textures.get(entry.id)}
+  async function textureFor(entry){if(!textures.has(entry.id))textures.set(entry.id,Promise.resolve().then(()=>loadTexture('./'+entry.file+(entry.revision?'?v='+encodeURIComponent(entry.revision):''))).then(texture=>{texture.magFilter=texture.minFilter=THREE.NearestFilter;texture.generateMipmaps=false;texture.colorSpace=THREE.SRGBColorSpace;return texture}));return textures.get(entry.id)}
   function detach(P){const state=P.pixel;if(!state)return;state.disposed=true;if(state.sprite){P.g.remove(state.sprite,state.anchor);state.sprite.material.map.dispose();state.sprite.material.dispose()}P.pixel=null;P.rig.visible=true}
   function attach(P,id){detach(P);if(!/^[a-z0-9_-]{1,24}$/.test(id||''))return;const state={id,ready:false,disposed:false};P.pixel=state;
     state.promise=ready.then(entries=>{const entry=entries.get(id);if(!entry)return;return textureFor(entry).then(texture=>{
@@ -18,12 +18,16 @@ export function createPixelCharacters({manifestUrl='./chars/manifest.json',loadT
   }
   function update(P,{pose,dt,time,camera,reduced=false,seated=false,daylight=1,slots=[]}){
     const state=P.pixel;if(!state?.ready)return false;
-    const sprite=state.sprite,direction=directionFrame(P.g.rotation.y,Math.atan2(camera.position.x-P.g.position.x,camera.position.z-P.g.position.z)),frame=POSE_FRAMES[pose]||direction.frame,flip=frame==='side'&&direction.flip;
+    const sprite=state.sprite,direction=directionFrame(P.g.rotation.y,Math.atan2(camera.position.x-P.g.position.x,camera.position.z-P.g.position.z));
+    P.walkT+=dt*Math.max(0,P.speed)*2.6;
+    const moving=P.speed>.3&&!POSE_FRAMES[pose],cycle=state.entry.animations?.walk?.[direction.frame],hasWalk=Array.isArray(cycle)&&cycle.length>1&&cycle.every(key=>state.entry.frames[key]);
+    const count=hasWalk?cycle.length:1,step=Math.floor(P.walkT/(Math.PI*2)*count)%count;
+    const walking=moving&&hasWalk,frame=walking?cycle[step]:(POSE_FRAMES[pose]||direction.frame),flip=(walking?direction.frame==='side':frame==='side')&&direction.flip;
     const [x,y,w,h]=state.entry.frames[frame],map=sprite.material.map,[aw,ah]=state.entry.size;
     if(state.frame!==frame||state.flip!==flip){map.repeat.set((flip?-1:1)*w/aw,h/ah);map.offset.set((x+(flip?w:0))/aw,1-(y+h)/ah);state.frame=frame;state.flip=flip}
-    P.walkT+=dt*P.speed*2.6;const moving=P.speed>.3,phase=Math.abs(Math.sin(P.walkT)),land=moving&&!reduced?Math.pow(1-phase,8):0;
+    state.walking=walking;state.step=walking?step:null;const phase=Math.abs(Math.sin(P.walkT)),land=moving&&!reduced?Math.pow(1-phase,8):0;
     let height=frame==='sit'?(seated?1.75:1.5):2,scaleY=1,scaleX=1,yLift=.02,rotation=0,tagY=frame==='sit'?(seated?2.05:1.8):2.25;
-    if(!reduced){if(moving){yLift+=phase*.05;scaleY-=land*.05;scaleX+=land*.04;if(frame==='side')rotation=(flip?-1:1)*.025}else if(frame!=='sit')scaleY+=Math.sin(time*Math.PI*2/3.6)*.015}
+    if(!reduced){if(walking){yLift+=phase*.008;if(direction.frame==='side')rotation=(flip?-1:1)*.008}else if(moving){yLift+=phase*.05;scaleY-=land*.05;scaleX+=land*.04;if(frame==='side')rotation=(flip?-1:1)*.025}else if(frame!=='sit')scaleY+=Math.sin(time*Math.PI*2/3.6)*.006}
     sprite.center.set(.5,0);
     if(pose==='lie'||pose==='prone'){sprite.center.set(.5,.5);yLift=.45;rotation=(pose==='lie'?1:-1)*Math.PI/2;tagY=.95}
     else if(pose==='bow'){const lean=Math.sin((P.bowPhase||0)*Math.PI);scaleY*=1-lean*.35;if(!reduced)rotation=.1*lean;tagY=1.6}

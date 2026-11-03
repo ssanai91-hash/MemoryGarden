@@ -4,19 +4,23 @@
 
 ## 원본과 변환
 
-- 원본: [chars-src 릴리스](https://github.com/ssanai91-hash/MemoryGarden/releases/tag/chars-src)의 `soongyeol-sheet.png`. 고해상도 원본은 저장소에 넣지 않는다.
+- 원본: [chars-src 릴리스](https://github.com/ssanai91-hash/MemoryGarden/releases/tag/chars-src)의 `soongyeol-walk-v2-sheet.png`. 이전 `soongyeol-sheet.png`도 보관한다. 고해상도 원본은 저장소에 넣지 않는다.
 - 게임용: `chars/soongyeol.png` 및 `chars/manifest.json`.
 - Python 3 + Pillow로 재생성:
 
 ```sh
-python tools/prepare_chars.py /path/to/soongyeol-sheet.png chars/soongyeol.png --report /tmp/soongyeol-report.json
+python tools/prepare_chars.py /path/to/soongyeol-walk-v2-sheet.png chars/soongyeol.png --layout walk6 --report /tmp/soongyeol-report.json
 ```
 
-2×2 자르기 → 초록 차이 40/25 제거 → 인물 높이 68px BOX 축소 → 28색·디더링 없음 → 48×72 칸의 발 중앙 정렬. 변환 결과는 96×144, 7,510바이트, 서 있는 세 자세 높이 차이 0px, 남은 초록 0px이다. PNG 투명도는 0/255이고 런타임 필터는 nearest, mipmap 없음이다.
+6×4 자르기 → 초록 차이 25 제거 → 공통 비율로 인물 높이 약 136px BOX 축소 → 64색 이하·디더링 없음 → 머리 중심과 발바닥 기준으로 정렬한다. 각 걷기 칸을 독립적으로 늘려 맞추지 않아 머리 크기가 걸음마다 변하는 것을 줄인다. 기존 68px 대비 한 변의 해상도를 두 배로 높였다. 변환 결과는 576×584, 56,814바이트, 실제 불투명 색상 63개, 걷기 높이 차이 최대 4px(약 ±2px), 남은 초록 0px이다. 색상 손실 없이 인덱스 PNG로 저장하며 투명도는 0/255, 런타임 필터는 nearest, mipmap 없음이다. 기본 `--layout poses4`는 이전 2×2 변환을 지원한다.
+
+[걷기 미리보기](docs/soongyeol-walk-preview.gif)는 변환된 실제 atlas를 재생한 것이며 정원 GPU 화면 녹화는 아니다. [원본 생성 요청문](docs/soongyeol-walk-prompt.txt)과 [원본 업로드 확인](docs/soongyeol-walk-source.jpg)도 보관한다.
 
 ## 동작과 표시
 
-`assets/pixel-characters.js`의 `POSE_FRAMES`가 동작 대응표다. 정면·뒷면·오른쪽 옆면·정면 앉기 4칸을 사용하고 왼쪽은 옆면을 좌우 반전한다. 걷기는 5cm 바운스·착지 압축·기울기, 대기는 3.6초 주기 숨쉬기다. 기존 발밑 그림자와 이름표·말풍선·24시간 후광을 유지한다. 낮·밤 및 정원 조명 슬롯의 거리로 색을 맞춘다. 이미지 데이터는 공유하고 사람별 UV와 재질은 분리한다. 스프라이트 자체는 1 draw call이며 그림자를 만들지 않는다.
+`assets/pixel-characters.js`의 `POSE_FRAMES`가 동작 대응표다. 앞·뒤·오른쪽 걷기 각 6칸(총 18칸)과 서기·앉기 6칸을 시트에 둔다. 왼쪽은 옆면을 좌우 반전한다. 걷기는 실제 팔·다리 프레임을 교체하며 `walkT += dt * speed * 2.6`의 이동 거리 박자를 따른다. 15/30/60fps에서 같은 거리를 이동하면 같은 프레임을 표시하고, 카메라 방향이 바뀌어도 걷기 위상은 이어진다. 정지하면 서기, 앉기 등 동작이면 해당 칸으로 바로 전환한다. 새 걷기의 추가 상하 움직임은 0.8cm로 줄이고 찌그러뜨리기를 없애며 대기 숨쉬기는 0.6%다. 동작 줄이기에서는 추가 흔들림 없이 이동에 필요한 다리 프레임만 표시한다. 옛 4칸 시트에는 기존 걷기 효과로 호환한다.
+
+기존 발밑 그림자와 이름표·말풍선·24시간 후광을 유지한다. 낮·밤 및 정원 조명 슬롯의 거리로 색을 맞춘다. 이미지 데이터는 공유하고 사람별 UV와 재질은 분리한다. 프레임 변경은 UV만 바꾸므로 매번 새 텍스처·재질을 만들지 않는다. 스프라이트 자체는 계속 1 draw call이며 그림자를 만들지 않는다. manifest를 재검증하고 PNG URL에 revision을 붙여 이전 68px 이미지 캐시와 새 atlas 칸 정보가 섞이지 않게 한다.
 
 | 1차 대체 동작 | 사용하는 칸과 효과 |
 | --- | --- |
@@ -39,7 +43,7 @@ npm test
 node tests/pixel-characters.mjs /path/to/three-r170.mjs
 ```
 
-서버를 실제 메시지 경로로 실행해 가짜 친구가 보는 hello/welcome/join/profile/현재 접속자 목록을 검사한다. 숭열만 자동 적용, 다른 이름의 강제 px 제거, 이름 변경 시 복귀, 잘못된 외형으로 변경 요청했을 때의 이름 재연결을 확인한다. r170 객체로 atlas 방향·좌우 반전·독립 UV·앉기·대체 동작·밤낮/따뜻한 조명·실패 시 3D 복귀·자원 해제를 확인한다.
+서버를 실제 메시지 경로로 실행해 가짜 친구가 보는 hello/welcome/join/profile/현재 접속자 목록을 검사한다. 숭열만 자동 적용, 다른 이름의 강제 px 제거, 이름 변경 시 복귀, 잘못된 외형으로 변경 요청했을 때의 이름 재연결을 확인한다. r170 객체로 atlas 방향·좌우 반전·독립 UV·걷기 6프레임 및 15/30/60fps 박자·앉기 우선·대체 동작·밤낮/따뜻한 조명·실패 시 3D 복귀·자원 해제를 확인한다. 변환 PNG의 투명도·초록 0개와 방향별 다리 영역 6칸의 차이도 검사한다.
 
 현재 검증 브라우저는 WebGL 2 생성이 불가능하므로 412×860 실제 정원 스크린샷 4장, 모닥불·포차·평상·음악방 자리와 낮밤의 GPU 화면 확인은 미완료다. 자동 검사 통과를 실제 화면 검증으로 간주하지 않는다.
 
