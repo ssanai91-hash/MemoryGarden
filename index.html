@@ -2132,6 +2132,10 @@ function seatAt(x,z,space=worldSpace){
   const c=CHAIR_SEATS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.3);if(c>=0)return 100+c;
   const st=STOOLS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.25);return st>=0?200+st:-1;
 }
+function seatSurfaceY(x,z,space=worldSpace){
+  const i=seatAt(x,z,space);if(i<0)return null;
+  return space==='listening'?.88:i>=200?.755:i>=100?.465:(FIRE_SEATS[i].seatY??.535);
+}
 function tableAt(x,z){if(worldSpace==='listening')return -1;const s=seatAt(x,z);return s>=200?99:s>=100?CHAIR_SEATS[s-100].table:-1}
 {
   const parasolTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=16;const x=c.getContext('2d');
@@ -2155,10 +2159,11 @@ function tableAt(x,z){if(worldSpace==='listening')return -1;const s=seatAt(x,z);
   });
 }
 if(CENTERPIECE==='campfire'){
-  const bark=F(0x5a3b24),cut=F(0xc9a46c),logGeo=new THREE.CylinderGeometry(.26,.28,2.35,9),endGeo=new THREE.CircleGeometry(.25,9);
+  const bark=F(0x5a3b24),cut=F(0xc9a46c),logGeo=new THREE.CylinderGeometry(.26,.28,2.35,9),endGeo=new THREE.CircleGeometry(.25,9),seatRay=new THREE.Raycaster();
   for(let j=0;j<8;j++){
     const a=(2*j+1)/16*Math.PI*2,g=new THREE.Group();g.position.set(Math.sin(a)*4.75,0,Math.cos(a)*4.75);g.rotation.y=a;scene.add(g);
-    part(logGeo,bark,[0,.27,0],null,[0,0,Math.PI/2],g);
+    const log=part(logGeo,bark,[0,.27,0],null,[0,0,Math.PI/2],g);g.updateMatrixWorld(true);
+    for(let k=0;k<2;k++){const sp=FIRE_SEATS[j*2+k];seatRay.set(new THREE.Vector3(sp.x,3,sp.z),new THREE.Vector3(0,-1,0));sp.seatY=seatRay.intersectObject(log)[0]?.point.y??.535}
     for(const s of[-1,1]){const e=part(endGeo,cut,[s*1.176,.27,0],null,[0,s*Math.PI/2,0],g);e.castShadow=false}
     for(const s of[-1,1])obstacles.push({x:g.position.x+Math.cos(a)*s*.6,z:g.position.z-Math.sin(a)*s*.6,r:.45});
   }
@@ -2418,7 +2423,8 @@ const reduceHaloMotion=matchMedia('(prefers-reduced-motion: reduce)');
 function posePerson(P,pose,dt,t){
   const personSpace=P.g.userData.space||'garden';
   P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)-P.g.position.y)*Math.min(1,dt*12);
-  if(pixelCharacters.update(P,{pose,dt,time:t,camera,reduced:reduceHaloMotion.matches,seated:seatAt(P.g.position.x,P.g.position.z,personSpace)>=0,daylight:personSpace==='listening'?.7:gardenEnvironment.frame(serverNow()).daylight,slots:personSpace==='garden'?gardenLights?.slots:[]})){
+  const seatY=seatSurfaceY(P.g.position.x,P.g.position.z,personSpace);
+  if(pixelCharacters.update(P,{pose,dt,time:t,camera,reduced:reduceHaloMotion.matches,seated:seatY!==null,seatHeight:seatY,groundHeight:P.g.position.y,daylight:personSpace==='listening'?.7:gardenEnvironment.frame(serverNow()).daylight,slots:personSpace==='garden'?gardenLights?.slots:[]})){
     if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.pixel.anchor,markBloom);P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches);
     if(P.bubble)P.bubble.userData.baseY=P.tag.position.y+.15+P.bubble.scale.y/2;return;
   }

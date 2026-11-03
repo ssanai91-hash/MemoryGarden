@@ -199,7 +199,21 @@
           ]
         }
       },
-      "revision": "walk-v2-b625c382841f"
+      "revision": "walk-v2-b625c382841f",
+      "seatAnchors": {
+        "sit": [
+          48,
+          120
+        ],
+        "sit_back": [
+          48,
+          134
+        ],
+        "sit_side": [
+          36,
+          130
+        ]
+      }
     },
     {
       "id": "jeongin",
@@ -399,7 +413,21 @@
           ]
         }
       },
-      "revision": "walk-v1-5cfaac55fba4"
+      "revision": "walk-v1-5cfaac55fba4",
+      "seatAnchors": {
+        "sit": [
+          48,
+          126
+        ],
+        "sit_back": [
+          48,
+          130
+        ],
+        "sit_side": [
+          38,
+          129
+        ]
+      }
     }
   ]
 }
