@@ -792,6 +792,7 @@ import {pavedDisk,makePrayerGarden} from './assets/prayer-garden.js';
 import {createCandleUI} from './assets/prayer-candles-ui.js';
 import {createBowHalo} from './assets/bow-halo.js';
 import {addAlpineRange} from './assets/garden-mountains.js';
+import {createPixelCharacters,pixelLookForName} from './assets/pixel-characters.js';
 import {createFramePacer,qualityDecision,createShadowBudget,disableActorShadows,createPowerSaving} from './assets/garden-performance.js';
 import {createGardenLightSlots} from './assets/garden-light-slots.js';
 (function(){
@@ -2295,7 +2296,7 @@ function disposeUmbrella(P){
 }
 function updateUmbrellas(){
   const apply=(P,state,key,wanted)=>{
-    const show=P.g.userData.space!=='listening'&&wanted===true&&!UMBRELLA_BLOCKED_POSES.includes(state);
+    const show=P.g.userData.space!=='listening'&&wanted===true&&!P.pixel?.ready&&!UMBRELLA_BLOCKED_POSES.includes(state);
     if(!show){if(P.umbrella)P.umbrella.visible=false;return}
     const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=Math.min(0,P.tag.position.y-2.25);
   };
@@ -2322,6 +2323,7 @@ function puffDust(x,z){
   const d=dust.pool[dust.i++%dust.pool.length];d.life=1;d.sp.visible=true;d.sp.position.set(x+(Math.random()-.5)*.2,.12,z+(Math.random()-.5)*.2);d.sp.scale.setScalar(.25);
 }
 function updateDust(dt){for(const d of dust.pool){if(!d.sp.visible)continue;d.life-=dt*1.6;if(d.life<=0){d.sp.visible=false;continue}d.sp.position.y+=dt*.35;d.sp.scale.setScalar(.25+(1-d.life)*.45);d.sp.material.opacity=d.life*.55}}
+const pixelCharacters=createPixelCharacters();
 function makePerson(L){
   const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);rig.scale.setScalar(.9);
   const legs=[],arms=[];
@@ -2409,13 +2411,17 @@ function makePerson(L){
   rig.traverse(node=>{if(node.isMesh&&!node.userData.handProp)contactMeshes.push(node)});
   g.add(blobShadow(.62));
   disableActorShadows(g);
-  return{wood,knives,eyes,blinkT:1+Math.random()*3,dustT:0,g,rig,torso,legs,arms,head,cup,can,soda,shot,riceCup,beerGlass,sodaGlass,tag,contactMeshes,walkT:0,speed:0};
+  const person={wood,knives,eyes,blinkT:1+Math.random()*3,dustT:0,g,rig,torso,legs,arms,head,cup,can,soda,shot,riceCup,beerGlass,sodaGlass,tag,contactMeshes,walkT:0,speed:0};pixelCharacters.attach(person,L.px);return person;
 }
 const prayerContactBounds=new THREE.Box3();
 const reduceHaloMotion=matchMedia('(prefers-reduced-motion: reduce)');
 function posePerson(P,pose,dt,t){
   const personSpace=P.g.userData.space||'garden';
   P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)-P.g.position.y)*Math.min(1,dt*12);
+  if(pixelCharacters.update(P,{pose,dt,time:t,camera,reduced:reduceHaloMotion.matches,seated:seatAt(P.g.position.x,P.g.position.z,personSpace)>=0,daylight:personSpace==='listening'?.7:gardenEnvironment.frame(serverNow()).daylight,slots:personSpace==='garden'?gardenLights?.slots:[]})){
+    if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.pixel.anchor,markBloom);P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches);
+    if(P.bubble)P.bubble.userData.baseY=P.tag.position.y+.15+P.bubble.scale.y/2;return;
+  }
   if(P.eyes){P.blinkT-=dt;const close=P.blinkT<0&&P.blinkT>-.13;P.eyes.forEach(e=>e.scale.y=close?.012:.075);if(P.blinkT<-.13)P.blinkT=2+Math.random()*4}
   if(personSpace==='garden'&&worldSpace==='garden'&&P.speed>2.2&&P.g.parent){P.dustT=(P.dustT||0)-dt;if(P.dustT<0){P.dustT=.22;puffDust(P.g.position.x,P.g.position.z)}}
   const w=Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
@@ -2696,6 +2702,7 @@ function validDog(d){
 }
 let myLook=loadJSON('mem.look'),myDog=loadJSON('mem.dog');
 if(!validLook(myLook))myLook=randLook();if(!validDog(myDog))myDog=randDog();
+myLook=pixelLookForName(store.get('garden.name'),myLook);
 store.set('mem.look',JSON.stringify(myLook));savePetPreference(myDog);
 let me=makePerson(myLook),myDogObj=makeDog(myDog);
 let myUmbrella=store.get('garden.umbrella')==='1';
@@ -2707,7 +2714,7 @@ let myNick=stripInvisible(store.get('garden.name')).slice(0,12);
 let hasEntered=false,visitToken='',lastVisitSave=0,visitEnded=readExitFlag(),animationFrameId=null,allowNavigation=false,historyReady=false;
 const shownName=()=>myNick||myName;
 function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${petDescription(d)})`}
-function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 걷는 '+(petKind(myDog)==='cat'?'고양이: ':'강아지: ')+petDescription(myDog)}
+function refreshMine(){$('lookBtn').hidden=!!myLook.px;setTag(me.tag,shownName());$('mine').textContent='함께 걷는 '+(petKind(myDog)==='cat'?'고양이: ':'강아지: ')+petDescription(myDog)}
 refreshMine();
 let pose='stand',sendDirty=true;
 function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',prone:'pProne',coffee:'pCoffee',beer:'pBeer',standing_pray:'standingPrayBtn',pray2:'pray2Btn',shake:'shakeBtn'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k));if(typeof markActionCategories==='function')markActionCategories()}
@@ -2939,19 +2946,19 @@ function sendPresence(){
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
-function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);e.P.halo?.dispose();disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.g.parent?.remove(e.D.g);peers.delete(k)}
+function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);e.P.halo?.dispose();pixelCharacters.detach(e.P);disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.g.parent?.remove(e.D.g);peers.delete(k)}
 function onPeerList(change){
   const seen=new Set();
   for(const pr of change.peers){
     if(pr.sameTab||pr.kind!=='viewer')continue;
     const s=pr.presence||{};if(!Number.isFinite(s.x)||!Number.isFinite(s.z))continue;
     seen.add(pr.peer);
-    const look=validLook(s.look)?s.look:null,dog=validDog(s.dog)?s.dog:null;
+    const look=pixelLookForName(stripInvisible(s.nick),validLook(s.look)?s.look:null),dog=validDog(s.dog)?s.dog:null;
     const key=JSON.stringify([look,dog]);
     let e=peers.get(pr.peer);const known=!!e;
     if(e&&e.key!==key){removePeer(pr.peer,true);e=null}
     if(!e){
-      const P=makePerson(look||randLook()),D=makeDog(dog||randDog());
+      const P=makePerson(validLook(look)?look:pixelLookForName(stripInvisible(s.nick),randLook())),D=makeDog(dog||randDog());
       P.g.position.set(s.x,0,s.z);D.g.position.set(s.x+1,0,s.z);
       e={P,D,key,x:s.x,z:s.z,h:0,pose:'stand',by:pr.by||(typeof s.uid==='string'?s.uid:null),dog:dog};
       peers.set(pr.peer,e);if(!known&&!pr.quiet)pendingHello.push(pr.peer);
@@ -3000,9 +3007,10 @@ let sharedFlowers=null;
 renderFlowers(localFlowers);
 if(document.fonts)document.fonts.ready.then(()=>{refreshMine();resolveNames()});
 
-function applyMyLook(look,dog,save){
+function applyMyLook(look,dog,save,boundName=shownName()){
+  look=pixelLookForName(boundName,look);
   const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
-  disposeUmbrella(me);me.halo?.dispose();me.g.parent?.remove(me.g);myDogObj.g.parent?.remove(myDogObj.g);
+  disposeUmbrella(me);me.halo?.dispose();pixelCharacters.detach(me);me.g.parent?.remove(me.g);myDogObj.g.parent?.remove(myDogObj.g);
   myLook=look;myDog=dog;me=makePerson(myLook);myDogObj=makeDog(myDog);
   me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);syncListeningActors();refreshMine();restoreLastBubble('me',shownName());
   store.set('mem.look',JSON.stringify(myLook));savePetPreference(myDog);store.set('garden.pet',petKind(myDog));
@@ -4450,7 +4458,7 @@ $('nameForm').onsubmit=e=>{
   const name=stripInvisible($('nameInput').value).slice(0,12),gender=entrySelection('entryGender');
   const look={...myLook,gender,hs:gender==='female'?1:0,hat:false};
   if(myLook.gender!==gender||!Number.isInteger(myLook.st))Object.assign(look,randLook(gender));
-  const pet=entryPetSpec();if(!validDog(pet))return;applyMyLook(look,pet,false);
+  const pet=entryPetSpec();if(!validDog(pet))return;applyMyLook(look,pet,false,name);
   myNick=name;store.set('garden.name',name);store.set('garden.gender',gender);store.set('garden.pet',petKind(pet));hasEntered=true;
   if(!visitToken)visitToken=newVisitToken();
   refreshMine();restoreLastBubble('me',shownName());renderVisitors();sendDirty=true;

@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "characters": [
+    {
+      "id": "soongyeol",
+      "name": "숭열",
+      "boundName": "숭열",
+      "file": "chars/soongyeol.png",
+      "size": [
+        96,
+        144
+      ],
+      "frames": {
+        "front": [
+          0,
+          0,
+          48,
+          72
+        ],
+        "back": [
+          48,
+          0,
+          48,
+          72
+        ],
+        "side": [
+          0,
+          72,
+          48,
+          72
+        ],
+        "sit": [
+          48,
+          72,
+          48,
+          72
+        ]
+      },
+      "feetBaseline": 70,
+      "source": {
+        "release": "chars-src",
+        "url": "https://github.com/ssanai91-hash/MemoryGarden/releases/download/chars-src/soongyeol-sheet.png",
+        "filename": "soongyeol-sheet.png",
+        "sha256": "f284217f31ae5de474b8555f05390252705fb1fa48ea35ffb4b2a3cefdf2c6b3"
+      },
+      "conversion": {
+        "height": 68,
+        "colors": 28,
+        "dithering": false,
+        "greenPixels": 0,
+        "standingHeightSpread": 0
+      }
+    }
+  ]
+}

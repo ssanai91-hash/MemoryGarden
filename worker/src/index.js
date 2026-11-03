@@ -56,13 +56,15 @@ const INVISIBLE = /[\u0000-\u001f\u007f​-‏‪-‮⁠-⁤﻿]/g;
 const clean = (v, n) => (typeof v === 'string' ? v.replace(INVISIBLE, '').trim().slice(0, n) : '');
 const num = (v, lo, hi) => (Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v * 100) / 100)) : null);
 
-function cleanLook(l) {
+function cleanLook(l,name) {
   if (!l || typeof l !== 'object') return null;
   const o = {};
   for (const k of ['skin', 'hair', 'shirt', 'pants', 'shoe']) {
     if (!Number.isInteger(l[k]) || l[k] < 0 || l[k] > 0xffffff) return null;
     o[k] = l[k];
   }
+  if(typeof l.px==='string'&&/^[a-z0-9_-]{1,24}$/.test(l.px))o.px=l.px;
+  if(name!==undefined){delete o.px;if(String(name).normalize('NFC')==='숭열')o.px='soongyeol'}
   o.hs = l.hs === 1 ? 1 : 0;
   o.hat = !!l.hat;
   if (['male', 'female'].includes(l.gender)) { o.gender = l.gender; o.hs = l.gender === 'female' ? 1 : 0; }
@@ -560,7 +562,7 @@ export class GardenRoom extends DurableObject {
         try { prior.ws.send(JSON.stringify({ t: 'replaced' })); prior.ws.close(4002, 'session resumed'); } catch (e) {}
       }
       a.name = clean(m.name, 12) || '친구';
-      a.look = cleanLook(m.look);
+      a.look = cleanLook(m.look,a.name);
       a.dog = cleanDog(m.dog);
       a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0, u:false };
       if(a.s.p.startsWith('wood'))a.s.p='stand';
@@ -615,7 +617,7 @@ export class GardenRoom extends DurableObject {
       case 'profile': {
         if (!this.allow(a, 'p', 2)) return;
         a.name = clean(m.name, 12) || a.name;
-        a.look = cleanLook(m.look) || a.look;
+        a.look = cleanLook(m.look,a.name) || cleanLook(a.look,a.name);
         a.dog = cleanDog(m.dog) || a.dog;
         ws.serializeAttachment(a);
         this.broadcast({ t: 'profile', id: a.id, name: a.name, look: a.look, dog: a.dog }, ws);
