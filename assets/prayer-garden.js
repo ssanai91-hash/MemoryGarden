@@ -23,7 +23,7 @@ export function makePrayerGarden({scene,stone,markBloom,obstacles,pointLight=(co
   part(L.width,.12,.12,L.x,.065,L.z-L.depth/2,curbMat);
   for(const side of[-1,1])part(.12,.12,L.depth,L.x+side*L.width/2,.065,L.z,curbMat);
   for(const side of[-1,1])part(6,.12,.12,L.x+side*7,.065,L.z+L.depth/2,curbMat);
-  const B=L.box,loader=new THREE.TextureLoader();
+  const B=L.box,BOX_SCALE=.5,cabinetStart=group.children.length,loader=new THREE.TextureLoader();
   const load=url=>{const t=loader.load(url);t.colorSpace=THREE.SRGBColorSpace;return t};
   const timber=new THREE.MeshLambertMaterial({map:load('./assets/candle-wood.webp'),color:0xd4b58b});
   // Twenty large candles: five across, four deep wooden shelves. Faces point toward the plaza.
@@ -43,8 +43,12 @@ export function makePrayerGarden({scene,stone,markBloom,obstacles,pointLight=(co
   const signCanvas=document.createElement('canvas');signCanvas.width=1024;signCanvas.height=160;const sp=signCanvas.getContext('2d');sp.fillStyle='#f5d49b';sp.textAlign='center';sp.font='bold 76px "Gowun Batang",serif';sp.fillText('소원을 밝히는 초함',512,108);
   const signTex=new THREE.CanvasTexture(signCanvas);signTex.colorSpace=THREE.SRGBColorSpace;
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.8,.59),new THREE.MeshBasicMaterial({map:signTex,transparent:true,toneMapped:false}));sign.position.set(B.x,4.57,B.z+.58);group.add(sign);
-  obstacles.push({x:B.x-1.65,z:B.z,r:.75},{x:B.x,z:B.z,r:.75},{x:B.x+1.65,z:B.z,r:.75});
-  const glow=pointLight(0xffb55f,0,8);glow.position.set(B.x,2.5,B.z+1.3);group.add(glow);
+  for(const offset of[-1.65,0,1.65])obstacles.push({x:B.x+offset*BOX_SCALE,z:B.z,r:.75*BOX_SCALE});
+  const glow=pointLight(0xffb55f,0,8*BOX_SCALE);glow.position.set(B.x,2.5,B.z+1.3);group.add(glow);
+  // Scale the complete cabinet around its floor anchor, keeping the plaza at full size.
+  const cabinet=new THREE.Group();cabinet.name='prayer-candle-cabinet';
+  cabinet.position.set(B.x*(1-BOX_SCALE),L.floor*(1-BOX_SCALE),B.z*(1-BOX_SCALE));cabinet.scale.setScalar(BOX_SCALE);
+  cabinet.add(...group.children.slice(cabinetStart));group.add(cabinet);
   let snapshot={rev:0,items:[]},seen='',lastSecond=-1,nextExpiry=Infinity,live=[];const matrix=new THREE.Object3D();
   function refresh(now){
     live=Prayer.display(snapshot,now);const key=live.map(c=>c.id).join(',');if(key===seen)return;seen=key;nextExpiry=live.length?Math.min(...live.map(c=>c.expiresAt)):Infinity;
@@ -62,6 +66,6 @@ export function makePrayerGarden({scene,stone,markBloom,obstacles,pointLight=(co
   return{group,paving,wax,flames,glow,apply(s){snapshot=s;seen='!';lastSecond=-1},update(now,time){
     const sec=Math.floor(now/1000);if(sec!==lastSecond||now>=nextExpiry){lastSecond=sec;refresh(now)}
     live.forEach((c,i)=>{const a=p(c.displaySlot),f=.94+.06*Math.sin(time*9+i*2.1);matrix.position.set(a.x,a.y+.87*.77-.077+.118*f,a.z+.01);matrix.rotation.set(0,0,.045*Math.sin(time*5+i));matrix.scale.set(.185*f,.28*f,1);matrix.updateMatrix();flames.setMatrixAt(i,matrix.matrix)});
-    flames.count=wax.count=live.length;flames.instanceMatrix.needsUpdate=true;glow.intensity=live.length?Math.min(5,1.2+live.length*.17):0;
+    flames.count=wax.count=live.length;flames.instanceMatrix.needsUpdate=true;glow.intensity=live.length?Math.min(5,1.2+live.length*.17)*BOX_SCALE*BOX_SCALE:0;
   }};
 }
