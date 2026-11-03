@@ -3360,8 +3360,8 @@ function practiceUI(){
   $('pauseBtn').hidden=!['auto','single'].includes(practice.mode);$('pauseBtn').textContent=practice.paused?'이어 하기':'잠시 멈춤';
   $('finishBtn').hidden=practice.mode==='idle';$('prayBtn').setAttribute('aria-pressed',String(practice.mode==='pray'));
   $('prayBtn').textContent=practice.mode==='pray'?'기도 마치기':'합장 기도';
-  $('autoBowBtn').textContent=practice.count>=108?'108배 완료':practice.count?'108배 이어 하기':'108배 하기';
-  $('autoBowBtn').disabled=practice.count>=108;$('bowBtn').disabled=practice.count>=108;
+  $('autoBowBtn').textContent=practice.count>=108?'108배 다시 하기':practice.count?'108배 이어 하기':'108배 하기';
+  $('autoBowBtn').disabled=false;$('bowBtn').disabled=false;
 }
 function endPractice(notify=true){practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
 function preparePracticeInPlace(){
@@ -3374,9 +3374,10 @@ function preparePracticeInPlace(){
 }
 function startPractice(mode){
   if(mode==='pray'&&practice.mode==='pray'){endPractice();closePoseMenu();return}
-  if(mode!=='pray'&&practice.count>=108)return;
+  const restart=mode==='auto'&&practice.count>=108;
+  if(restart){practice.count=0;store.set('garden.bows','0')}
   preparePracticeInPlace();
-  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();
+  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();if(restart)saveVisit();
 }
 $('prayBtn').onclick=()=>startPractice('pray');$('bowBtn').onclick=()=>startPractice('single');$('autoBowBtn').onclick=()=>startPractice('auto');
 $('pauseBtn').onclick=()=>{practice.paused=!practice.paused;practiceUI()};$('finishBtn').onclick=()=>endPractice();
@@ -3388,8 +3389,8 @@ function updatePractice(dt){
   me.haloUntil=validBowHaloUntil(practice.haloUntil,serverNow());
   if(!['auto','single'].includes(practice.mode)||practice.paused)return;
   practice.elapsed+=dt;
-  if(practice.elapsed>=8){practice.elapsed-=8;practice.count=Math.min(108,practice.count+1);store.set('garden.bows',String(practice.count));
-    if(practice.count>=108||practice.mode==='single'){const complete=practice.count===108;endPractice(false);if(complete){completeBowHalo();toast('108배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요')}}practiceUI();
+  if(practice.elapsed>=8){const previous=practice.count;practice.elapsed-=8;practice.count=Math.min(108,practice.count+1);store.set('garden.bows',String(practice.count));
+    if(practice.count>=108||practice.mode==='single'){const complete=previous<108&&practice.count===108;endPractice(false);if(complete){completeBowHalo();toast('108배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요')}}practiceUI();
   }
   me.bowPhase=practice.elapsed/8;
 }
@@ -4712,7 +4713,7 @@ function restoreVisit(){
   practice.haloUntil=validBowHaloUntil(Math.max(practice.haloUntil,Number(pr.haloUntil)||0),serverNow());
   if(Number.isInteger(pr.count))practice.count=Math.min(108,Math.max(practice.count,pr.count));
   practice.mode=['pray','single','auto'].includes(pr.mode)?pr.mode:'idle';
-  if(practice.count>=108&&practice.mode!=='pray')practice.mode='idle';
+  if(practice.count>=108&&practice.mode==='auto')practice.mode='idle';
   practice.elapsed=Number.isFinite(pr.elapsed)?Math.max(0,Math.min(7.999,pr.elapsed)):0;
   practice.paused=!!pr.paused;
   if(practice.mode==='pray')pose='pray';
