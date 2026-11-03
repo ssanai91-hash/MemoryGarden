@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createPixelActions} from './pixel-actions.js';
 export const POSE_FRAMES=Object.freeze({sit:'sit',coffee:'sit',beer:'sit',soda:'sit',soju:'sit',makgeolli:'sit',cheers:'sit',pray:'sit',bow:'sit',lie:'sit',prone:'sit',woodpick:'sit',fuel:'sit',standing_pray:'front',pray2:'front',wave:'front',shake:'front',woodfeed:'front'});
 const SEATED_POSES=new Set(['sit','coffee','beer','soda','soju','makgeolli','cheers']);
 export function pixelLookForName(name,look){const next={...look},who=String(name||'').trim().normalize('NFC');delete next.px;if(who==='숭열')next.px='soongyeol';else if(who==='정인')next.px='jeongin';return next}
@@ -7,7 +8,7 @@ export function createPixelCharacters({manifestUrl='./chars/manifest.json',loadT
   const textures=new Map(),warm=new THREE.Color(0xffd4a1),point=new THREE.Vector3();
   const ready=Promise.resolve().then(getManifest).then(m=>new Map((m.characters||[]).filter(c=>/^[a-z0-9_-]{1,24}$/.test(c.id)&&c.file==='chars/'+c.id+'.png'&&c.size?.length===2&&['front','back','side','sit'].every(k=>Array.isArray(c.frames?.[k])&&c.frames[k].length===4&&c.frames[k].every(Number.isFinite))).map(c=>[c.id,c]))).catch(()=>new Map());
   async function textureFor(entry){if(!textures.has(entry.id))textures.set(entry.id,Promise.resolve().then(()=>loadTexture('./'+entry.file+(entry.revision?'?v='+encodeURIComponent(entry.revision):''))).then(texture=>{texture.magFilter=texture.minFilter=THREE.NearestFilter;texture.generateMipmaps=false;texture.colorSpace=THREE.SRGBColorSpace;return texture}));return textures.get(entry.id)}
-  function detach(P){const state=P.pixel;if(!state)return;state.disposed=true;if(state.sprite){P.g.remove(state.sprite,state.anchor);state.sprite.material.map.dispose();state.sprite.material.dispose()}P.pixel=null;P.rig.visible=true}
+  function detach(P){const state=P.pixel;if(!state)return;state.disposed=true;state.actions?.dispose();if(state.sprite){P.g.remove(state.sprite,state.anchor);state.sprite.material.map.dispose();state.sprite.material.dispose()}P.pixel=null;P.rig.visible=true}
   function attach(P,id){detach(P);if(!/^[a-z0-9_-]{1,24}$/.test(id||''))return;const state={id,ready:false,disposed:false};P.pixel=state;
     state.promise=ready.then(entries=>{const entry=entries.get(id);if(!entry)return;return textureFor(entry).then(texture=>{
       if(state.disposed||P.pixel!==state)return;
@@ -15,11 +16,14 @@ export function createPixelCharacters({manifestUrl='./chars/manifest.json',loadT
       const sprite=new THREE.Sprite(material);sprite.name='pixel-character-'+id;sprite.center.set(.5,0);sprite.castShadow=sprite.receiveShadow=false;sprite.frustumCulled=false;
       const anchor=new THREE.Group();anchor.position.y=1.75;P.g.add(sprite,anchor);P.halo?.dispose();P.halo=null;P.rig.visible=false;
       Object.assign(state,{entry,sprite,anchor,ready:true});
+      if(entry.actionVersion===1)state.actions=createPixelActions(P,state);
     })}).catch(()=>{if(state.disposed||P.pixel!==state)return;state.failed=true;P.rig.visible=true});
   }
-  function update(P,{pose,dt,time,camera,reduced=false,seated=false,seatHeight=null,groundHeight=0,daylight=1,slots=[]}){
+  function update(P,options){
+    const {pose,dt,time,camera,reduced=false,seated=false,seatHeight=null,groundHeight=0,daylight=1,slots=[]}=options;
     const state=P.pixel;if(!state?.ready)return false;
     const sprite=state.sprite,direction=directionFrame(P.g.rotation.y,Math.atan2(camera.position.x-P.g.position.x,camera.position.z-P.g.position.z));
+    if(state.actions)return state.actions.update(options,direction);
     P.walkT+=dt*Math.max(0,P.speed)*2.6;
     const moving=P.speed>.3&&!POSE_FRAMES[pose],cycle=state.entry.animations?.walk?.[direction.frame],hasWalk=Array.isArray(cycle)&&cycle.length>1&&cycle.every(key=>state.entry.frames[key]);
     const count=hasWalk?cycle.length:1,step=Math.floor(P.walkT/(Math.PI*2)*count)%count;

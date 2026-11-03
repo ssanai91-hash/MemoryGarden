@@ -2301,9 +2301,9 @@ function disposeUmbrella(P){
 }
 function updateUmbrellas(){
   const apply=(P,state,key,wanted)=>{
-    const show=P.g.userData.space!=='listening'&&wanted===true&&!P.pixel?.ready&&!UMBRELLA_BLOCKED_POSES.includes(state);
+    const show=P.g.userData.space!=='listening'&&wanted===true&&!UMBRELLA_BLOCKED_POSES.includes(state);
     if(!show){if(P.umbrella)P.umbrella.visible=false;return}
-    const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=Math.min(0,P.tag.position.y-2.25);
+    const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=P.pixel?.ready?P.tag.position.y-2.05:Math.min(0,P.tag.position.y-2.25);
   };
   apply(me,pose,room&&room.selfId||myLook.shirt+':'+myLook.hair,myUmbrella);
   for(const [id,peer] of peers)apply(peer.P,peer.pose,id,peer.umbrella);
@@ -2424,7 +2424,7 @@ function posePerson(P,pose,dt,t){
   const personSpace=P.g.userData.space||'garden';
   P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)-P.g.position.y)*Math.min(1,dt*12);
   const seatY=seatSurfaceY(P.g.position.x,P.g.position.z,personSpace);
-  if(pixelCharacters.update(P,{pose,dt,time:t,camera,reduced:reduceHaloMotion.matches,seated:seatY!==null,seatHeight:seatY,groundHeight:P.g.position.y,daylight:personSpace==='listening'?.7:gardenEnvironment.frame(serverNow()).daylight,slots:personSpace==='garden'?gardenLights?.slots:[]})){
+  if(pixelCharacters.update(P,{pose,dt,time:t,camera,reduced:reduceHaloMotion.matches,seated:seatY!==null,seatHeight:seatY,groundHeight:P.g.position.y,surfaceHeight:personSpace==='listening'?0:Math.max(P.g.position.y,prayerSurfaceAt(P.g.position.x,P.g.position.z)),pocha:personSpace==='garden'&&seatY===.755,daylight:personSpace==='listening'?.7:gardenEnvironment.frame(serverNow()).daylight,slots:personSpace==='garden'?gardenLights?.slots:[]})){
     if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.pixel.anchor,markBloom);P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches);
     if(P.bubble)P.bubble.userData.baseY=P.tag.position.y+.15+P.bubble.scale.y/2;return;
   }
@@ -2447,7 +2447,7 @@ function posePerson(P,pose,dt,t){
   }
   else if(pose==='shake'&&still){const pump=Math.sin(t*10)*.16;arm=[-1.18+pump,0];armZ=[.18,.06];torsoLean=.12;tagY=2.22}
   else if(pose==='wave'&&still){arm=[0,0];armZ=[-.06,2.6+Math.sin(t*8)*.3]}
-  else if(pose==='pray2'&&still){const ph=t*4.4+(P.jumpSeed||(P.jumpSeed=Math.random()*6)),hop=Math.abs(Math.sin(ph)),land=1-hop;ry=hop*.42-land*land*.05;leg=[-.5*hop,-.5*hop];arm=[-.15,-.15];armZ=[-2.62-hop*.12,2.62+hop*.12];torsoLean=-.06+Math.sin(ph*2)*.04;tagY=2.25+hop*.42+.6}
+  else if(pose==='pray2'&&still){torsoLean=.08;ry=0;leg=[0,0];arm=[-2.2,-2.2];armZ=[.55,-.55];tagY=2.22}
   else if(pose==='cheers'&&still){arm=[onLog?-.7:0,-2.5];armZ=[-.06,-.35];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
   else if(['coffee','beer','soda','soju','makgeolli'].includes(pose)&&still){const c=Math.max(0,Math.sin(t*.7));arm=[onLog?-.7:0,-.9-c*1.3];armZ=[-.06,-.25-c*.15];if(onLog){ry=-.13;leg=[-1.25,-1.25];tagY=2.05}}
   else if(pose==='fuel'&&still){const c=(Math.sin(t*3.2)+1)/2;torsoLean=.55;ry=-.28;leg=[-.7,.35];arm=[-1.1-c*.7,-1.1-c*.7];armZ=[.2,-.2];tagY=1.9}
@@ -2470,7 +2470,7 @@ function posePerson(P,pose,dt,t){
   P.torso.rotation.x=L(P.torso.rotation.x,torsoLean);
   P.rig.rotation.x=L(P.rig.rotation.x,rx);P.rig.position.y=L(P.rig.position.y,ry);P.rig.position.z=L(P.rig.position.z,rz);
   if(pose==='pray2'&&w<.1){P.rig.position.y=ry;P.legs.forEach((l,i)=>l.rotation.x=leg[i]);P.arms.forEach((a,i)=>{a.rotation.x+=(arm[i]-a.rotation.x)*Math.min(1,dt*18);a.rotation.z+=(armZ[i]-a.rotation.z)*Math.min(1,dt*18)});P.tag.position.y=tagY}
-  if(P.knives){const on=pose==='pray2'&&w<.1;P.knives.forEach(k=>k.visible=on)}
+  if(P.knives)P.knives.forEach(k=>k.visible=false);
   for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
   // 절하기·누워있기·엎드리기에서 몸이 바닥이나 방석에 묻히지 않게 한다.
   const surface=personSpace==='listening'?0:prayerSurfaceAt(P.g.position.x,P.g.position.z);
@@ -5233,8 +5233,8 @@ for(const type of['pointerdown','wheel','keydown','input','change'])document.add
 document.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')performanceInput(e)},{capture:true,passive:true});
 function targetFrameCap(now){
  const moving=Math.hypot(move.x,move.y)>.08||!!target||me.speed>.3||Object.values(keys).some(Boolean),when=serverNow();
- const resting=cam.sky||!!calm.mode||['sit','lie','prone','pray','bow','standing_pray','yoga'].includes(pose);
- const effect=bonfire.stoke>.05||['cheers','shake','pray2','woodpick','woodfeed'].includes(pose)||rpsActive()||firePlayState.auroraUntil>when||(firePlayState.fireworks&&when-firePlayState.fireworks.startedAt<FIREWORK_DURATION);
+ const resting=cam.sky||!!calm.mode||['sit','lie','prone','pray','bow','standing_pray','pray2','yoga'].includes(pose);
+ const effect=bonfire.stoke>.05||['cheers','shake','woodpick','woodfeed'].includes(pose)||rpsActive()||firePlayState.auroraUntil>when||(firePlayState.fireworks&&when-firePlayState.fireworks.startedAt<FIREWORK_DURATION);
  return framePacer.cap(now,{moving,resting,effect,power:power.active});
 }
 function requestGardenFrame(){if(!visitEnded&&animationFrameId===null)animationFrameId=requestAnimationFrame(tick)}
