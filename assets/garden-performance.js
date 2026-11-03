@@ -20,3 +20,15 @@ export function qualityDecision({level,touch,mean,p90,bad,good,elapsed}){
  if(good>=30000&&level<max)return{level:level+1,bad:0,good:0};
  return{level,bad,good};
 }
+
+export function disableActorShadows(root){root.traverse(o=>{if(o.isMesh)o.castShadow=false});return root}
+export function createShadowBudget(){
+ let last=-Infinity,gx=Infinity,gz=Infinity,key='',direction=null;
+ return{plan(now,position,dir,scene='garden'){
+  const x=Math.round(position.x/4)*4,z=Math.round(position.z/4)*4,len=Math.hypot(dir.x,dir.y,dir.z)||1,n={x:dir.x/len,y:dir.y/len,z:dir.z/len};
+  const turned=!direction||n.x*direction.x+n.y*direction.y+n.z*direction.z<Math.cos(Math.PI/360);
+  const update=scene!==key||x!==gx||z!==gz||turned||now-last>=1000;
+  if(update){last=now;gx=x;gz=z;direction=n;key=scene}
+  return{update,x,z};
+ },reset(){last=-Infinity;key=''}};
+}
