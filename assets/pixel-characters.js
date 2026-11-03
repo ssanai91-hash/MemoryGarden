@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 export const POSE_FRAMES=Object.freeze({sit:'sit',coffee:'sit',beer:'sit',soda:'sit',soju:'sit',makgeolli:'sit',cheers:'sit',pray:'sit',bow:'sit',lie:'sit',prone:'sit',woodpick:'sit',fuel:'sit',standing_pray:'front',pray2:'front',wave:'front',shake:'front',woodfeed:'front'});
-export function pixelLookForName(name,look){const next={...look};delete next.px;if(String(name||'').trim().normalize('NFC')==='숭열')next.px='soongyeol';return next}
+export function pixelLookForName(name,look){const next={...look},who=String(name||'').trim().normalize('NFC');delete next.px;if(who==='숭열')next.px='soongyeol';else if(who==='정인')next.px='jeongin';return next}
 export function directionFrame(heading,viewHeading){const angle=Math.atan2(Math.sin(heading-viewHeading),Math.cos(heading-viewHeading)),a=Math.abs(angle);return a<Math.PI/4?{frame:'front',flip:false}:a>Math.PI*.75?{frame:'back',flip:false}:{frame:'side',flip:angle<0}}
 export function createPixelCharacters({manifestUrl='./chars/manifest.json',loadTexture=url=>new THREE.TextureLoader().loadAsync(url),getManifest=()=>fetch(manifestUrl,{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('manifest');return r.json()})}={}){
   const textures=new Map(),warm=new THREE.Color(0xffd4a1),point=new THREE.Vector3();

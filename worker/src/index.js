@@ -64,7 +64,7 @@ function cleanLook(l,name) {
     o[k] = l[k];
   }
   if(typeof l.px==='string'&&/^[a-z0-9_-]{1,24}$/.test(l.px))o.px=l.px;
-  if(name!==undefined){delete o.px;if(String(name).normalize('NFC')==='숭열')o.px='soongyeol'}
+  if(name!==undefined){delete o.px;const who=String(name).normalize('NFC');if(who==='숭열')o.px='soongyeol';else if(who==='정인')o.px='jeongin'}
   o.hs = l.hs === 1 ? 1 : 0;
   o.hat = !!l.hat;
   if (['male', 'female'].includes(l.gender)) { o.gender = l.gender; o.hs = l.gender === 'female' ? 1 : 0; }

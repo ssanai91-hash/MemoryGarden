@@ -200,6 +200,206 @@
         }
       },
       "revision": "walk-v2-b625c382841f"
+    },
+    {
+      "id": "jeongin",
+      "name": "정인",
+      "boundName": "정인",
+      "file": "chars/jeongin.png",
+      "size": [
+        576,
+        576
+      ],
+      "frames": {
+        "walk_front_0": [
+          0,
+          0,
+          96,
+          144
+        ],
+        "walk_front_1": [
+          96,
+          0,
+          96,
+          144
+        ],
+        "walk_front_2": [
+          192,
+          0,
+          96,
+          144
+        ],
+        "walk_front_3": [
+          288,
+          0,
+          96,
+          144
+        ],
+        "walk_front_4": [
+          384,
+          0,
+          96,
+          144
+        ],
+        "walk_front_5": [
+          480,
+          0,
+          96,
+          144
+        ],
+        "walk_back_0": [
+          0,
+          144,
+          96,
+          144
+        ],
+        "walk_back_1": [
+          96,
+          144,
+          96,
+          144
+        ],
+        "walk_back_2": [
+          192,
+          144,
+          96,
+          144
+        ],
+        "walk_back_3": [
+          288,
+          144,
+          96,
+          144
+        ],
+        "walk_back_4": [
+          384,
+          144,
+          96,
+          144
+        ],
+        "walk_back_5": [
+          480,
+          144,
+          96,
+          144
+        ],
+        "walk_side_0": [
+          0,
+          288,
+          96,
+          144
+        ],
+        "walk_side_1": [
+          96,
+          288,
+          96,
+          144
+        ],
+        "walk_side_2": [
+          192,
+          288,
+          96,
+          144
+        ],
+        "walk_side_3": [
+          288,
+          288,
+          96,
+          144
+        ],
+        "walk_side_4": [
+          384,
+          288,
+          96,
+          144
+        ],
+        "walk_side_5": [
+          480,
+          288,
+          96,
+          144
+        ],
+        "front": [
+          0,
+          432,
+          96,
+          144
+        ],
+        "back": [
+          96,
+          432,
+          96,
+          144
+        ],
+        "side": [
+          192,
+          432,
+          96,
+          144
+        ],
+        "sit": [
+          288,
+          432,
+          96,
+          144
+        ],
+        "sit_back": [
+          384,
+          432,
+          96,
+          144
+        ],
+        "sit_side": [
+          480,
+          432,
+          96,
+          144
+        ]
+      },
+      "feetBaseline": 140,
+      "source": {
+        "release": "chars-src",
+        "filename": "jeongin-walk-v1-sheet.png",
+        "sha256": "5cfaac55fba40f80b19aa36562bd382d7cb1ad8493c63922c65852302408aa26",
+        "url": "https://github.com/ssanai91-hash/MemoryGarden/releases/download/chars-src/jeongin-walk-v1-sheet.png"
+      },
+      "conversion": {
+        "height": 136,
+        "colors": 64,
+        "dithering": false,
+        "greenPixels": 0,
+        "walkHeightSpread": 5,
+        "registration": "shared-scale-head-center-feet-baseline"
+      },
+      "animations": {
+        "walk": {
+          "front": [
+            "walk_front_0",
+            "walk_front_1",
+            "walk_front_2",
+            "walk_front_3",
+            "walk_front_4",
+            "walk_front_5"
+          ],
+          "back": [
+            "walk_back_0",
+            "walk_back_1",
+            "walk_back_2",
+            "walk_back_3",
+            "walk_back_4",
+            "walk_back_5"
+          ],
+          "side": [
+            "walk_side_0",
+            "walk_side_1",
+            "walk_side_2",
+            "walk_side_3",
+            "walk_side_4",
+            "walk_side_5"
+          ]
+        }
+      },
+      "revision": "walk-v1-5cfaac55fba4"
     }
   ]
 }
