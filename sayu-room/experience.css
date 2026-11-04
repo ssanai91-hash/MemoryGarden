@@ -69,3 +69,6 @@ body{background:var(--ink);color:var(--paper);font-family:var(--f-ui);
 #pick small{color:var(--dim);font-size:12px}
 @media (prefers-reduced-motion:reduce){#gate,#hint,#toast,#bar,#medi{transition:none}}
 
+
+.btn:disabled{opacity:.45;cursor:wait}
+#credits{position:fixed;left:12px;bottom:4px;font-size:9px;color:var(--dim);pointer-events:none;z-index:6;max-width:90vw}
