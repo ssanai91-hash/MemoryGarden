@@ -1,6 +1,6 @@
 // node tests/pixel-actions.mjs /path/to/three-r170.mjs
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import{pathToFileURL}from'node:url';
-const THREE=await import(pathToFileURL(process.argv[2]).href),c={THREE};vm.createContext(c);for(const file of ['pixel-actions','pixel-characters'])vm.runInContext(fs.readFileSync(new URL('../assets/'+file+'.js',import.meta.url),'utf8').replace(/^import .*;$/mg,'').replaceAll('export ',''),c);
+const THREE=await import(pathToFileURL(process.argv[2]).href),c={THREE};vm.createContext(c);for(const file of ['pixel-rest','pixel-actions','pixel-characters'])vm.runInContext(fs.readFileSync(new URL('../assets/'+file+'.js',import.meta.url),'utf8').replace(/^import .*;$/mg,'').replaceAll('export ',''),c);
 vm.runInContext('this.actionPoses=ACTION_POSES',c);
 const manifest=JSON.parse(fs.readFileSync(new URL('../chars/manifest.json',import.meta.url),'utf8')),system=c.createPixelCharacters({getManifest:()=>manifest,loadTexture:()=>new THREE.Texture()}),camera=new THREE.PerspectiveCamera(55,412/860,.1,400),keys=['cup','can','soda','shot','riceCup','beerGlass','sodaGlass','wood'];
 let checks=0;

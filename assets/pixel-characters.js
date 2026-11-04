@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {createPixelActions,createPixelRest} from './pixel-actions.js';
+import {createPixelActions} from './pixel-actions.js';
+import {createPixelRest} from './pixel-rest.js';
 export const POSE_FRAMES=Object.freeze({sit:'sit',coffee:'sit',beer:'sit',soda:'sit',soju:'sit',makgeolli:'sit',cheers:'sit',pray:'sit',bow:'sit',lie:'sit',prone:'sit',woodpick:'sit',fuel:'sit',standing_pray:'front',pray2:'front',wave:'front',shake:'front',woodfeed:'front'});
 const SEATED_POSES=new Set(['sit','coffee','beer','soda','soju','makgeolli','cheers']);
 export function pixelLookForName(name,look){const next={...look},who=String(name||'').trim().normalize('NFC');delete next.px;if(who==='숭열')next.px='soongyeol';else if(who==='정인')next.px='jeongin';return next}
@@ -15,7 +16,7 @@ export function createPixelCharacters({manifestUrl='./chars/manifest.json',loadT
       const map=texture.clone();map.needsUpdate=true;const material=new THREE.SpriteMaterial({map,alphaTest:.5,transparent:false,fog:false,toneMapped:false});
       const sprite=new THREE.Sprite(material);sprite.name='pixel-character-'+id;sprite.center.set(.5,0);sprite.castShadow=sprite.receiveShadow=false;sprite.frustumCulled=false;
       const anchor=new THREE.Group();anchor.position.y=1.75;P.g.add(sprite,anchor);P.halo?.dispose();P.halo=null;P.rig.visible=false;
-      Object.assign(state,{entry,sprite,anchor,rest:createPixelRest(P,sprite),ready:true});
+      Object.assign(state,{entry,sprite,anchor,rest:createPixelRest(P,sprite,entry,anchor),ready:true});
       if(entry.actionVersion===1)state.actions=createPixelActions(P,state);
     })}).catch(()=>{if(state.disposed||P.pixel!==state)return;state.failed=true;P.rig.visible=true});
   }
@@ -50,11 +51,11 @@ export function createPixelCharacters({manifestUrl='./chars/manifest.json',loadT
       tagY=sprite.position.y+height*(1-sprite.center.y)+.15;
     }
     sprite.scale.set(height*w/h*scaleX,height*scaleY,1);sprite.material.rotation=rotation;
-    const resting=pose==='lie'||pose==='prone';if(resting)sprite.position.set(0,Math.max(groundHeight,options.surfaceHeight??groundHeight)-groundHeight+.012,0);state.rest.update(resting);
+    const resting=pose==='lie'||pose==='prone';if(resting)sprite.position.set(0,Math.max(groundHeight,options.surfaceHeight??groundHeight)-groundHeight+.012,0);if(!state.rest.update(resting,pose,Math.max(groundHeight,options.surfaceHeight??groundHeight)-groundHeight))return false;
     const d=THREE.MathUtils.clamp(daylight,0,1);sprite.material.color.setRGB(.65+d*.35,.72+d*.28,.85+d*.15);
     let warmth=0;for(const slot of slots||[]){const light=slot.light||slot;if(!light.visible||light.intensity<=0||!light.distance)continue;light.getWorldPosition(point);const distance=point.distanceTo(P.g.position);if(distance<light.distance)warmth+=Math.min(.3,light.intensity/(distance*distance+1)*.025)}
-    sprite.material.color.lerp(warm,Math.min(.5,warmth));P.tag.position.y=resting?sprite.position.y+.65:tagY;
-    if(resting){state.anchor.position.set(0,height*.33,0).applyQuaternion(state.rest.mesh.quaternion).add(sprite.position);state.anchor.position.y+=.12;state.anchor.quaternion.copy(state.rest.mesh.quaternion);state.anchor.rotateY(Math.PI)}else{state.anchor.position.set(0,seatBound?sprite.position.y+height*(.83-sprite.center.y):yLift+height*scaleY*.83,0);state.anchor.quaternion.identity()}
+    sprite.material.color.lerp(warm,Math.min(.5,warmth));
+    if(!resting){P.tag.position.y=tagY;state.anchor.position.set(0,seatBound?sprite.position.y+height*(.83-sprite.center.y):yLift+height*scaleY*.83,0);state.anchor.quaternion.identity()}
     if(P.umbrella)P.umbrella.visible=false;return true;
   }
   return{ready,attach,detach,update};

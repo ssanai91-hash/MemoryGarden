@@ -5,7 +5,7 @@ const c={THREE,Math,Promise,Map,scene:new THREE.Scene(),CENTERPIECE:'campfire',w
 c.part=(geo,mat,pos,scale,rot,parent)=>{const m=new THREE.Mesh(geo,mat);m.position.fromArray(pos);if(scale)m.scale.fromArray(scale);if(rot)m.rotation.fromArray([...rot,'XYZ']);parent.add(m);return m};vm.createContext(c);
 vm.runInContext(html.slice(html.indexOf('const FIRE_SEATS='),html.indexOf('function tableAt('))+';this.fireSeats=FIRE_SEATS;this.chairSeats=CHAIR_SEATS;this.stools=STOOLS;',c);
 const start=html.indexOf("if(CENTERPIECE==='campfire'){\n  const bark=");assert.ok(start>=0);vm.runInContext(html.slice(start,html.indexOf('/* ---------- stacked dry firewood',start)),c);c.scene.updateMatrixWorld(true);
-for(const file of ['pixel-actions','pixel-characters'])vm.runInContext(fs.readFileSync(new URL('../assets/'+file+'.js',import.meta.url),'utf8').replace(/^import .*;$/mg,'').replaceAll('export ',''),c);c.pixelCharacters=c.createPixelCharacters({getManifest:()=>manifest,loadTexture:()=>new THREE.Texture()});
+for(const file of ['pixel-rest','pixel-actions','pixel-characters'])vm.runInContext(fs.readFileSync(new URL('../assets/'+file+'.js',import.meta.url),'utf8').replace(/^import .*;$/mg,'').replaceAll('export ',''),c);c.pixelCharacters=c.createPixelCharacters({getManifest:()=>manifest,loadTexture:()=>new THREE.Texture()});
 vm.runInContext(html.slice(html.indexOf('function posePerson('),html.indexOf('/* ---------- blocky dogs',html.indexOf('function posePerson('))),c);
 const ray=new THREE.Raycaster(),world=new THREE.Vector3();
 for(const entry of manifest.characters){

@@ -39,6 +39,7 @@
 !assets/garden-light-slots.js
 !assets/pixel-characters.js
 !assets/pixel-actions.js
+!assets/pixel-rest.js
 !chars/
 !chars/manifest.json
 !chars/*.png
