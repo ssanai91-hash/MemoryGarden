@@ -33,9 +33,12 @@ export function createEntryScreen({document,storage,crypto,fetcher=(...args)=>fe
   // 코드가 맞으면 내 정보를 먼저 보여 주고, 사용자가 입장하기를 눌러야 들어간다.
   let resumeSaved=false;
   const identity=createGardenIdentity({document,storage,crypto,fetcher,now:()=>Date.now()+state.offset,onMode(){resumeSaved=false;if(identity.importing())update();else void initialise()}});
+  // 같은 탭 기록이 없으면 기기 전체 사본(새 탭·정리된 탭)도 본다. 하던 자세는 입장하기 뒤에 이어진다.
   try{
-    const visit=JSON.parse(sessionStorage.getItem('garden.visit.v1')||'null');
-    resumeSaved=sessionStorage.getItem('garden.visit.left.v1')!=='1'&&visit?.v===1&&/^[a-f0-9]{64}$/.test(visit.token||'')&&!!text(visit.name)&&!!identity.credentials().personalCode&&visit.personal?.personalCode===identity.credentials().personalCode;
+    const code=identity.credentials().personalCode,ok=visit=>visit?.v===1&&/^[a-f0-9]{64}$/.test(visit.token||'')&&!!text(visit.name)&&!!code&&visit.personal?.personalCode===code;
+    let visit=null;try{visit=JSON.parse(sessionStorage.getItem('garden.visit.v1')||'null')}catch{}
+    if(!ok(visit)){try{visit=JSON.parse(storage.get('garden.visit.device.v1')||'null')}catch{visit=null}if(visit&&Date.now()-(visit.savedAt||0)>=24*60*60*1000)visit=null}
+    resumeSaved=sessionStorage.getItem('garden.visit.left.v1')!=='1'&&ok(visit);
   }catch{}
   async function initialise(){
     if(state.busy)return false;state.busy=true;state.failed=false;state.ready=false;controls(true);update();

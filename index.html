@@ -567,7 +567,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 0.3</small>
+    <small class="entry-version">ver 0.4</small>
   </form>
  </main>
 </div>
@@ -4785,19 +4785,25 @@ $('rpsPanel').addEventListener('keydown',event=>{if(event.key==='Escape'&&!rpsAc
 
 /* ---------- one tab visit: survives reload, ends on explicit leave ---------- */
 const VISIT_KEY='garden.visit.v1';
+// 기기 전체 사본: 바로가기가 새 탭을 열거나 휴대폰이 탭을 정리해도, '나가기' 전이면 절하기·모닥불에 앉기·눕기 등
+// 하던 자세와 자리를 입장하기 뒤에 그대로 이어 간다. 같은 입장 코드에만 쓰고, 하루가 지나면 쓰지 않는다.
+const DEVICE_VISIT_KEY='garden.visit.device.v1',DEVICE_VISIT_MS=24*60*60*1000;
 function newVisitToken(){
   const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
   return [...bytes].map(value=>value.toString(16).padStart(2,'0')).join('');
 }
+function validVisit(value){return !!(value&&value.v===1&&/^[a-f0-9]{64}$/.test(value.token||'')&&stripInvisible(value.name).slice(0,12))}
 function readVisit(){
   if(visitEnded||readExitFlag())return null;
+  try{const value=JSON.parse(sessionStorage.getItem(VISIT_KEY)||'null');if(validVisit(value))return value}catch(e){}
   try{
-    const value=JSON.parse(sessionStorage.getItem(VISIT_KEY)||'null');
-    if(value&&value.v===1&&/^[a-f0-9]{64}$/.test(value.token||'')&&stripInvisible(value.name).slice(0,12))return value;
+    const value=JSON.parse(store.get(DEVICE_VISIT_KEY)||'null'),code=typeof gardenIdentity==='undefined'?'':gardenIdentity.credentials().personalCode;
+    if(validVisit(value)&&code&&value.personal?.personalCode===code&&Date.now()-(value.savedAt||0)<DEVICE_VISIT_MS)return value;
   }catch(e){}
   return null;
 }
-function clearVisit(){try{sessionStorage.removeItem(VISIT_KEY)}catch(e){}}
+// keepDevice: 다른 탭·기기가 같은 코드로 이어받아 이 탭만 물러날 때는 기기 사본을 지우지 않는다.
+function clearVisit(keepDevice=false){try{sessionStorage.removeItem(VISIT_KEY)}catch(e){}if(!keepDevice)store.set(DEVICE_VISIT_KEY,'')}
 function saveVisit(){
   if(visitEnded||readExitFlag()||!hasEntered||!visitToken)return false;
   const p=me.g.position,message=lastMessages.get('me');
@@ -4806,6 +4812,7 @@ function saveVisit(){
     practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,target:practice.target,haloUntil:practice.haloUntil,halos:practice.halos,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
   let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
+  if(snapshot.personal?.personalCode)store.set(DEVICE_VISIT_KEY,JSON.stringify({...snapshot,savedAt:Date.now()}));
   lastVisitSave=performance.now();return stored;
 }
 async function restoreVisit({connect=true,identity=true}={}){
@@ -4875,11 +4882,11 @@ function showExitScreen(){
   me.g.visible=false;myDogObj.g.visible=false;quietThunder(true);silenceMusicOnExit();
   if(animationFrameId!==null){cancelAnimationFrame(animationFrameId);animationFrameId=null}
 }
-function leaveGarden(closeWindow=true,notifyServer=true){
+function leaveGarden(closeWindow=true,notifyServer=true,keepDevice=false){
   if(worldSpace==='listening')exitListening(true);
   candleUI?.endVisit();gardenBoard.close(true);if($('fireLoadDialog').open)$('fireLoadDialog').close();if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
-  clearVisit();visitToken='';fireWelcomeShown=false;isGardenAdmin=false;$('kickAllBtn').hidden=true;
+  clearVisit(keepDevice);visitToken='';fireWelcomeShown=false;isGardenAdmin=false;$('kickAllBtn').hidden=true;
   const old=room;room=null;
   if(old){if(notifyServer)old.send({t:'leave'});old.close()}
   if(cam.sky)setSkyView(false,true);
@@ -5063,7 +5070,7 @@ function connectRoomServer(base,code){
           toast(messages[m.code]||'게임 상태를 다시 확인해 주세요.');renderRps();updateRpsInvite();
           if(m.code==='ended'||m.code==='locked')api.send({t:'rps_sync'});break;
         }
-        case 'replaced':api.close();leaveGarden(false,false);setConn(false,'다른 기기에서 내 기록으로 입장했어요');break;
+        case 'replaced':api.close();leaveGarden(false,false,true);setConn(false,'다른 기기에서 내 기록으로 입장했어요');break;
         case 'kicked':api.close();leaveGarden(false,false);setConn(false,'관리자가 정원을 정리했어요 · 기록은 저장됐어요');toast('관리자가 정원을 정리했어요 · 기록은 저장됐고 다시 입장할 수 있어요');break;
         case 'kick_done':$('kickAllBtn').disabled=false;toast(m.count?`${m.count}명을 내보냈어요 · 모두 기록이 저장됐어요`:'내보낼 사람이 없어요');break;
         case 'prayer_place':break; // Ignore legacy seat-allocation messages: prayer stays in place.

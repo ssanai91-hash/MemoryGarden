@@ -5,9 +5,9 @@ class Element{
  querySelectorAll(selector){if(selector.startsWith('input[name=')){const name=selector.match(/"([^"]+)"/)[1];return this.radios.filter(x=>x.name===name)}return this.controls||[]}
  querySelector(selector){return this.querySelectorAll(selector).find(x=>x.checked)}
 }
-function setup({saved,fail=false,blockSave=false,session=null}={}){
+function setup({saved,fail=false,blockSave=false,session=null,extra=[]}={}){
  const nodes=new Map(),ids=['nameForm','nameInput','nameSubmit','entryExisting','entryHint','petBreed','petCoat','petOptions','petBreedLabel','welcome'];for(const id of ids)nodes.set(id,new Element(id==='nameForm'?'form':id));const form=nodes.get('nameForm');form.radios=['entryGender:male','entryGender:female','entryPet:dog','entryPet:cat'].map(v=>{const e=new Element('input');[e.name,e.value]=v.split(':');return e});form.controls=[...form.radios,...['nameInput','petBreed','petCoat'].map(id=>nodes.get(id))];
- const actions=new Element('div'),doc={createElement:tag=>new Element(tag),getElementById:id=>nodes.get(id),querySelector:()=>actions,head:new Element('head'),body:new Element('body')};const values=new Map(saved?[['garden.identity.v1',JSON.stringify({code:'12345',registered:true})]]:[]),calls=[],allocations=[];let failing=fail,blocked=blockSave;
+ const actions=new Element('div'),doc={createElement:tag=>new Element(tag),getElementById:id=>nodes.get(id),querySelector:()=>actions,head:new Element('head'),body:new Element('body')};const values=new Map([...(saved?[['garden.identity.v1',JSON.stringify({code:'12345',registered:true})]]:[]),...extra]),calls=[],allocations=[];let failing=fail,blocked=blockSave;
  const scope={document:doc,crypto,Date,Math,Uint8Array,AbortController,setTimeout,clearTimeout,setInterval:()=>1,clearInterval(){},sessionStorage:{removeItem(){},getItem:k=>session?.[k]??null}};vm.createContext(scope);for(const f of ['prayer-rules','garden-identity','entry-screen'])vm.runInContext(fs.readFileSync(__dirname+'/../assets/'+f+'.js','utf8').replace(/^import .*;\n/gm,'').replace(/export function/g,'function'),scope);
  const profile={id:'saved',name:'저장된 친구',look:{skin:1,hair:2,shirt:3,pants:4,shoe:5,gender:'female'},dog:{kind:'cat',b:2,coat:3,n:'나비'},progress:{108:37,3000:100},totalBows:137,halos:{},completed:{}};
  const fetcher=async(url,options)=>{calls.push(url);if(url==='/personal/allocate')allocations.push(JSON.parse(options.body).request);if(failing)throw Error('연결을 확인해 주세요');if(url==='/personal/allocate')return{ok:true,json:async()=>({code:'00042'})};assert.ok(values.has('garden.identity.v1'),'code must be saved before loading settings');return{ok:true,json:async()=>({personal:saved||JSON.parse(options.body).personalCode==='99999'?profile:null,pending:!saved,now:Date.now()})}};
@@ -31,6 +31,10 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
  const resume=setup({saved:true,session:{'garden.visit.v1':JSON.stringify(visit)}});let resumeJoined=false;resume.entry.waitForEntry().then(()=>{resumeJoined=true});await settle();await settle();
  assert.equal(resume.nodes.get('nameInput').value,'저장된 친구');assert.equal(resumeJoined,false,'no automatic entry');assert.match(resume.nodes.get('entryHint').textContent,/입장하기를 눌러/);
  await resume.form.onsubmit({preventDefault(){}});await settle();assert.equal(resumeJoined,true);
+ // A new tab (no same-tab record) still recognises the device-wide copy, and still waits for the tap; a stale copy is ignored.
+ const deviceTab=setup({saved:true,extra:[['garden.visit.device.v1',JSON.stringify({...visit,savedAt:Date.now()})]]});let deviceJoined=false;deviceTab.entry.waitForEntry().then(()=>{deviceJoined=true});await settle();await settle();
+ assert.match(deviceTab.nodes.get('entryHint').textContent,/지난 자리에서 이어져요/);assert.equal(deviceJoined,false);
+ const stale=setup({saved:true,extra:[['garden.visit.device.v1',JSON.stringify({...visit,savedAt:Date.now()-25*3600*1000})]]});await settle();await settle();assert.doesNotMatch(stale.nodes.get('entryHint').textContent,/지난 자리에서/);
  const html=fs.readFileSync(__dirname+'/../index.html','utf8');assert.ok(html.indexOf('await entryScreen.waitForEntry()')>html.indexOf('const cam='));assert.ok(!fs.readFileSync(__dirname+'/../assets/entry-screen.js','utf8').includes('new WebSocket'));
  console.log('PASS: allocate/save before settings; server fields restored; saved-code settings; explicit button intent (same-tab resume included); retry remains in settings; pending drafts and reusable controls.');
 })().catch(e=>{console.error(e);process.exitCode=1});
