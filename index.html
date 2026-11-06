@@ -576,7 +576,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 1.7</small>
+    <small class="entry-version">ver 1.8</small>
   </form>
  </main>
 </div>
@@ -834,7 +834,6 @@ import {addAlpineRange} from './assets/garden-mountains.js';
 import {createFramePacer,qualityDecision,createShadowBudget,disableActorShadows,createPowerSaving} from './assets/garden-performance.js';
 import {createGardenLightSlots} from './assets/garden-light-slots.js';
 import {makeBlackPoodle,isPhotoPoodle} from './assets/black-poodle.js';
-import {createProfileEditor} from './assets/profile-editor.js';
 const entryScreen=await window.gardenEntryReady;
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
@@ -2952,31 +2951,43 @@ $('pWave').onclick=()=>setPose('wave');$('pSit').onclick=()=>setPose('sit');$('p
 
 function startStandingPrayer(){preparePracticeInPlace();setPose('standing_pray')}
 
-const profileEditor=createProfileEditor({
-  THREE,randomLook:randLook,
-  current:()=>hasEntered&&!visitEnded?{name:myNick,look:myLook}:null,
-  makePreview(look,parent){
-    const actor=makePerson(look,parent,true);
-    const sharedGeometry=new Set([BOX,...Object.values(personGeo).filter(v=>v.isBufferGeometry)]);
-    const sharedMaterials=new Set([...Object.values(matCache),...Object.values(personGeo).filter(v=>v.isMaterial)]);
-    return{root:actor.g,dispose(){
-      actor.g.removeFromParent();const geometries=new Set(),materials=new Set();
-      actor.g.traverse(node=>{if(node.geometry&&!sharedGeometry.has(node.geometry))geometries.add(node.geometry);for(const m of(Array.isArray(node.material)?node.material:[node.material]))if(m&&!sharedMaterials.has(m))materials.add(m)});
-      geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());
-    }};
-  },
-  prepare(){closeOtherMenus('profile');cancelFireCare();target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k])},
-  async save(draft){
-    if(!room?.connected())throw Error('connection');
-    const saved=await room.saveProfile({...draft,dog:myDog});
-    if(visitEnded||!hasEntered)return;
-    myNick=saved.name;store.set('garden.name',myNick);applyMyLook(saved.look,saved.dog,false);store.set('garden.gender',myLook.gender);
-    if(saved.personal)receivePersonal(saved.personal);
-    refreshMine();restoreLastBubble('me',shownName());renderVisitors();sendDirty=true;saveVisit();toast('이름과 모습을 저장했어요');
-  },
-  onClose(){Object.keys(keys).forEach(k=>delete keys[k]);resetQualitySampling();if(hasEntered&&!visitEnded)$('lookBtn').focus({preventScroll:true})}
-});
-$('lookBtn').onclick=()=>profileEditor.open();
+let profileEditor=null,profileEditorLoading=false;
+async function openProfileEditor(){
+  if(profileEditorLoading)return;
+  profileEditorLoading=true;$('lookBtn').disabled=true;
+  try{
+    if(!profileEditor){
+      const {createProfileEditor}=await import('./assets/profile-editor.js');
+      profileEditor=createProfileEditor({
+        THREE,randomLook:randLook,
+        current:()=>hasEntered&&!visitEnded?{name:myNick,look:myLook}:null,
+        makePreview(look,parent){
+          const actor=makePerson(look,parent,true);
+          const sharedGeometry=new Set([BOX,...Object.values(personGeo).filter(v=>v.isBufferGeometry)]);
+          const sharedMaterials=new Set([...Object.values(matCache),...Object.values(personGeo).filter(v=>v.isMaterial)]);
+          return{root:actor.g,dispose(){
+            actor.g.removeFromParent();const geometries=new Set(),materials=new Set();
+            actor.g.traverse(node=>{if(node.geometry&&!sharedGeometry.has(node.geometry))geometries.add(node.geometry);for(const m of(Array.isArray(node.material)?node.material:[node.material]))if(m&&!sharedMaterials.has(m))materials.add(m)});
+            geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());
+          }};
+        },
+        prepare(){closeOtherMenus('profile');cancelFireCare();target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k])},
+        async save(draft){
+          if(!room?.connected())throw Error('connection');
+          const saved=await room.saveProfile({...draft,dog:myDog});
+          if(visitEnded||!hasEntered)return;
+          myNick=saved.name;store.set('garden.name',myNick);applyMyLook(saved.look,saved.dog,false);store.set('garden.gender',myLook.gender);
+          if(saved.personal)receivePersonal(saved.personal);
+          refreshMine();restoreLastBubble('me',shownName());renderVisitors();sendDirty=true;saveVisit();toast('이름과 모습을 저장했어요');
+        },
+        onClose(){Object.keys(keys).forEach(k=>delete keys[k]);resetQualitySampling();if(hasEntered&&!visitEnded)$('lookBtn').focus({preventScroll:true})}
+      });
+    }
+    profileEditor.open();
+  }catch{toast('내 모습 창을 불러오지 못했어요. 잠시 후 다시 눌러 주세요.')}
+  finally{profileEditorLoading=false;$('lookBtn').disabled=false}
+}
+$('lookBtn').onclick=openProfileEditor;
 function syncStandingPrayerBubble(key,P,state,name){
   const praying=state==='standing_pray'&&P.speed<.3;P.standingPrayer=praying;
   if(praying){P.prayerBubble=true;showBubble(key,name,'기도중...')}
@@ -4917,7 +4928,7 @@ function showExitScreen(){
 }
 function leaveGarden(closeWindow=true,notifyServer=true,keepDevice=false){
   if(worldSpace==='listening')exitListening(true);
-  profileEditor.close(true);candleUI?.endVisit();gardenBoard.close(true);if($('fireLoadDialog').open)$('fireLoadDialog').close();if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
+  profileEditor?.close(true);candleUI?.endVisit();gardenBoard.close(true);if($('fireLoadDialog').open)$('fireLoadDialog').close();if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
   clearVisit(keepDevice);visitToken='';fireWelcomeShown=false;isGardenAdmin=false;$('kickAllBtn').hidden=true;$('kickDuplicatesBtn').hidden=true;
   const old=room;room=null;
@@ -4989,7 +5000,7 @@ addEventListener('popstate',event=>{
   const view=event.state&&event.state.gardenView;
   if(candleUI?.isOpen()){candleUI.close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
   if($('fireLoadDialog').open){$('fireLoadDialog').close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
-  if(profileEditor.isOpen()){profileEditor.close();if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
+  if(profileEditor?.isOpen()){profileEditor.close();if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if($('qualityDialog').open){$('qualityDialog').close();if(worldSpace==='listening')history.pushState({gardenView:'listening'},'',location.href);else if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if($('listeningAudio').open){$('listeningAudio').close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
   if(view==='listening'){enterListening(true);return}
