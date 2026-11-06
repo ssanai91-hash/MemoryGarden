@@ -585,7 +585,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 0.9</small>
+    <small class="entry-version">ver 1.0</small>
   </form>
  </main>
 </div>
@@ -944,7 +944,7 @@ let worldSpace='garden',listeningDoor=null;
 const listening={scene:null,returnPoint:null,state:{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0},audio:null,
   muted:store.get('garden.listening.muted')==='1',volume:Math.max(0,Math.min(1,Number(store.get('garden.listening.volume')??'.65')))||0};
 scene.fog=new THREE.Fog(0xe9dccb,30,95);
-const camera=new THREE.PerspectiveCamera(55,1,0.1,400);
+const camera=new THREE.PerspectiveCamera(55,1,0.1,600);
 const sky=new THREE.Mesh(new THREE.SphereGeometry(300,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
   uniforms:{top:{value:new THREE.Color(0x9fb7d1)},bot:{value:new THREE.Color(0xf3dcc0)}},
   vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
@@ -972,9 +972,9 @@ const TABLE_SPOTS=[0.95,4.4].map((a,i)=>({x:Math.round(Math.sin(a)*1420)/100,z:M
 const nearTable=(x,z,r)=>TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<r);
 // 주황 포장마차: 모닥불 뒤쪽 나무 아래. 앞(입구)은 모닥불을 향한다.
 const ALTAR_SPOTS=[Prayer.LAYOUT.buddha,Prayer.LAYOUT.mary];
-// A fixed world position above the statues' midpoint. Never reposition it
-// relative to the orbiting camera; it must move on screen with the statues.
-const ALTAR_MOON_ANCHOR=new THREE.Vector3((ALTAR_SPOTS[0].x+ALTAR_SPOTS[1].x)/2,Prayer.LAYOUT.floor+12,(ALTAR_SPOTS[0].z+ALTAR_SPOTS[1].z)/2);
+// Fixed scenery in the distant sky, beyond the mountain belt behind the
+// statues. Never place the moon inside the plaza or recalculate it from the camera.
+const ALTAR_MOON_SKY_POSITION=new THREE.Vector3((ALTAR_SPOTS[0].x+ALTAR_SPOTS[1].x)/2,135,(ALTAR_SPOTS[0].z+ALTAR_SPOTS[1].z)/2-270);
 // 기도 광장의 조각상: 'sayu'(사유의 방 반가사유상 2점) 또는 'classic'(옛 좌불상·성모 마리아상).
 const PLAZA_STATUES='sayu';
 const nearAltar=(x,z,r)=>ALTAR_SPOTS.some(p=>Math.hypot(x-p.x,z-p.z)<r);
@@ -3940,7 +3940,7 @@ function updateNightSky(now,weather,phase){
   nightSky.galaxy.renderOrder=-5;nightSky.group.add(nightSky.galaxy);
   nightSky.moons=[0].map(()=>{
     const moon=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false,blending:THREE.AdditiveBlending}));
-    markBloom(moon.material,1.6);moon.position.copy(ALTAR_MOON_ANCHOR);moon.scale.set(2.8,2.8,1);moon.renderOrder=2;nightSky.group.add(moon);return moon;
+    markBloom(moon.material,1.6);moon.position.copy(ALTAR_MOON_SKY_POSITION);moon.scale.set(38,38,1);moon.renderOrder=2;nightSky.group.add(moon);return moon;
   });
   loadPhotographicMoon();
 }
