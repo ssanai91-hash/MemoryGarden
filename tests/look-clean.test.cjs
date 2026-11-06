@@ -10,13 +10,11 @@ const last=(ws,t)=>ws.messages.filter(m=>m.t===t).at(-1),look={skin:1,hair:2,shi
 (async()=>{
  const room=new c.Room(ctx,{});await ctx.ready;const observer=socket('observer'),owner=socket('owner'),friend=socket('friend'),jeongin=socket('jeongin'),send=(ws,m)=>room.webSocketMessage(ws,JSON.stringify(m));
  await send(observer,{t:'hello',name:'관찰자',look});await send(owner,{t:'hello',name:'숭열',look});
- assert.equal(owner.a.look.px,'soongyeol');assert.equal(last(observer,'join').peer.look.px,'soongyeol');
- await send(jeongin,{t:'hello',name:'정인',look:{...look,px:'soongyeol'}});assert.equal(jeongin.a.look.px,'jeongin');assert.equal(last(observer,'join').peer.look.px,'jeongin');
- await send(friend,{t:'hello',name:'친구',look:{...look,px:'soongyeol'}});assert.equal(friend.a.look.px,undefined);assert.equal(last(friend,'welcome').peers.find(p=>p.name==='숭열').look.px,'soongyeol');
- now+=3000;await send(owner,{t:'profile',name:'다른 이름',look:{...look,px:'soongyeol'}});assert.equal(owner.a.look.px,undefined);assert.equal(last(observer,'profile').look.px,undefined);
- now+=3000;await send(owner,{t:'profile',name:'숭열',look:null});assert.equal(last(observer,'profile').look.px,'soongyeol');
- assert.equal(room.visiblePeers('observer').find(p=>p.id==='owner').look.px,'soongyeol');
- assert.equal(last(friend,'welcome').peers.find(p=>p.name==='정인').look.px,'jeongin');now+=3000;await send(owner,{t:'profile',name:'정인',look:null});assert.equal(last(observer,'profile').look.px,'jeongin');now+=3000;await send(owner,{t:'profile',name:'숭열',look:null});assert.equal(last(observer,'profile').look.px,'soongyeol');
- now+=3000;await send(jeongin,{t:'profile',name:'정인님',look:{...look,px:'jeongin'}});assert.equal(last(observer,'profile').look.px,undefined);
- console.log('PASS: server hello/welcome/join/profile and observer snapshots bind 숭열/정인 to distinct sprites; forged IDs rejected; exact-name matching and rename between both characters/3D work even with an invalid look.');
+ assert.equal(room.visiblePeers('observer').find(p=>p.id==='owner').look.px,undefined);
+ // Special name-bound pixel sprites were removed: no name or forged field yields a px look.
+ assert.equal(owner.a.look.px,undefined);assert.equal(last(observer,'join').peer.look.px,undefined);
+ await send(jeongin,{t:'hello',name:'정인',look:{...look,px:'jeongin'}});assert.equal(jeongin.a.look.px,undefined);assert.equal(last(observer,'join').peer.look.px,undefined);
+ await send(friend,{t:'hello',name:'친구',look:{...look,px:'soongyeol'}});assert.equal(friend.a.look.px,undefined);assert.ok(last(friend,'welcome').peers.every(p=>p.look?.px===undefined));
+ now+=3000;await send(owner,{t:'profile',name:'숭열',look:{...look,px:'soongyeol'}});assert.equal(owner.a.look.px,undefined);assert.equal(last(observer,'profile').look.px,undefined);
+ console.log('PASS: every visitor uses the shared 3D character; name-bound and forged pixel looks are never stored or relayed.');
 })().catch(e=>{console.error(e);process.exitCode=1});

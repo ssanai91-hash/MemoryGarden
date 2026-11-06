@@ -123,7 +123,12 @@ button:disabled{opacity:.5;cursor:default}
 .visitors.collapsed .visitors-title{margin-bottom:0}
 .visitor-names{display:grid;gap:3px;max-height:120px;overflow-y:auto;font-size:11px;line-height:1.35;color:var(--soft);overflow-wrap:anywhere}
 .poses{bottom:26px}
-@media(max-width:650px){.plaque{top:12px;left:12px;padding:10px 12px;max-width:215px}.plaque h1{font-size:20px}.plaque .row button{font-size:11px;padding:5px 8px}.plaque .sub,.mine{display:none}.practice{bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:10px 12px;width:calc(100vw - 48px);max-width:370px}.practice-title strong{font-size:16px}.poses{bottom:calc(194px + env(safe-area-inset-bottom,0px));right:12px;gap:5px}.poses button{font-size:11px;min-width:70px;padding:6px 9px}#joy{width:84px;height:84px;left:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}.practice{left:106px;right:12px;width:auto;max-width:none;transform:none}.practice .row button{font-size:11.5px;padding:6px 9px}#knob{width:34px;height:34px;margin:-17px 0 0 -17px}.toast{top:210px}.environment{font-size:10px}.eyebrow{font-size:9px}}
+@media(max-width:650px){.plaque{top:12px;left:12px;padding:10px 12px;max-width:215px}.plaque h1{font-size:20px}.plaque .row button{font-size:11px;padding:5px 8px}.plaque .sub,.mine{display:none}.practice{bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:10px 12px;width:calc(100vw - 48px);max-width:370px}.practice-title strong{font-size:16px}.poses{bottom:calc(194px + env(safe-area-inset-bottom,0px));right:12px;gap:5px}.poses button{font-size:11px;min-width:70px;padding:6px 9px}#joy{width:84px;height:84px;left:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+/* 우산: 조이스틱 오른쪽, 조이스틱 가운데 높이. 눌러서 쓰고 접는다. */
+.umbrella-btn{position:fixed;z-index:4;left:108px;bottom:calc(28px + env(safe-area-inset-bottom,0px));width:56px;height:56px;padding:0;border-radius:50%;display:grid;place-items:center;font-size:30px;line-height:1;background:rgba(43,42,51,.32);color:#fff;border:2px solid rgba(255,255,255,.75);box-shadow:0 2px 10px rgba(0,0,0,.18);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.umbrella-btn[aria-pressed="true"]{background:#3f6fa8;border-color:#cfe2ff;color:#fff;box-shadow:0 0 0 3px rgba(120,170,235,.35),0 2px 10px rgba(0,0,0,.2)}
+.chat-docked .umbrella-btn{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 28px)}
+.sky-view .umbrella-btn,.visit-ended .umbrella-btn,body.board-open .umbrella-btn,body.listening-room .umbrella-btn{display:none}.practice{left:106px;right:12px;width:auto;max-width:none;transform:none}.practice .row button{font-size:11.5px;padding:6px 9px}#knob{width:34px;height:34px;margin:-17px 0 0 -17px}.toast{top:210px}.environment{font-size:10px}.eyebrow{font-size:9px}}
 .plaque{max-height:calc(100dvh - 36px);overflow-y:auto}
 @media(max-width:380px){.practice .row{gap:4px}.practice .row button{font-size:10.5px!important;padding:5px 7px!important}}
 /* Keep the garden visible while controls are in use. */
@@ -239,10 +244,10 @@ button:disabled{opacity:.5;cursor:default}
 
 /* Keep the garden card on a consistent two-column rhythm. */
 #gardenPanel{padding:10px}
-#gardenPanel .plaque-heading{display:grid;grid-template-columns:minmax(0,1fr) 28px 54px;align-items:center;gap:5px}
+#gardenPanel .plaque-heading{display:grid;grid-template-columns:minmax(0,1fr) 54px 28px;align-items:center;gap:5px}
 #gardenPanel .plaque-heading h1{min-width:0;font-size:16px;line-height:28px;white-space:nowrap;text-wrap:nowrap}
 #gardenPanel .plaque-heading button{box-sizing:border-box;width:100%;height:28px;min-width:0;margin:0;padding:0 5px;font-size:10px;line-height:1;white-space:nowrap}
-#gardenPanel #soundToggle{padding:0;font-size:17px;display:grid;place-items:center}
+#gardenPanel #musicToggle{padding:0;font-size:17px;display:grid;place-items:center}
 #gardenDetails{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 #gardenDetails>.eyebrow{margin:0 0 8px;font-size:9px;line-height:1.4;letter-spacing:.08em}
 #gardenPanel .room-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0}
@@ -257,7 +262,7 @@ button:disabled{opacity:.5;cursor:default}
 body.listening-room #campfireLastCare{display:none}
 #gardenPanel #nowPlaying{padding-top:8px;border-top:1px solid var(--line)}
 @media(max-width:380px){
-  #gardenPanel .plaque-heading{grid-template-columns:minmax(0,1fr) 26px 50px;gap:4px}
+  #gardenPanel .plaque-heading{grid-template-columns:minmax(0,1fr) 50px 26px;gap:4px}
   #gardenPanel .plaque-heading h1{font-size:14px}
 }
 
@@ -302,7 +307,7 @@ body.listening-room #skyViewBtn,body.listening-room #firePlayList,body.listening
 .chat-docked .bow-counter{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 110px)}
 .chat-docked .chat-history{left:max(12px,env(safe-area-inset-left,0px));width:min(420px,calc(100vw - 24px));bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 50px)}
 .sky-view #chatBar,.sky-view #dockActions,.rps-open #chatBar,.rps-open #dockActions,.visit-ended #chatBar,.visit-ended #dockActions,body.board-open #chatBar,body.board-open #dockActions{display:none}
-@media(max-width:650px){.chat-docked #joy{width:78px;height:78px}}
+@media(max-width:650px){.chat-docked #joy{width:78px;height:78px}.chat-docked .umbrella-btn{left:102px;bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 25px)}}
 
 .pet-options{margin:0 0 14px}
 .pet-choice-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
@@ -396,7 +401,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
 <header class="plaque collapsed" id="gardenPanel">
-  <div class="plaque-heading"><h1>기억의 정원</h1><button id="soundToggle" class="sound-toggle" type="button" aria-pressed="false" aria-label="자연의 소리 켜기" title="자연의 소리 켜기">☂</button><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button></div>
+  <div class="plaque-heading"><h1>기억의 정원</h1><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button><button id="musicToggle" class="sound-toggle" type="button" aria-pressed="false" aria-label="새벽 예불 켜기" title="새벽 예불 켜기">♪</button></div>
   <div id="gardenDetails" hidden>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
   <section class="garden-menu-group" aria-labelledby="gardenMenuTitle">
@@ -405,18 +410,10 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   </section>
   <section class="garden-menu-group" aria-labelledby="gardenSettingsTitle">
     <h2 class="garden-menu-caption" id="gardenSettingsTitle">설정</h2>
-    <div class="garden-actions garden-preferences" id="gardenPreferences"><button id="homeInstallBtn" type="button">홈 화면 추가</button><button id="qualityBtn" type="button">화면 품질</button><button id="musicBtn" type="button" aria-expanded="false">소리 · 음악</button><button id="thunderSoundBtn" type="button" aria-pressed="true">천둥 끄기</button><button id="rerollBtn" type="button">반려동물 변경</button></div>
+    <div class="garden-actions garden-preferences" id="gardenPreferences"><button id="homeInstallBtn" type="button">홈 화면 추가</button><button id="qualityBtn" type="button">화면 품질</button><button id="lookBtn" type="button">내 모습 바꾸기</button><button id="rerollBtn" type="button">반려동물 변경</button></div>
   </section>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status">모닥불을 불러오는 중…</div><div id="campfireLastCare"></div>
   <div class="now" id="nowPlaying" hidden></div>
-  <div class="panel" id="musicPanel" hidden>
-    <button id="natureSoundBtn" type="button" aria-pressed="false">자연의 소리 켜기</button>
-    <p class="mhead" id="natureStatus" role="status">비가 오면 빗소리가 들려요</p>
-    <div class="mhead" id="musicNote">고른 곡은 지금 정원에 있는 모두에게 같은 박자로 들려요</div>
-    <div class="tracks" id="tracks"></div>
-    <button class="music-sound" id="soundBtn" type="button" hidden>소리 켜기</button>
-    <label class="vol" id="synthVolume" for="vol">내 볼륨<input id="vol" type="range" min="0" max="100" value="70"></label>
-  </div>
   </div>
 </header>
 
@@ -530,10 +527,10 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / <span id="bowTarget">108</span>배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button><button id="lookBtn" type="button">모습 바꾸기 🎲</button><button id="umbrellaOnBtn" type="button" aria-pressed="false">우산 쓰기</button><button id="umbrellaOffBtn" type="button" aria-pressed="true">우산 접기</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="auto3000Btn" type="button">3000배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
+<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="poseList" hidden><button class="cat-btn" type="button" data-sub="subRest" aria-expanded="false" aria-controls="subRest">쉬기 ▸</button><button class="cat-btn" type="button" data-sub="subFriend" aria-expanded="false" aria-controls="subFriend">친구와 ▸</button><button class="cat-btn" type="button" data-sub="subPray" aria-expanded="false" aria-controls="subPray">기도 ▸</button><button class="cat-btn" id="firePlayBtn" type="button" data-sub="firePlayList" aria-expanded="false" aria-controls="firePlayList">모닥불 놀이 ▸</button></div><div id="subRest" class="action-sub" role="group" aria-label="쉬기" hidden><button id="pSit" type="button" aria-pressed="false">앉기</button><button id="pLie" type="button" aria-pressed="false">누워있기</button><button id="pProne" type="button" aria-pressed="false">엎드리기</button><button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button><button class="sub-back" type="button" data-back="subRest">← 동작</button></div><div id="subFriend" class="action-sub" role="group" aria-label="친구와" hidden><button id="shakeBtn" type="button" aria-pressed="false">악수하기</button><button id="pWave" type="button" aria-pressed="false">손 흔들기</button><button class="sub-back" type="button" data-back="subFriend">← 동작</button></div><div id="subPray" class="action-sub" role="group" aria-label="기도" hidden><button id="standingPrayBtn" type="button" aria-pressed="false">기도하기</button><button id="pray2Btn" type="button" aria-pressed="false">기도하기2</button><button id="prayBtn" type="button" aria-pressed="false">합장 기도</button><button id="bowBtn" type="button">한 배 하기</button><button id="autoBowBtn" type="button">108배 하기</button><button id="auto3000Btn" type="button">3000배 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button><button class="sub-back" type="button" data-back="subPray">← 동작</button></div><div id="firePlayList" class="action-sub" role="group" aria-label="모닥불 놀이" hidden><button id="pFuel" type="button">장작 넣기</button><button id="auroraBtn" type="button">오로라 가루 넣기</button><button id="fireworksBtn" type="button">불꽃놀이</button><button class="sub-back" type="button" data-back="firePlayList">← 동작</button></div></div><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
 <div class="dock-actions" id="dockActions" role="group" aria-label="대화 목록과 동작" hidden><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
-<div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div>
+<div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div><button id="umbrellaBtn" class="umbrella-btn" type="button" aria-pressed="false" aria-label="우산 쓰기" title="우산 쓰기">☂</button>
 <div class="toast" id="toast"></div>
 <div id="speechLayer" class="bubbles" aria-label="말풍선"></div>
 <div class="calm-dim" id="calmDim" hidden></div><section class="calm-panel" id="calmPanel" hidden aria-live="polite"><div class="calm-orb" id="calmOrb"></div><div class="calm-say" id="calmSay">들이쉬고…</div><div class="calm-time" id="calmTime">0:00</div><div class="calm-total" id="calmTotal"></div><button id="calmEnd" type="button">마치기</button></section><button class="jar-btn" id="jarBtn" type="button" hidden aria-label="반딧불이 병 · 눌러서 놓아주기"><span id="jarCount">0</span><span class="jar-icon" aria-hidden="true">🫙<span class="jar-spark">✨</span></span></button>
@@ -570,7 +567,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 0.2</small>
+    <small class="entry-version">ver 0.3</small>
   </form>
  </main>
 </div>
@@ -825,7 +822,6 @@ import {createCandleUI} from './assets/prayer-candles-ui.js';
 import {createBowHalo} from './assets/bow-halo.js';
 import {createSayuStatues} from './assets/sayu-statues.js';
 import {addAlpineRange} from './assets/garden-mountains.js';
-import {createPixelCharacters,pixelLookForName} from './assets/pixel-characters.js';
 import {createFramePacer,qualityDecision,createShadowBudget,disableActorShadows,createPowerSaving} from './assets/garden-performance.js';
 import {createGardenLightSlots} from './assets/garden-light-slots.js';
 import {makeBlackPoodle,isPhotoPoodle} from './assets/black-poodle.js';
@@ -1583,7 +1579,7 @@ function syncListeningSound(){
   if(worldSpace==='listening'){
     syncNatureOutput();
     if(AC)master.gain.setTargetAtTime(0,AC.currentTime,.12);
-  }else{renderNatureUI();syncNatureOutput();if(AC&&audioOn)master.gain.setTargetAtTime(hasTempleMusic()?vol:0,AC.currentTime,.3)}
+  }else{syncNatureOutput();if(AC&&audioOn)master.gain.setTargetAtTime(hasTempleMusic()?vol:0,AC.currentTime,.3)}
 }
 function scheduleListeningAudio(){
   const a=listening.audio;if(!a||a.ac.state!=='running'||worldSpace!=='listening'||!listening.state.power||listening.muted||document.hidden||visitEnded||!hasEntered)return;
@@ -1604,7 +1600,7 @@ function renderListeningUI(){
   $('listeningMute').textContent=listening.muted?'내 소리 켜기':'내 소리 끄기';$('listeningMute').setAttribute('aria-pressed',String(listening.muted));
   $('listeningStatus').textContent=(state.power?'함께 듣는 중 · '+record.name:'오디오 전원이 꺼져 있어요')+(room&&!room.connected()?' · 재연결 중':'');
   for(const b of $('listeningRecords').querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.record===state.track));
-  if(worldSpace==='listening'){$('soundToggle').setAttribute('aria-pressed',String(listening.state.power&&!listening.muted));$('soundToggle').setAttribute('aria-label',listening.muted?'내 소리 켜기':'내 소리 끄기');$('soundToggle').title=listening.muted?'내 소리 켜기':'내 소리 끄기';$('nowPlaying').hidden=false;$('nowPlaying').textContent='♪ '+(state.power?record.name:'호숫가 음악방 · 잠시 쉬어 가요');}
+  if(worldSpace==='listening'){const on=listening.state.power&&!listening.muted;$('musicToggle').setAttribute('aria-pressed',String(on));$('musicToggle').setAttribute('aria-label','음악방 오디오');$('musicToggle').title='음악방 오디오';$('nowPlaying').hidden=false;$('nowPlaying').textContent='♪ '+(state.power?record.name:'호숫가 음악방 · 잠시 쉬어 가요');}
 }
 function openListeningAudio(){
   if(worldSpace!=='listening')return;if(typeof $('listeningAudio').showModal!=='function'){toast('이 브라우저에서는 오디오 창을 열 수 없어요');return}closeOtherMenus('listening');stopListeningMovement();if(!ensureListeningAudio())toast('이 브라우저는 오디오 재생을 지원하지 않아요');syncListeningSound();renderListeningUI();if(!$('listeningAudio').open)$('listeningAudio').showModal();
@@ -2353,7 +2349,7 @@ function updateUmbrellas(){
   const apply=(P,state,key,wanted)=>{
     const show=P.g.userData.space!=='listening'&&wanted===true&&!UMBRELLA_BLOCKED_POSES.includes(state);
     if(!show){if(P.umbrella)P.umbrella.visible=false;return}
-    const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=P.pixel?.ready?P.tag.position.y-2.05:Math.min(0,P.tag.position.y-2.25);
+    const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=Math.min(0,P.tag.position.y-2.25);
   };
   apply(me,pose,room&&room.selfId||myLook.shirt+':'+myLook.hair,myUmbrella);
   for(const [id,peer] of peers)apply(peer.P,peer.pose,id,peer.umbrella);
@@ -2378,7 +2374,6 @@ function puffDust(x,z){
   const d=dust.pool[dust.i++%dust.pool.length];d.life=1;d.sp.visible=true;d.sp.position.set(x+(Math.random()-.5)*.2,.12,z+(Math.random()-.5)*.2);d.sp.scale.setScalar(.25);
 }
 function updateDust(dt){for(const d of dust.pool){if(!d.sp.visible)continue;d.life-=dt*1.6;if(d.life<=0){d.sp.visible=false;continue}d.sp.position.y+=dt*.35;d.sp.scale.setScalar(.25+(1-d.life)*.45);d.sp.material.opacity=d.life*.55}}
-const pixelCharacters=createPixelCharacters();
 function makePerson(L){
   const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);rig.scale.setScalar(.9);
   const legs=[],arms=[];
@@ -2466,7 +2461,7 @@ function makePerson(L){
   rig.traverse(node=>{if(node.isMesh&&!node.userData.handProp)contactMeshes.push(node)});
   g.add(blobShadow(.62));
   disableActorShadows(g);
-  const person={wood,knives,eyes,blinkT:1+Math.random()*3,dustT:0,g,rig,torso,legs,arms,head,cup,can,soda,shot,riceCup,beerGlass,sodaGlass,tag,contactMeshes,walkT:0,speed:0};pixelCharacters.attach(person,L.px);return person;
+  const person={wood,knives,eyes,blinkT:1+Math.random()*3,dustT:0,g,rig,torso,legs,arms,head,cup,can,soda,shot,riceCup,beerGlass,sodaGlass,tag,contactMeshes,walkT:0,speed:0};return person;
 }
 const prayerContactBounds=new THREE.Box3();
 const reduceHaloMotion=matchMedia('(prefers-reduced-motion: reduce)');
@@ -2474,10 +2469,6 @@ function posePerson(P,pose,dt,t){
   const personSpace=P.g.userData.space||'garden';
   P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)-P.g.position.y)*Math.min(1,dt*12);
   const seatY=seatSurfaceY(P.g.position.x,P.g.position.z,personSpace);
-  if(pixelCharacters.update(P,{pose,dt,time:t,camera,reduced:reduceHaloMotion.matches,seated:seatY!==null,seatHeight:seatY,groundHeight:P.g.position.y,surfaceHeight:personSpace==='listening'?0:Math.max(P.g.position.y,prayerSurfaceAt(P.g.position.x,P.g.position.z)),pocha:personSpace==='garden'&&seatY===.755,daylight:personSpace==='listening'?.7:gardenEnvironment.frame(serverNow()).daylight,slots:personSpace==='garden'?gardenLights?.slots:[]})){
-    if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.pixel.anchor,markBloom,{person:P});P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches,P.haloLevel||1);
-    if(P.bubble)P.bubble.userData.baseY=P.tag.position.y+.15+P.bubble.scale.y/2;return;
-  }
   if(P.eyes){P.blinkT-=dt;const close=P.blinkT<0&&P.blinkT>-.13;P.eyes.forEach(e=>e.scale.y=close?.012:.075);if(P.blinkT<-.13)P.blinkT=2+Math.random()*4}
   if(personSpace==='garden'&&worldSpace==='garden'&&P.speed>2.2&&P.g.parent){P.dustT=(P.dustT||0)-dt;if(P.dustT<0){P.dustT=.22;puffDust(P.g.position.x,P.g.position.z)}}
   const w=Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
@@ -2760,7 +2751,7 @@ function validDog(d){
 }
 let myLook=loadJSON('mem.look'),myDog=loadJSON('mem.dog');
 if(!validLook(myLook))myLook=randLook();if(!validDog(myDog))myDog=randDog();
-myLook=pixelLookForName(store.get('garden.name'),myLook);
+
 store.set('mem.look',JSON.stringify(myLook));savePetPreference(myDog);
 let me=makePerson(myLook),myDogObj=makeDog(myDog);
 let myUmbrella=store.get('garden.umbrella')==='1';
@@ -2772,7 +2763,7 @@ let myNick=stripInvisible(store.get('garden.name')).slice(0,12);
 let hasEntered=false,visitToken='',lastVisitSave=0,visitEnded=readExitFlag(),animationFrameId=null,allowNavigation=false,historyReady=false;
 const shownName=()=>myNick||myName;
 function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${petDescription(d)})`}
-function refreshMine(){$('lookBtn').hidden=!!myLook.px;setTag(me.tag,shownName());$('mine').textContent='함께 걷는 '+(petKind(myDog)==='cat'?'고양이: ':'강아지: ')+petDescription(myDog)}
+function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 걷는 '+(petKind(myDog)==='cat'?'고양이: ':'강아지: ')+petDescription(myDog)}
 refreshMine();
 let pose='stand',sendDirty=true;
 function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',prone:'pProne',standing_pray:'standingPrayBtn',pray2:'pray2Btn',shake:'shakeBtn'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k));if(typeof markActionCategories==='function')markActionCategories()}
@@ -2781,18 +2772,16 @@ function setPose(p){cancelFireCare();if(worldSpace==='listening'&&p==='sit'){sit
   syncPoseButtons();sendDirty=true;closePoseMenu()}
 let pendingStoke=false,fuelTimer=0,pendingFireAction='stoke';
 function syncUmbrellaButtons(){
-  $('umbrellaOnBtn').setAttribute('aria-pressed',String(myUmbrella));
-  $('umbrellaOffBtn').setAttribute('aria-pressed',String(!myUmbrella));
-  $('umbrellaOnBtn').hidden=myUmbrella;$('umbrellaOffBtn').hidden=!myUmbrella;$('umbrellaOnBtn').setAttribute('aria-pressed','false');$('umbrellaOffBtn').setAttribute('aria-pressed','false');
+  const b=$('umbrellaBtn');b.setAttribute('aria-pressed',String(myUmbrella));b.setAttribute('aria-label',myUmbrella?'우산 접기':'우산 쓰기');b.title=b.getAttribute('aria-label');
 }
 function setMyUmbrella(open){
   if(!hasEntered||visitEnded)return;
   if(open&&UMBRELLA_BLOCKED_POSES.includes(pose)){endPractice(false);preparePracticeInPlace();syncPoseButtons()}
   myUmbrella=!!open;store.set('garden.umbrella',myUmbrella?'1':'0');
-  syncUmbrellaButtons();updateUmbrellas();sendDirty=true;sendPresence();saveVisit();closePoseMenu();
+  syncUmbrellaButtons();updateUmbrellas();sendDirty=true;sendPresence();saveVisit();
   toast(myUmbrella?'우산을 썼어요':'우산을 접었어요');
 }
-$('umbrellaOnBtn').onclick=()=>setMyUmbrella(true);$('umbrellaOffBtn').onclick=()=>setMyUmbrella(false);syncUmbrellaButtons();
+$('umbrellaBtn').onclick=e=>{e.stopPropagation();setMyUmbrella(!myUmbrella)};syncUmbrellaButtons();
 
 function sitNearest(){
   const seats=[];if(CENTERPIECE==='campfire')FIRE_SEATS.forEach(sp=>seats.push({x:sp.x,z:sp.z,h:Math.atan2(-sp.x,-sp.z),fire:true}));
@@ -3004,19 +2993,19 @@ function sendPresence(){
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
-function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);e.P.halo?.dispose();pixelCharacters.detach(e.P);disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.dispose?.();e.D.g.parent?.remove(e.D.g);peers.delete(k)}
+function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);e.P.halo?.dispose();disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.dispose?.();e.D.g.parent?.remove(e.D.g);peers.delete(k)}
 function onPeerList(change){
   const seen=new Set();
   for(const pr of change.peers){
     if(pr.sameTab||pr.kind!=='viewer')continue;
     const s=pr.presence||{};if(!Number.isFinite(s.x)||!Number.isFinite(s.z))continue;
     seen.add(pr.peer);
-    const look=pixelLookForName(stripInvisible(s.nick),validLook(s.look)?s.look:null),dog=validDog(s.dog)?s.dog:null;
+    const look=validLook(s.look)?s.look:null,dog=validDog(s.dog)?s.dog:null;
     const key=JSON.stringify([look,dog]);
     let e=peers.get(pr.peer);const known=!!e;
     if(e&&e.key!==key){removePeer(pr.peer,true);e=null}
     if(!e){
-      const P=makePerson(validLook(look)?look:pixelLookForName(stripInvisible(s.nick),randLook())),D=makeDog(dog||randDog());
+      const P=makePerson(validLook(look)?look:randLook()),D=makeDog(dog||randDog());
       P.g.position.set(s.x,0,s.z);D.g.position.set(s.x+1,0,s.z);
       e={P,D,key,x:s.x,z:s.z,h:0,pose:'stand',by:pr.by||(typeof s.uid==='string'?s.uid:null),dog:dog};
       peers.set(pr.peer,e);if(!known&&!pr.quiet)pendingHello.push(pr.peer);
@@ -3065,10 +3054,9 @@ let sharedFlowers=null;
 renderFlowers(localFlowers);
 if(document.fonts)document.fonts.ready.then(()=>{refreshMine();resolveNames()});
 
-function applyMyLook(look,dog,save,boundName=shownName()){
-  look=pixelLookForName(boundName,look);
+function applyMyLook(look,dog,save){
   const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
-  disposeUmbrella(me);me.halo?.dispose();pixelCharacters.detach(me);me.g.parent?.remove(me.g);myDogObj.dispose?.();myDogObj.g.parent?.remove(myDogObj.g);
+  disposeUmbrella(me);me.halo?.dispose();me.g.parent?.remove(me.g);myDogObj.dispose?.();myDogObj.g.parent?.remove(myDogObj.g);
   myLook=look;myDog=dog;me=makePerson(myLook);myDogObj=makeDog(myDog);
   me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);syncListeningActors();refreshMine();restoreLastBubble('me',shownName());
   store.set('mem.look',JSON.stringify(myLook));savePetPreference(myDog);store.set('garden.pet',petKind(myDog));
@@ -3077,7 +3065,8 @@ function applyMyLook(look,dog,save,boundName=shownName()){
 }
 
 /* ---------- natural soundscape: rain, roof drops, water and birds; no automatic music ---------- */
-const natureAudio={ac:null,master:null,on:false,want:store.get('garden.natureSound')!=='0',timer:0,engine:null};
+// 자연의 소리는 항상 켠다(끄기 버튼 없음). 브라우저 자동 재생 제한 때문에 입장 후 첫 터치에서 시작한다.
+const natureAudio={ac:null,master:null,on:false,timer:0,engine:null};
 const amb={ac:null,g:{},nodes:new Set(),birdAt:0,dripAt:0,effectsAt:0,label:''};
 function initNatureAudio(){
   if(natureAudio.ac)return true;const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return false;
@@ -3193,12 +3182,7 @@ function ambUpdate(){
   }
   const night=gardenHour()<6.5||gardenHour()>=19.5;
   const label=indoors?'음악방 · 창밖의 잔잔한 자연 소리':rain>.7?'소나기 · 굵은 빗줄기와 물웅덩이':rain>.32?'촉촉한 비 · 나뭇잎과 빗방울':rain>.015?'잔잔한 비 · 부드러운 빗소리':night?'밤의 정원 · 풀벌레와 물소리':'낮의 정원 · 바람과 새소리';
-  const text=label+(shelter&&rain>.015?' · 처마와 지붕에 떨어지는 비':'');if(text!==amb.label){amb.label=text;renderNatureUI()}
-}
-function renderNatureUI(){
-  const on=natureAudio.on;$('natureSoundBtn').textContent=on?'자연의 소리 끄기':'자연의 소리 켜기';$('natureSoundBtn').setAttribute('aria-pressed',String(on));
-  $('natureStatus').textContent=on?(amb.label||'날씨와 장소에 따라 빗소리와 물소리가 들려요'):'자연의 소리를 껐어요';
-  if(worldSpace==='garden'){$('soundToggle').setAttribute('aria-pressed',String(on));$('soundToggle').setAttribute('aria-label',on?'자연의 소리 끄기':'자연의 소리 켜기');$('soundToggle').title=on?'자연의 소리 끄기':'자연의 소리 켜기';$('soundToggle').textContent='☂'}
+  const text=label+(shelter&&rain>.015?' · 처마와 지붕에 떨어지는 비':'');amb.label=text;
 }
 function syncNatureOutput(){
   if(!natureAudio.ac)return;const audible=natureAudio.on&&!visitEnded&&hasEntered&&!document.hidden;
@@ -3208,23 +3192,19 @@ function syncNatureOutput(){
 function setNatureSound(on){
   if(on&&(visitEnded||!hasEntered||document.hidden))return;
   if(on&&!initNatureAudio()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
-  natureAudio.on=on;natureAudio.want=on;store.set('garden.natureSound',on?'1':'0');clearInterval(natureAudio.timer);natureAudio.timer=0;
+  natureAudio.on=on;clearInterval(natureAudio.timer);natureAudio.timer=0;
   if(natureAudio.ac){if(on){ambInit();natureAudio.engine.setActive(true);natureAudio.ac.resume().then(()=>{syncNatureOutput()}).catch(()=>{});natureAudio.timer=setInterval(ambUpdate,400)}syncNatureOutput()}
-  renderNatureUI();
 }
 function natureFirstGesture(e){
-  if(e&&e.target&&e.target.closest&&e.target.closest('#soundToggle, #natureSoundBtn'))return;
   if(visitEnded||!hasEntered)return;
-  if(worldSpace==='listening'){if(natureAudio.want&&!natureAudio.on)setNatureSound(true);if(!listening.muted){ensureListeningAudio();syncListeningSound()}return}
-  if(natureAudio.want){if(!natureAudio.on)setNatureSound(true);else if(natureAudio.ac&&natureAudio.ac.state==='suspended')natureAudio.ac.resume().then(syncNatureOutput).catch(()=>{})}
+  if(worldSpace==='listening'){if(!natureAudio.on)setNatureSound(true);if(!listening.muted){ensureListeningAudio();syncListeningSound()}return}
+  if(!natureAudio.on)setNatureSound(true);else if(natureAudio.ac&&natureAudio.ac.state==='suspended')natureAudio.ac.resume().then(syncNatureOutput).catch(()=>{});
 }
 function silenceNatureAudio(){
   clearInterval(natureAudio.timer);natureAudio.timer=0;natureAudio.on=false;for(const n of amb.nodes)try{n.stop()}catch(e){}amb.nodes.clear();
   natureAudio.engine?.close();natureAudio.engine=null;
-  const old=natureAudio.ac;natureAudio.ac=null;natureAudio.master=null;amb.ac=null;amb.g={};amb.noise=null;amb.out=null;amb.panners=null;amb.streamF=null;amb.rainBodyF=null;amb.label='';if(old)old.close().catch(()=>{});renderNatureUI();
+  const old=natureAudio.ac;natureAudio.ac=null;natureAudio.master=null;amb.ac=null;amb.g={};amb.noise=null;amb.out=null;amb.panners=null;amb.streamF=null;amb.rainBodyF=null;amb.label='';if(old)old.close().catch(()=>{});
 }
-$('natureSoundBtn').onclick=()=>setNatureSound(!natureAudio.on);
-$('soundToggle').onclick=e=>{e.stopPropagation();if(worldSpace==='listening'){$('listeningMute').click();return}setNatureSound(!natureAudio.on)};
 addEventListener('pointerdown',natureFirstGesture,true);addEventListener('keydown',natureFirstGesture,true);
 document.addEventListener('visibilitychange',()=>{
   if(!natureAudio.ac)return;
@@ -3234,14 +3214,11 @@ document.addEventListener('visibilitychange',()=>{
 
 
 /* ---------- temple ambience: synthesised live, same beat for everyone ---------- */
-const TRACKS=[
-  {id:'dawn',name:'새벽 예불',desc:'목탁과 범종, 낮은 울림'},
-  {id:'wind',name:'산사의 바람',desc:'처마 끝 풍경과 바람 소리'},
-  {id:'bowl',name:'싱잉볼 명상',desc:'길게 퍼지는 그릇 소리'},
-  {id:'melody',name:'고요한 선율',desc:'느린 오음계 피리 가락'}];
+// 음악은 새벽 예불 한 곡. 서버 시각 기준 같은 박자로 들리며, 각자 제목줄 오른쪽 ♪로 켜고 끈다.
+const TRACKS=[{id:'dawn',name:'새벽 예불',desc:'목탁과 범종, 낮은 울림'}];
 let AC=null,master=null,bus=null,noiseBuf=null,bed=[],audioOn=false,vol=(()=>{const v=parseInt(store.get('garden.vol')||'70',10);return Number.isFinite(v)?Math.max(0,Math.min(100,v))/100:.7})();
 // 자연의 소리·선택곡·천둥에 적용하는 이 브라우저의 음량.
-let music={track:null,startedAt:0};
+const music={track:'dawn',startedAt:0};
 function hasTempleMusic(){return TRACKS.some(x=>x.id===music.track)}
 const sched=new Map();
 function h3(){let h=2166136261;for(const x of arguments){h^=x|0;h=Math.imul(h,16777619);h^=h>>>13}return(h>>>0)/4294967296}
@@ -3277,13 +3254,10 @@ function flute(t,f,dur){
   const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.085,t+.45);g.gain.setValueAtTime(.085,t+dur*.65);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
   o.connect(lp);lp.connect(g);g.connect(bus);o.start(t);lfo.start(t);o.stop(t+dur+.1);lfo.stop(t+dur+.1);
 }
-const PENTA_HI=[1318.5,1480,1661.2,1975.5,2217.5],BOWLS=[174.6,196,220,261.6,293.7],FLUTE=[293.7,329.6,392,440,523.3,587.3];
+const PENTA_HI=[1318.5,1480,1661.2,1975.5,2217.5];
 const VOICES={
-  dawn:[{p:1.5,prob:1,on:k=>k%20<14,fn:(t,k)=>moktak(t,k%20===13?520:640)},{p:30,prob:1,fn:t=>bell(t,98)},{p:11,prob:.5,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)]*.5)}],
-  wind:[{p:.9,prob:.33,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)])},{p:21,prob:.6,fn:t=>bowl(t,196)}],
-  bowl:[{p:7,prob:.9,fn:(t,k,r)=>bowl(t,BOWLS[Math.floor(r*5)])},{p:5,prob:.2,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)])}],
-  melody:[{p:3.4,prob:.78,fn:(t,k,r)=>{const i=Math.floor((Math.sin(k*.61)*.5+.5)*5.99);flute(t,FLUTE[(i+(r<.25?1:0))%6],2.6+r*1.4)}},{p:17,prob:1,fn:t=>bowl(t,146.8)}]};
-const BEDS={dawn:{drone:.05,wind:0},wind:{drone:.02,wind:.05},bowl:{drone:.035,wind:0},melody:{drone:.025,wind:.015}};
+  dawn:[{p:1.5,prob:1,on:k=>k%20<14,fn:(t,k)=>moktak(t,k%20===13?520:640)},{p:30,prob:1,fn:t=>bell(t,98)},{p:11,prob:.5,fn:(t,k,r)=>chime(t,PENTA_HI[Math.floor(r*5)]*.5)}],};
+const BEDS={dawn:{drone:.05,wind:0}};
 function stopBed(){const t=AC.currentTime;bed.forEach(n=>{try{if(n.gain){n.gain.cancelScheduledValues(t);n.gain.setValueAtTime(n.gain.value,t);n.gain.linearRampToValueAtTime(0,t+1.2)}else n.stop(t+1.3)}catch(e){}});bed=[]}
 function startBed(id){
   const B=BEDS[id];if(!B)return;const t=AC.currentTime;
@@ -3311,49 +3285,19 @@ let musicScheduleTimer=setInterval(schedule,250);
 function setAudioOn(on){
   if(on&&(visitEnded||!hasEntered))return;
   if(on&&!initAudio()){toast('이 브라우저에서는 소리를 낼 수 없어요');return}
-  audioOn=on;if(AC){if(on)AC.resume().catch(()=>{});master.gain.setTargetAtTime(on&&hasTempleMusic()&&worldSpace==='garden'?vol:0,AC.currentTime,.3);
+  audioOn=on;store.set('garden.music',on?'1':'0');if(AC){if(on)AC.resume().catch(()=>{});master.gain.setTargetAtTime(on&&hasTempleMusic()&&worldSpace==='garden'?vol:0,AC.currentTime,.3);
     stopBed();sched.clear();if(on&&hasTempleMusic())startBed(music.track)}
   if(worldSpace==='listening')syncListeningSound();renderMusicUI();
 }
-function applyMusic(m){
-  const changed=m.track!==music.track||m.startedAt!==music.startedAt;music=m;
-  if(AC)master.gain.setTargetAtTime(audioOn&&hasTempleMusic()&&worldSpace==='garden'?vol:0,AC.currentTime,.2);
-  if(changed&&AC&&audioOn){stopBed();sched.clear();if(hasTempleMusic())startBed(music.track)}
-  syncNatureOutput();if(worldSpace==='listening')syncListeningSound();renderMusicUI();
-}
-let canPickMusic=true;
 function renderMusicUI(){
   if(worldSpace==='listening'){renderListeningUI();return}
-  const tr=hasTempleMusic()?TRACKS.find(x=>x.id===music.track):null;
-  $('nowPlaying').hidden=!tr;$('nowPlaying').textContent=tr?`♪ ${tr.name}`:'';
-  renderNatureUI();
-  $('soundBtn').hidden=!tr;$('soundBtn').textContent=audioOn?'내 음악 소리 끄기':'내 음악 소리 켜기';$('soundBtn').classList.toggle('on',audioOn);
-  $('synthVolume').hidden=false;
-  $('musicNote').textContent=db?(canPickMusic?'고른 곡을 함께 들어요 · 각자 소리 켜기를 눌러 주세요':'음악은 정원 주인이 골라요 · 볼륨은 내 마음대로'):'자연의 소리와 별도로, 듣고 싶은 곡만 골라 주세요';
-  const box=$('tracks');box.textContent='';
-  [...TRACKS,{id:null,name:'음악 끄기',desc:'선택곡을 끄고 자연의 소리 듣기'}].forEach(x=>{
-    const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed',String(music.track===x.id));b.disabled=!canPickMusic;
-    const n=document.createElement('span');n.textContent=x.name;const d=document.createElement('small');d.textContent=x.desc;b.append(n,d);
-    b.onclick=()=>pickTrack(x.id);box.appendChild(b)});
+  const b=$('musicToggle');b.setAttribute('aria-pressed',String(audioOn));b.setAttribute('aria-label',audioOn?'새벽 예불 끄기':'새벽 예불 켜기');b.title=b.getAttribute('aria-label');
+  $('nowPlaying').hidden=!audioOn;$('nowPlaying').textContent=audioOn?'♪ 새벽 예불':'';
 }
-async function pickTrack(id){
-  if(visitEnded||!hasEntered)return;
-  if(!canPickMusic||id&&!TRACKS.some(x=>x.id===id))return;
-  const m={track:id,startedAt:Date.now()};
-  if(id&&!audioOn)setAudioOn(true);
-  if(room&&room.kind==='ws'){if(!room.connected()){toast('정원에 다시 연결되면 골라 주세요');return}room.send({t:'music',track:id});return}
-  if(db&&canPickMusic){try{await db.doc('memorial/music').set(m)}catch(e){toast('음악을 바꾸지 못했어요. 잠시 뒤 다시 눌러 주세요');return}}
-  applyMusic(m);if(id)toast(`${TRACKS.find(x=>x.id===id).name}을 골랐어요`);
-}
-$('soundBtn').onclick=()=>setAudioOn(!audioOn);
-function setMusicExpanded(open){
-  if(open)closeOtherMenus('music');
-  $('musicPanel').hidden=!open;$('musicBtn').setAttribute('aria-expanded',String(open));syncMenuSections();
-}
-$('musicBtn').onclick=()=>worldSpace==='listening'?openListeningAudio():setMusicExpanded($('musicPanel').hidden);
-$('vol').value=Math.round(vol*100);
-$('vol').oninput=e=>{vol=e.target.value/100;store.set('garden.vol',String(e.target.value));if(AC&&audioOn)master.gain.setTargetAtTime(hasTempleMusic()&&worldSpace==='garden'?vol:0,AC.currentTime,.1);
-  syncNatureOutput();if(thunderAudio.master&&thunderAudio.context)thunderAudio.master.gain.setTargetAtTime(vol,thunderAudio.context.currentTime,.1)};
+$('musicToggle').onclick=e=>{e.stopPropagation();if(worldSpace==='listening'){openListeningAudio();return}setAudioOn(!audioOn);if(audioOn)toast('새벽 예불을 켰어요');};
+// 입장한 뒤 첫 터치에서, 지난번에 켜 두었던 새벽 예불을 다시 켠다.
+function musicFirstGesture(){if(store.get('garden.music')==='1'&&!audioOn&&hasEntered&&!visitEnded&&worldSpace==='garden')setAudioOn(true)}
+addEventListener('pointerdown',musicFirstGesture,true);
 renderMusicUI();
 
 
@@ -3376,8 +3320,7 @@ function closeOtherMenus(keep){
   if(keep!=='history')toggleChatHistory(false,false);
   if(keep!=='chat')blurChatInput();
   if(keep!=='order')toggleOrderMenu(false);
-  if(keep!=='music')setMusicExpanded(false);
-  if(keep!=='garden'&&keep!=='music')setGardenExpanded(false);
+  if(keep!=='garden')setGardenExpanded(false);
 }
 const ACTION_SUBS=['subRest','subFriend','subPray','firePlayList'];
 function actionMenuOpen(){return !$('poseList').hidden||ACTION_SUBS.some(id=>!$(id).hidden)}
@@ -3417,7 +3360,6 @@ function setGardenExpanded(open){
   $('gardenPanel').classList.toggle('collapsed',!open);
   $('gardenToggle').setAttribute('aria-expanded',String(open));
   $('gardenToggle').textContent=open?'접기 ▴':'펼치기 ▾';
-  if(!open)setMusicExpanded(false);
   store.set('garden.ui.panel',open?'1':'0');syncMenuSections();
 }
 const initialPoseMenu=store.get('garden.ui.poses')==='1',initialGardenMenu=store.get('garden.ui.panel')==='1';
@@ -3427,7 +3369,13 @@ $('gardenToggle').onclick=()=>setGardenExpanded($('gardenDetails').hidden);
 
 
 $('goBtn').onclick=()=>goToFriend(false);
-$('rerollBtn').onclick=()=>{closeOtherMenus('pet');openNameDialog(false);$('nameForm').querySelector('input[name="entryPet"]:checked')?.focus({preventScroll:true})};
+// 반려동물 변경: 지금 종류(강아지/고양이) 안에서 품종·털색을 무작위로 바꾼다. 이름은 그대로 둔다.
+function randomPetLike(current){
+  const kind=petKind(current),breeds=kind==='cat'?CAT_BREEDS:BREEDS,coats=kind==='cat'?CAT_COATS:DOG_COATS;let next;
+  for(let i=0;i<8;i++){next={...(kind==='cat'?{kind:'cat'}:{}),b:Math.floor(Math.random()*breeds.length),coat:Math.floor(Math.random()*coats.length),n:current?.n||(kind==='cat'?pick(CAT_NAMES):pick(DOGNAMES))};if(next.b!==current?.b||next.coat!==current?.coat)break}
+  return next;
+}
+$('rerollBtn').onclick=()=>{const dog=randomPetLike(myDog);if(!validDog(dog))return;applyMyLook(myLook,dog,true);if(room&&room.kind==='ws')room.profile();toast(petDescription(dog)+' · 마음에 들 때까지 눌러 보세요')};
 
 /* ---------- prayer practice: durable server clock, lightweight local animation ---------- */
 const BOW_HALO_MS=Prayer.HALO_RED_MS;
@@ -4052,10 +4000,8 @@ function drawLightning(event){
   }
   lightningPositions.fill(0);lightningPositions.set(points);lightningGeometry.setDrawRange(0,points.length/3);lightningGeometry.attributes.position.needsUpdate=true;
 }
-const thunderAudio={context:null,noise:null,master:null,nodes:new Set(),enabled:store.get('garden.thunderSound')!=='0',lastEvent:null,suppressUntil:Date.now()+1500};
-function renderThunderButton(){
-  $('thunderSoundBtn').textContent=thunderAudio.enabled?'천둥 끄기':'천둥 켜기';$('thunderSoundBtn').setAttribute('aria-pressed',String(thunderAudio.enabled));
-}
+const thunderAudio={context:null,noise:null,master:null,nodes:new Set(),enabled:true,lastEvent:null,suppressUntil:Date.now()+1500};
+// 천둥 소리는 항상 켠다(끄기 버튼 없음).
 function unlockThunder(){
   if(!hasEntered||visitEnded||!thunderAudio.enabled||document.hidden)return;
   const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;
@@ -4106,14 +4052,9 @@ function updateThunderStorm(now,weather){
   $('stormFlash').style.opacity=String(peak*(reduce?.045:.22));
   if(rain&&now>=event.thunderAt&&now<event.thunderAt+650)playThunder(event);
 }
-$('thunderSoundBtn').onclick=()=>{
-  thunderAudio.enabled=!thunderAudio.enabled;store.set('garden.thunderSound',thunderAudio.enabled?'1':'0');
-  if(thunderAudio.enabled)unlockThunder();else quietThunder();renderThunderButton();
-};
 document.addEventListener('pointerdown',unlockThunder,{capture:true,passive:true});
 document.addEventListener('keydown',unlockThunder,{capture:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)quietThunder();else {thunderAudio.suppressUntil=Date.now()+1500;unlockThunder()}});
-renderThunderButton();
 
 
 /* ---------- shared fire play and the waterside firework launch ---------- */
@@ -5071,7 +5012,7 @@ function connectRoomServer(base,code){
     if(sh.candles)candleUI?.apply(sh.candles);
     if(sh.fireplay)applyFirePlay(sh.fireplay);
     if(Array.isArray(sh.flowers)){sharedFlowers=sh.flowers.filter(Number.isInteger).slice(-300);renderFlowers(sharedFlowers)}
-    if(sh.music){const ok=TRACKS.some(x=>x.id===sh.music.track);applyMusic({track:ok?sh.music.track:null,startedAt:Number.isFinite(sh.music.startedAt)?sh.music.startedAt:0})}
+    
     if(['auto','clear','rain','snow'].includes(sh.weather))setSharedWeather(sh.weather,sh.weatherTransition);
     setPochaOrders(sh.pocha);
     $('chatLog').textContent='';historyKeys.clear();
@@ -5138,8 +5079,7 @@ function connectRoomServer(base,code){
         }
         case 'board_page':case 'board_note':case 'board_posted':case 'board_confirmed':case 'board_error':case 'board_changed':gardenBoard.receive(m);break;
         case 'flower':sharedFlowers=(sharedFlowers||[]).concat(Number.isInteger(m.c)?m.c:0).slice(-300);renderFlowers(sharedFlowers);break;
-        case 'music':{const mu=m.music||{},ok=TRACKS.some(x=>x.id===mu.track);applyMusic({track:ok?mu.track:null,startedAt:mu.startedAt||serverNow()});
-          if(mu.by!==you)toast(ok?(stripInvisible(m.name).slice(0,12)||'친구')+'님이 '+TRACKS.find(x=>x.id===mu.track).name+'을 틀었어요':'음악을 껐어요');break}
+        case 'music':break; // 곡 선택은 없어졌다(새벽 예불 고정, 각자 ♪로 켜고 끔)
         case 'order':onFriendOrder(Object.assign({},m.order,{mine:m.order&&m.order.by===you}),stripInvisible(m.name).slice(0,12)||'친구',m.pocha);break;
         case 'pocha':setPochaOrders(m.pocha);break;
         case 'pocha_error':toast(m.code==='slow'?'주문이 많아요. 잠시 후 다시 눌러 주세요.':m.code==='item'?'차림표에서 다시 골라 주세요.':'포차의 내 자리에 앉은 뒤 다시 눌러 주세요.');break;

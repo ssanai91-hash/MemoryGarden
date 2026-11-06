@@ -2,11 +2,11 @@
 #gardenPanel{width:224px;max-width:calc(100vw - 24px);padding:11px;border:1px solid #e4dfd2;border-radius:16px;background:rgba(250,247,239,.97);box-shadow:0 8px 28px #18241b24;scrollbar-width:thin;overscroll-behavior:contain}
 #gardenPanel:not(.collapsed){max-height:calc(100dvh - var(--keyboard-lift,0px) - var(--chat-height,63px) - 88px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 #gardenPanel.collapsed{width:max-content;padding:8px 10px;max-width:calc(100vw - 104px)}
-#gardenPanel .plaque-heading{grid-template-columns:minmax(0,1fr) 28px 46px;gap:5px}
+#gardenPanel .plaque-heading{grid-template-columns:minmax(0,1fr) 46px 28px;gap:5px}
 #gardenPanel .plaque-heading h1{font-size:16px;line-height:28px;letter-spacing:-.025em}
 #gardenPanel .plaque-heading button{border-radius:9px;border-color:#e4dfd5;background:#fffdf8;color:#5d6257;box-shadow:none}
-#gardenPanel #soundToggle{font-size:16px}
-#gardenPanel #soundToggle[aria-pressed="true"]{background:#eee2cb;color:#9a6a35}
+#gardenPanel #musicToggle{font-size:16px}
+#gardenPanel #musicToggle[aria-pressed="true"]{background:#eee2cb;color:#9a6a35}
 #gardenPanel #gardenDetails{margin-top:7px;padding-top:0;border-top:0}
 #gardenPanel .who{align-items:flex-start;gap:6px;margin:0;padding:7px 0 9px;border-top:0;border-bottom:1px solid #e5e0d4;font-size:11px;line-height:1.5;color:#727568}
 #gardenPanel .who .dot{flex:0 0 6px;width:6px;height:6px;margin-top:5px;box-shadow:0 0 0 2px #879b6520}
