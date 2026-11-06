@@ -791,6 +791,7 @@ import {createNatureSoundscape} from './assets/nature-soundscape.js';
 import {pavedDisk,makePrayerGarden} from './assets/prayer-garden.js';
 import {createCandleUI} from './assets/prayer-candles-ui.js';
 import {createBowHalo} from './assets/bow-halo.js';
+import {createSayuStatues} from './assets/sayu-statues.js';
 import {addAlpineRange} from './assets/garden-mountains.js';
 import {createPixelCharacters,pixelLookForName} from './assets/pixel-characters.js';
 import {createFramePacer,qualityDecision,createShadowBudget,disableActorShadows,createPowerSaving} from './assets/garden-performance.js';
@@ -922,6 +923,8 @@ const TABLE_SPOTS=[0.95,4.4].map((a,i)=>({x:Math.round(Math.sin(a)*1420)/100,z:M
 const nearTable=(x,z,r)=>TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<r);
 // 주황 포장마차: 모닥불 뒤쪽 나무 아래. 앞(입구)은 모닥불을 향한다.
 const ALTAR_SPOTS=[Prayer.LAYOUT.buddha,Prayer.LAYOUT.mary];
+// 기도 광장의 조각상: 'sayu'(사유의 방 반가사유상 2점) 또는 'classic'(옛 좌불상·성모 마리아상).
+const PLAZA_STATUES='sayu';
 const nearAltar=(x,z,r)=>ALTAR_SPOTS.some(p=>Math.hypot(x-p.x,z-p.z)<r);
 const POCHA={x:-6.3,z:-23.4};POCHA.h=Math.atan2(-POCHA.x,-POCHA.z);
 const pochaLocal=(lx,lz)=>({x:POCHA.x+Math.cos(POCHA.h)*lx+Math.sin(POCHA.h)*lz,z:POCHA.z-Math.sin(POCHA.h)*lx+Math.cos(POCHA.h)*lz});
@@ -2056,12 +2059,13 @@ if(CENTERPIECE==='buddha')obstacles.push({x:0,z:0,r:5.75});
 
 /* ---------- a separate east-side prayer square ---------- */
 const prayerView=makePrayerGarden({scene,stone:F,markBloom,obstacles,pointLight:(color,strength,range)=>gardenPointLight('prayer',color,strength,range)});
-if(CENTERPIECE==='campfire'){
+if(CENTERPIECE==='campfire'&&PLAZA_STATUES==='classic'){
   memorial.visible=true;memorial.position.set(ALTAR_SPOTS[0].x,Prayer.LAYOUT.floor,ALTAR_SPOTS[0].z);memorial.scale.setScalar(.46);
   obstacles.push({x:ALTAR_SPOTS[0].x,z:ALTAR_SPOTS[0].z,r:2.7});
 }
-const maryStatue=new THREE.Group();maryStatue.position.set(ALTAR_SPOTS[1].x,Prayer.LAYOUT.floor,ALTAR_SPOTS[1].z);scene.add(maryStatue);
-{
+const maryStatue=new THREE.Group();maryStatue.position.set(ALTAR_SPOTS[1].x,Prayer.LAYOUT.floor,ALTAR_SPOTS[1].z);
+const sayuStatues=PLAZA_STATUES==='sayu'?createSayuStatues({scene,GLTFLoader,spots:ALTAR_SPOTS,floor:Prayer.LAYOUT.floor,stone:F,obstacles}):null;
+if(PLAZA_STATUES==='classic'){scene.add(maryStatue);
   const ivory=F(0xf3eee3,{roughness:.8,emissive:C(0x38352e),emissiveIntensity:.3});
   const blue=F(0x719bc4,{roughness:.83,emissive:C(0x1c2a42),emissiveIntensity:.28}),face=F(0xeadfcd,{roughness:.85,emissive:C(0x353027),emissiveIntensity:.25});
   const round=new THREE.SphereGeometry(1,20,14);

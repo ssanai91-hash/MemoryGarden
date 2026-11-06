@@ -45,3 +45,7 @@
 !chars/*.png
 
 !assets/black-poodle.js
+
+!assets/sayu-statues.js
+!assets/sayu-left.glb
+!assets/sayu-right.glb
