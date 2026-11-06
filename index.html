@@ -1131,7 +1131,9 @@ const FALLS={s:70,q:0,poolR:4.4};Object.assign(FALLS,atSQ(FALLS.s,FALLS.q));
 const streamQ=s=>-3.2+1.1*Math.sin(s*.42);
 const STREAM=[];for(let s=FALLS.s-2.8;s>=LAKE.sB-1.2;s-=.5)STREAM.push({s,...atSQ(s,streamQ(s))});
 const streamDist=(x,z)=>{let d=1e9;for(const p of STREAM)d=Math.min(d,Math.hypot(p.x-x,p.z-z));return d};
-const HUT=(()=>{const pa=Math.atan2(LAKE.pz,LAKE.px),d=lakeR(pa)+6.2,x=LAKE.x+LAKE.px*d,z=LAKE.z+LAKE.pz*d;return{x,z,h:Math.atan2(-LAKE.px,-LAKE.pz)}})();
+// 농막: 포장마차 뒤(모닥불에서 멀어지는 쪽)로 옮겼다. 예전 호숫가 자리는 기도 광장 불상 뒤로 보여
+// 절할 때 시야를 가렸다. 앞(마루·처마)은 포장마차 쪽을 바라본다. 주변 나무·꽃은 nearWaterworks가 비운다.
+const HUT=(()=>{const r=Math.hypot(POCHA.x,POCHA.z),ux=POCHA.x/r,uz=POCHA.z/r,d=10.5,x=POCHA.x+ux*d,z=POCHA.z+uz*d;return{x,z,h:Math.atan2(-ux,-uz)}})();
 LAKE.beach=(()=>{const a=Math.atan2(-LAKE.pz,-LAKE.px),d=lakeR(a)+2.6;return{x:LAKE.x-LAKE.px*d,z:LAKE.z-LAKE.pz*d}})();
 const hutLocal=(lx,lz)=>({x:HUT.x+Math.cos(HUT.h)*lx+Math.sin(HUT.h)*lz,z:HUT.z-Math.sin(HUT.h)*lx+Math.cos(HUT.h)*lz});
 const hutToLocal=(x,z)=>{const dx=x-HUT.x,dz=z-HUT.z;return{lx:Math.cos(HUT.h)*dx-Math.sin(HUT.h)*dz,lz:Math.sin(HUT.h)*dx+Math.cos(HUT.h)*dz}};
@@ -1344,7 +1346,7 @@ const waterworks={sheets:[],mist:null,foam:[],tex:null};
     for(let k=-3;k<=3;k++)part(plank,wood,[k*.4,.08,0],[.32,.07,2.6],null,cross);
     const path=new THREE.Mesh(new THREE.PlaneGeometry(2.2,FALLS.s-FALLS.poolR-OUTER_TRAIL-.4,3,Math.ceil((FALLS.s-FALLS.poolR-OUTER_TRAIL-.4)*2)),M(0xd7c7a4));path.rotation.x=-Math.PI/2;path.rotation.z=-2.45;
     const mid=(OUTER_TRAIL+FALLS.s-FALLS.poolR)/2,pm=atSQ(mid,0);path.position.set(pm.x,.021,pm.z);path.receiveShadow=true;scene.add(path);}
-  // ----- farm hut (농막) facing the lake -----
+  // ----- farm hut (농막) behind the pojangmacha, facing it -----
   const hut=new THREE.Group();hut.position.set(HUT.x,0,HUT.z);hut.rotation.y=HUT.h;scene.add(hut);
   const sid=document.createElement('canvas');sid.width=128;sid.height=128;const sx=sid.getContext('2d');sx.fillStyle='#e7dcc2';sx.fillRect(0,0,128,128);
   for(let y=0;y<128;y+=16){sx.fillStyle='#cbbd9d';sx.fillRect(0,y+13,128,3)}const sidTex=new THREE.CanvasTexture(sid);sidTex.wrapS=sidTex.wrapT=THREE.RepeatWrapping;sidTex.repeat.set(3,2);
