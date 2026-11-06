@@ -43,3 +43,5 @@
 !chars/
 !chars/manifest.json
 !chars/*.png
+
+!assets/black-poodle.js

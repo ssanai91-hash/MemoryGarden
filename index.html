@@ -795,6 +795,7 @@ import {addAlpineRange} from './assets/garden-mountains.js';
 import {createPixelCharacters,pixelLookForName} from './assets/pixel-characters.js';
 import {createFramePacer,qualityDecision,createShadowBudget,disableActorShadows,createPowerSaving} from './assets/garden-performance.js';
 import {createGardenLightSlots} from './assets/garden-light-slots.js';
+import {makeBlackPoodle,isPhotoPoodle} from './assets/black-poodle.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
@@ -2517,6 +2518,7 @@ const DOGNAMES=['콩이','보리','초코','두부','하루','몽이','별이','
 function randDog(){return{b:Math.floor(Math.random()*BREEDS.length),n:pick(DOGNAMES)}}
 function makeDog(spec){
   if(spec.kind==='cat')return makeCat(spec);
+  if(isPhotoPoodle(spec))return makeBlackPoodle({scene,blobShadow,disableActorShadows});
   const base=BREEDS[spec.b]||BREEDS[0],coat=DOG_COATS[spec.coat??0]||DOG_COATS[0];
   const B=coat.native?base:{...base,c1:coat.c1,c2:coat.c2,earC:coat.earC??coat.c1};
   const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);scene.add(g);
@@ -2581,7 +2583,7 @@ const CAT_COATS=[
 const CAT_NAMES=['나비','루나','호박','치즈','후추','솜이','밤이','유자','오월','별이'];
 const petKind=spec=>spec?.kind==='cat'?'cat':'dog';
 const petBreed=spec=>(petKind(spec)==='cat'?CAT_BREEDS:BREEDS)[spec.b];
-function petDescription(spec){return petBreed(spec).k+' · '+(petKind(spec)==='cat'?CAT_COATS[spec.coat]:DOG_COATS[spec.coat??0]).k}
+function petDescription(spec){if(isPhotoPoodle(spec))return '검은 푸들 · 사진 모델';return petBreed(spec).k+' · '+(petKind(spec)==='cat'?CAT_COATS[spec.coat]:DOG_COATS[spec.coat??0]).k}
 function savePetPreference(spec){
   store.set('mem.dog',JSON.stringify(spec));
   store.set('garden.pet.'+petKind(spec),JSON.stringify(spec));
@@ -2675,6 +2677,7 @@ function collide(x,z,r,space=worldSpace){
   return[x,z];
 }
 function updateDog(D,ox,oz,oh,ownerPose,ownerMoving,dt,t){
+  D.updateDetail?.(camera,t);
   const resting=(['sit','lie','prone','standing_pray','pray','bow','coffee','beer','soda','soju','cheers','makgeolli'].includes(ownerPose))&&!ownerMoving;
   const back=resting?-.2:.3;
   const tx=ox-Math.cos(oh)*1.0-Math.sin(oh)*back,tz=oz+Math.sin(oh)*1.0-Math.cos(oh)*back;
@@ -2952,7 +2955,7 @@ function sendPresence(){
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
-function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);e.P.halo?.dispose();pixelCharacters.detach(e.P);disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.g.parent?.remove(e.D.g);peers.delete(k)}
+function removePeer(k,keepMessage=false){const e=peers.get(k);if(!e)return;disposeUmbrella(e.P);e.P.halo?.dispose();pixelCharacters.detach(e.P);disposeBubble(k,keepMessage);e.P.g.parent?.remove(e.P.g);e.D.dispose?.();e.D.g.parent?.remove(e.D.g);peers.delete(k)}
 function onPeerList(change){
   const seen=new Set();
   for(const pr of change.peers){
@@ -3016,7 +3019,7 @@ if(document.fonts)document.fonts.ready.then(()=>{refreshMine();resolveNames()});
 function applyMyLook(look,dog,save,boundName=shownName()){
   look=pixelLookForName(boundName,look);
   const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
-  disposeUmbrella(me);me.halo?.dispose();pixelCharacters.detach(me);me.g.parent?.remove(me.g);myDogObj.g.parent?.remove(myDogObj.g);
+  disposeUmbrella(me);me.halo?.dispose();pixelCharacters.detach(me);me.g.parent?.remove(me.g);myDogObj.dispose?.();myDogObj.g.parent?.remove(myDogObj.g);
   myLook=look;myDog=dog;me=makePerson(myLook);myDogObj=makeDog(myDog);
   me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);syncListeningActors();refreshMine();restoreLastBubble('me',shownName());
   store.set('mem.look',JSON.stringify(myLook));savePetPreference(myDog);store.set('garden.pet',petKind(myDog));
