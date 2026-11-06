@@ -2,7 +2,8 @@ import './prayer-rules.js';
 import {createGardenIdentity} from './garden-identity.js';
 
 // This screen does not import Three.js or open a WebSocket. Loading a saved
-// profile is a read-only preview; the world waits for an explicit submit.
+// profile is a read-only preview. Admission waits for saved credentials and a
+// submit (automatic only when resuming the same tab); the 3D scene never waits.
 export function createEntryScreen({document,storage,crypto,fetcher=(...args)=>fetch(...args)}){
   const $=id=>document.getElementById(id),P=globalThis.GardenPrayer,form=$('nameForm');
   const breeds={dog:['시바','몰티즈','진돗개','푸들','허스키','닥스훈트','래브라도','웰시코기','비글','포메라니안'],cat:['코리안 쇼트헤어','브리티시 쇼트헤어','스코티시 폴드','러시안 블루','샴','랙돌','페르시안','메인쿤']};
@@ -19,21 +20,33 @@ export function createEntryScreen({document,storage,crypto,fetcher=(...args)=>fe
     const kind=choice('entryPet')||'dog';state.kind=kind;const saved=state.drafts[kind];options('petBreed',breeds[kind],saved.b);options('petCoat',coats[kind],saved.coat);$('petOptions').hidden=false;$('petBreedLabel').textContent='품종';
   }
   function draft(){const kind=choice('entryPet')||'dog',previous=state.drafts[kind];return{name:text($('nameInput').value),gender:choice('entryGender'),look:state.person?.look||null,dog:{...previous,b:Number($('petBreed').value),coat:Number($('petCoat').value),...(kind==='cat'?{kind:'cat'}:{})}}}
-  function controls(busy){for(const node of form.querySelectorAll('input,select,fieldset'))node.disabled=busy;$('entryExisting').disabled=busy}
+  function controls(busy){for(const node of form.querySelectorAll('input,select,fieldset,button'))node.disabled=busy;$('entryExisting').disabled=busy}
   function update(){
     const importing=identity.importing(),valid=importing?identity.valid():!!text($('nameInput').value)&&!!choice('entryGender')&&!!choice('entryPet');
     $('nameSubmit').disabled=state.busy||(!state.failed&&(!state.ready||!valid));
     $('nameSubmit').textContent=state.busy?'입장 정보 준비 중…':importing?'내 정보 불러오기':state.failed?'다시 시도':'입장하기';
+    $('entryExisting').textContent=importing?'내 코드로 돌아가기':'새로운 코드로 입장';
     if(!state.failed)$('entryHint').textContent=state.busy?'입장 정보를 준비하고 있어요':'입장 코드 자동 저장 · 내 정보 확인 후 입장';
     identity.updateEntry(false);
   }
-  const identity=createGardenIdentity({document,storage,crypto,fetcher,now:()=>Date.now()+state.offset,onMode(){if(identity.importing())update();else void initialise()}});
+  let autoEnterSaved=false;
+  const identity=createGardenIdentity({document,storage,crypto,fetcher,now:()=>Date.now()+state.offset,onMode(){autoEnterSaved=false;if(identity.importing())update();else void initialise()}});
+  try{
+    const visit=JSON.parse(sessionStorage.getItem('garden.visit.v1')||'null');
+    autoEnterSaved=sessionStorage.getItem('garden.visit.left.v1')!=='1'&&visit?.v===1&&/^[a-f0-9]{64}$/.test(visit.token||'')&&!!text(visit.name)&&!!identity.credentials().personalCode&&visit.personal?.personalCode===identity.credentials().personalCode;
+  }catch{}
   async function initialise(){
     if(state.busy)return false;state.busy=true;state.failed=false;state.ready=false;controls(true);update();
     try{
-      if(!await identity.prepare())throw Error(identity.errorText());
+      const importing=identity.importing();
+      if(importing&&!identity.valid()){await identity.prepare();throw Error(identity.errorText())}
+      if(!importing&&!await identity.prepare())throw Error(identity.errorText());
+      controls(true);
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);let result;
-      try{const response=await fetcher('/personal/profile',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',signal:controller.signal,body:JSON.stringify(identity.credentials())});result=await response.json();if(!response.ok)throw Error(result.error==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':'내 정보를 불러오지 못했어요. 다시 눌러 주세요.')}finally{clearTimeout(timer)}
+      try{const response=await fetcher('/personal/profile',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',signal:controller.signal,body:JSON.stringify(importing?identity.importCredentials():identity.credentials())});result=await response.json();if(!response.ok)throw Error(result.error==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':'내 정보를 불러오지 못했어요. 다시 눌러 주세요.')}finally{clearTimeout(timer)}
+      // Trying another code must not replace the saved identity on a typo or
+      // network failure. Commit the imported code only after profile lookup.
+      if(importing&&!await identity.prepare())throw Error(identity.errorText());
       state.offset=Number.isFinite(result.now)?result.now-Date.now():0;state.person=result.personal||null;
       if(result.personal)identity.confirm(result.personal);
       const saved=result.personal||identity.saved()||{};
@@ -41,7 +54,10 @@ export function createEntryScreen({document,storage,crypto,fetcher=(...args)=>fe
       const dog=saved.dog,kind=dog?.kind==='cat'?'cat':'dog';if(dog&&Number.isInteger(dog.b)&&breeds[kind][dog.b]&&coats[kind][dog.coat??0])state.drafts[kind]={...dog,coat:dog.coat??0};
       select('entryPet',kind);petControls(false);identity.showSettings();state.ready=true;state.failed=false;return true;
     }catch(e){state.failed=true;$('entryHint').textContent=e.message||'입장 정보를 준비하지 못했어요. 다시 눌러 주세요.';return false}
-    finally{state.busy=false;controls(false);update()}
+    finally{
+      state.busy=false;controls(false);update();
+      if(state.ready&&autoEnterSaved){autoEnterSaved=false;if(text($('nameInput').value))void submit({preventDefault(){}})}
+    }
   }
   async function submit(event){
     event.preventDefault();if(state.busy)return;
@@ -55,7 +71,7 @@ export function createEntryScreen({document,storage,crypto,fetcher=(...args)=>fe
   }
   form.noValidate=true;form.onsubmit=submit;
   listen(form,'input',()=>update());listen(form,'change',event=>{if(event.target?.name==='entryPet')petControls();update()});
-  listen($('entryExisting'),'click',()=>identity.useExisting());
+  listen($('entryExisting'),'click',()=>identity.importing()?identity.useSaved():identity.useExisting());
   document.body.classList.add('entry-open');$('welcome').hidden=false;
   select('entryGender','male');select('entryPet','dog');petControls(false);void initialise();
   return{identity,waitForEntry:()=>entered,start:initialise,

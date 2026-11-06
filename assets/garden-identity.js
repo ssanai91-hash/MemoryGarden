@@ -33,18 +33,18 @@ export function createGardenIdentity({document,storage,crypto,onSwitch,onMode,no
   const entry=document.createElement('section');entry.className='personal-entry';entry.setAttribute('aria-label','개인 기록');
   const label=document.createElement('strong'),summary=document.createElement('p'),row=document.createElement('div');row.className='row';
   const restore=document.createElement('button'),fresh=document.createElement('button'),input=document.createElement('input'),error=document.createElement('p');
-  restore.type=fresh.type='button';restore.textContent='코드 불러오기';fresh.textContent='새 코드 만들기';
+  restore.type=fresh.type='button';restore.textContent='코드 불러오기';restore.hidden=true;fresh.textContent='새 코드 발급받기';
   input.id='personalEntryCode';input.type='text';input.placeholder='5자리 입장 코드';input.inputMode='numeric';input.autocomplete='off';input.spellcheck=false;input.maxLength=32;input.setAttribute('aria-label','개인 입장 코드');input.setAttribute('autocapitalize','characters');
   error.setAttribute('role','status');error.className='personal-status';row.append(restore,fresh);entry.append(label,summary,input,row,error);
   document.getElementById('nameForm').prepend(entry);
   const style=document.createElement('style');style.textContent='.personal-entry{padding:.7rem;border:1px solid #8b9a7a66;border-radius:12px;margin-bottom:.9rem;text-align:left}.personal-entry p{margin:.35rem 0;font-size:.86rem}.personal-entry input{width:100%;box-sizing:border-box}.personal-entry .row{display:flex;gap:.4rem;flex-wrap:wrap}.personal-entry button{font-size:.82rem}.personal-restoring>:not(.personal-entry):not(.entry-footer):not(#nameSubmit):not(#entryHint):not(#nameCancel){display:none!important}.personal-code{font-size:1.05rem;letter-spacing:.07em;word-break:break-word;user-select:all}.personal-stats{white-space:pre-line;line-height:1.7}.personal-status{color:#815332}';document.head.append(style);
   function renderEntry(){
-    label.textContent=mode==='restore'?'기존 개인 코드로 입장':mode!=='new'&&active?.registered?'내 기록으로 입장':'처음 방문 · 5자리 코드 발급';
-    summary.textContent=mode==='restore'?'다른 기기에서도 같은 코드로 기록을 이어갑니다.':mode!=='new'&&active?.registered?'절 횟수와 후광 기록을 불러옵니다.':'입장 전에 5자리 코드를 발급받아 이 기기에 저장합니다.';
+    label.textContent=mode==='restore'?'새로운 코드로 입장':mode!=='new'&&active?.registered?'내 기록으로 입장':'처음 방문 · 5자리 코드 발급';
+    summary.textContent=mode==='restore'?'사용할 다른 코드를 입력해 주세요. 코드가 없으면 새 코드를 발급받을 수 있어요.':mode!=='new'&&active?.registered?'절 횟수와 후광 기록을 불러옵니다.':'입장 전에 5자리 코드를 발급받아 이 기기에 저장합니다.';
     entry.hidden=mode!=='restore';input.hidden=mode!=='restore';document.getElementById('nameForm').classList.toggle('personal-restoring',mode==='restore');
   }
   restore.onclick=()=>{mode='restore';error.textContent='';renderEntry();input.focus();onMode?.()};
-  fresh.onclick=()=>{create();error.textContent='입장하면 새 5자리 코드를 만듭니다.'};
+  fresh.onclick=()=>{create();error.textContent='새 5자리 코드를 준비하고 있어요.'};
   input.oninput=()=>{input.setCustomValidity('');error.textContent='';onMode?.()};
   const dialog=document.createElement('dialog');dialog.className='home-install-help';dialog.setAttribute('aria-labelledby','personalTitle');
   const heading=document.createElement('h2');heading.id='personalTitle';heading.textContent='내 입장 코드';
@@ -87,6 +87,8 @@ export function createGardenIdentity({document,storage,crypto,onSwitch,onMode,no
     saved:()=>active?(cache().profile||cache().draft||null):null,
     bind(next){if(next.onMode)onMode=next.onMode;if(next.onSwitch)onSwitch=next.onSwitch;if(next.now)now=next.now},
     useExisting(){restore.onclick()},
+    useSaved(){mode='saved';renderEntry();onMode?.()},
+    importCredentials(){return{personalCode:rules.formatCode(input.value),personalAction:'restore'}},
     showSettings(){mode='saved';renderEntry()},
     errorText:()=>error.textContent,
     confirm,open,
