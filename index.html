@@ -391,20 +391,22 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 @media(max-width:380px) and (max-height:650px){.board-screen{padding-top:76px}}
 </style>
 <link rel="stylesheet" href="./assets/entry-screen.css">
+<link rel="stylesheet" href="./assets/garden-panel.css">
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
 <header class="plaque collapsed" id="gardenPanel">
   <div class="plaque-heading"><h1>기억의 정원</h1><button id="soundToggle" class="sound-toggle" type="button" aria-pressed="false" aria-label="자연의 소리 켜기" title="자연의 소리 켜기">☂</button><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button></div>
   <div id="gardenDetails" hidden>
-  <div class="eyebrow">A MOMENT OF STILLNESS</div>
-  <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
-  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button><button id="kickAllBtn" type="button" hidden>모두 내보내기</button><button id="homeInstallBtn" type="button">바탕화면에 추가</button><button id="qualityBtn" type="button">화면 품질</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
-  <div class="garden-actions">
-    <div class="garden-action-row"><button id="musicBtn" type="button" aria-expanded="false">소리 · 음악</button><button id="thunderSoundBtn" type="button" aria-pressed="true">천둥 소리 끄기</button></div>
-    <div class="garden-action-row"><button id="rerollBtn" type="button">반려동물 변경</button><button id="goBtn" type="button" hidden>친구에게 가기</button></div>
-  </div>
+  <section class="garden-menu-group" aria-labelledby="gardenMenuTitle">
+    <h2 class="garden-menu-caption" id="gardenMenuTitle">정원</h2>
+    <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="goBtn" type="button" hidden>친구에게 가기</button><button id="leaveBtn" type="button" hidden>나가기</button><button id="kickAllBtn" type="button" hidden>모두 내보내기</button></div>
+  </section>
+  <section class="garden-menu-group" aria-labelledby="gardenSettingsTitle">
+    <h2 class="garden-menu-caption" id="gardenSettingsTitle">설정</h2>
+    <div class="garden-actions garden-preferences" id="gardenPreferences"><button id="homeInstallBtn" type="button">홈 화면 추가</button><button id="qualityBtn" type="button">화면 품질</button><button id="musicBtn" type="button" aria-expanded="false">소리 · 음악</button><button id="thunderSoundBtn" type="button" aria-pressed="true">천둥 끄기</button><button id="rerollBtn" type="button">반려동물 변경</button></div>
+  </section>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status">모닥불을 불러오는 중…</div><div id="campfireLastCare"></div>
   <div class="now" id="nowPlaying" hidden></div>
   <div class="panel" id="musicPanel" hidden>
@@ -465,7 +467,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   function sync(){
     const value=saved();installed=installed||value==='installed'||standalone();requested=!installed&&(requested||value==='requested');
     button.disabled=installed||requested||busy;
-    button.textContent=installed?'바탕화면에 추가됨':requested?'바탕화면 추가 요청됨':busy?'추가하는 중…':'바탕화면에 추가';
+    button.textContent=installed?'홈 화면에 추가됨':requested?'추가 요청됨':busy?'추가 중…':'홈 화면 추가';
     if(installed)deferred=null;
   }
   function remember(state){
@@ -2910,12 +2912,12 @@ function receiveFireMessage(m){
 }
 function renderCampfireStatus(){
   const state=Fire.frame(sharedCampfire,serverNow()),last=sharedCampfire?.last;
-  const label={out:'모닥불이 꺼졌어요 · 장작으로 다시 살릴 수 있어요',embers:'작은 잉걸불이 남아 있어요',low:'모닥불이 잦아들고 있어요',steady:'모닥불이 은은하게 타고 있어요',bright:'모닥불이 활활 타오르고 있어요'}[state.stage];
+  const label={out:'모닥불 꺼짐 · 장작을 넣어 주세요',embers:'모닥불 · 잉걸불이 남아 있어요',low:'모닥불 · 잦아드는 중',steady:'모닥불 · 은은하게 타는 중',bright:'모닥불 · 활활 타오르는 중'}[state.stage];
   const age=last?Math.max(0,serverNow()-last.at):0;
   const ago=age<60000?'방금':age<3600000?Math.floor(age/60000)+'분 전':age<86400000?Math.floor(age/3600000)+'시간 전':Math.floor(age/86400000)+'일 전';
   const minutes=Math.ceil(state.left/60000),remaining=minutes>=60?Math.floor(minutes/60)+'시간 '+(minutes%60?minutes%60+'분':''):minutes+'분';
-  const text=!sharedCampfire?'모닥불 상태를 연결하고 있어요…':label+(state.left?' · 장작 '+state.logs+'/5 · '+['','은은한 불','따뜻한 불','활활 타는 불','힘찬 불길','큰 모닥불'][state.level]+' · 약 '+remaining:'');
-  const detail=last?`${stripInvisible(last.name).slice(0,12)||'친구'}님이 ${ago} ${last.kind==='relit'?'불을 다시 살렸어요':'장작 '+(last.count||1)+'개를 넣었어요'}`:'장작 한 개로 2시간 · 최대 5개(10시간)';
+  const text=!sharedCampfire?'모닥불 연결 중…':label+(state.left?'\n장작 '+state.logs+'/5 · 약 '+remaining+' 남음':'');
+  const detail=last?`${stripInvisible(last.name).slice(0,12)||'친구'} · ${ago} · ${last.kind==='relit'?'다시 불붙임':'장작 '+(last.count||1)+'개 추가'}`:'장작 1개에 2시간 · 최대 5개';
   const key=text+'|'+detail;if(key===fireStatusKey)return;fireStatusKey=key;
   $('campfireStatus').textContent=text;$('campfireLastCare').textContent=detail;
 }
@@ -3036,7 +3038,7 @@ function updateWho(){
   const n=peers.size,connected=room&&room.connected();
   $('goBtn').hidden=!connected||![...peers.values()].some(e=>(e.space||'garden')===worldSpace);
   $('leaveBtn').hidden=!hasEntered;syncChatDock();
-  $('whoText').textContent=!hasEntered?'이름을 확인하고 들어와 주세요':!room?'지금은 혼자 산책 중이에요':!connected?room.status():n===0?'지금은 나 혼자예요 · 친구를 불러 보세요':'지금 '+(n+1)+'명이 함께 있어요';
+  $('whoText').textContent=!hasEntered?'이름을 확인하고 들어와 주세요':!room?'혼자 산책 중이에요':!connected?room.status():n===0?'지금은 혼자 머무는 중이에요':'지금 '+(n+1)+'명이 함께 있어요';
   $('dot').classList.toggle('off',!connected);renderVisitors();
 }
 function renderVisitors(){
@@ -3323,7 +3325,7 @@ let canPickMusic=true;
 function renderMusicUI(){
   if(worldSpace==='listening'){renderListeningUI();return}
   const tr=hasTempleMusic()?TRACKS.find(x=>x.id===music.track):null;
-  $('nowPlaying').hidden=!tr;$('nowPlaying').textContent=tr?`♪ 함께 듣는 중 · ${tr.name}`:'';
+  $('nowPlaying').hidden=!tr;$('nowPlaying').textContent=tr?`♪ ${tr.name}`:'';
   renderNatureUI();
   $('soundBtn').hidden=!tr;$('soundBtn').textContent=audioOn?'내 음악 소리 끄기':'내 음악 소리 켜기';$('soundBtn').classList.toggle('on',audioOn);
   $('synthVolume').hidden=false;
@@ -4052,7 +4054,7 @@ function drawLightning(event){
 }
 const thunderAudio={context:null,noise:null,master:null,nodes:new Set(),enabled:store.get('garden.thunderSound')!=='0',lastEvent:null,suppressUntil:Date.now()+1500};
 function renderThunderButton(){
-  $('thunderSoundBtn').textContent=thunderAudio.enabled?'천둥 소리 끄기':'천둥 소리 켜기';$('thunderSoundBtn').setAttribute('aria-pressed',String(thunderAudio.enabled));
+  $('thunderSoundBtn').textContent=thunderAudio.enabled?'천둥 끄기':'천둥 켜기';$('thunderSoundBtn').setAttribute('aria-pressed',String(thunderAudio.enabled));
 }
 function unlockThunder(){
   if(!hasEntered||visitEnded||!thunderAudio.enabled||document.hidden)return;

@@ -55,7 +55,7 @@ export function createGardenIdentity({document,storage,crypto,onSwitch,onMode,no
   const copy=document.createElement('button'),change=document.createElement('button'),close=document.createElement('button');
   for(const b of[copy,change,close])b.type='button';copy.textContent='코드 복사';change.textContent='다른 코드로 입장';close.textContent='닫기';
   dialog.append(heading,secret,note,stats,status,copy,change,close);document.body.append(dialog);
-  const button=document.createElement('button');button.type='button';button.textContent='내 입장 코드';document.querySelector('.room-actions').append(button);
+  const button=document.createElement('button');button.type='button';button.textContent='내 입장 코드';(document.getElementById('gardenPreferences')||document.querySelector('.room-actions')).append(button);
   const remain=until=>{const hours=Math.max(0,Math.ceil((until-now())/3600000));return hours?hours>=24?Math.floor(hours/24)+'일 '+hours%24+'시간':hours+'시간':'꺼짐'};
   function render(){const p=view||cache().profile,halos=rules.haloState(p?.halos,now());secret.textContent=code()||'입장 후 발급됩니다.';stats.textContent=p?'누적 '+p.totalBows+'배\n108배 완료 '+(p.completed?.[108]||0)+'회 · 3000배 완료 '+(p.completed?.[3000]||0)+'회\n108배 진행 '+(p.progress?.[108]||0)+'/108 · 3000배 진행 '+(p.progress?.[3000]||0)+'/3000\n획득 후광 '+(p.highestHalo===2?'빨간색':p.highestHalo===1?'흰색':'없음')+'\n흰 후광 '+remain(halos.whiteUntil)+' · 빨간 후광 '+remain(halos.redUntil):'정원에 연결하면 개인 기록을 보관합니다.';status.textContent=active?.registered?'개인 기록을 저장했어요.':'아직 기록 저장을 확인하지 못했어요.'}
   function open(){render();dialog.showModal();clearInterval(timer);timer=setInterval(render,1000)}

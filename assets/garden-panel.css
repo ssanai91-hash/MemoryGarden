@@ -1,0 +1,33 @@
+/* Compact garden settings; scoped so dialogs and entry controls keep their layout. */
+#gardenPanel{width:224px;max-width:calc(100vw - 24px);padding:11px;border:1px solid #e4dfd2;border-radius:16px;background:rgba(250,247,239,.97);box-shadow:0 8px 28px #18241b24;scrollbar-width:thin;overscroll-behavior:contain}
+#gardenPanel:not(.collapsed){max-height:calc(100dvh - var(--keyboard-lift,0px) - var(--chat-height,63px) - 88px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+#gardenPanel.collapsed{width:max-content;padding:8px 10px;max-width:calc(100vw - 104px)}
+#gardenPanel .plaque-heading{grid-template-columns:minmax(0,1fr) 28px 46px;gap:5px}
+#gardenPanel .plaque-heading h1{font-size:16px;line-height:28px;letter-spacing:-.025em}
+#gardenPanel .plaque-heading button{border-radius:9px;border-color:#e4dfd5;background:#fffdf8;color:#5d6257;box-shadow:none}
+#gardenPanel #soundToggle{font-size:16px}
+#gardenPanel #soundToggle[aria-pressed="true"]{background:#eee2cb;color:#9a6a35}
+#gardenPanel #gardenDetails{margin-top:7px;padding-top:0;border-top:0}
+#gardenPanel .who{align-items:flex-start;gap:6px;margin:0;padding:7px 0 9px;border-top:0;border-bottom:1px solid #e5e0d4;font-size:11px;line-height:1.5;color:#727568}
+#gardenPanel .who .dot{flex:0 0 6px;width:6px;height:6px;margin-top:5px;box-shadow:0 0 0 2px #879b6520}
+#gardenPanel #whoText{min-width:0;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}
+#gardenPanel .garden-menu-group{margin:9px 0 0}
+#gardenPanel .garden-menu-caption{margin:0 0 5px;font:600 10px/1.4 var(--body);letter-spacing:.04em;color:#969486}
+#gardenPanel .room-actions,#gardenPanel .garden-preferences{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:0}
+#gardenPanel .room-actions>button,#gardenPanel .garden-preferences>button{box-sizing:border-box;grid-column:auto;display:flex;align-items:center;justify-content:center;min-width:0;width:100%;height:32px;min-height:32px;margin:0;padding:4px 5px;border:1px solid #e6e1d7;border-radius:9px;background:#fffdf8;box-shadow:none;color:#4e554a;font-size:11.5px;font-weight:400;line-height:1.2;white-space:nowrap;word-break:keep-all;letter-spacing:-.025em}
+#gardenPanel #inviteBtn,#gardenPanel #homeInstallBtn,#gardenPanel #qualityBtn{grid-column:auto}
+#gardenPanel #inviteBtn{background:#a8733e;border-color:#a8733e;color:#fff}
+#gardenPanel #kickAllBtn{color:#986054;background:#faf3ed;border-color:#e9dacf}
+#gardenPanel .garden-preferences>button[aria-pressed="true"]{background:#edf0e5;border-color:#dce2ce;color:#647747}
+#gardenPanel .room-actions>button:disabled,#gardenPanel .garden-preferences>button:disabled{opacity:.55;cursor:default}
+#gardenPanel .room-actions>button:focus-visible,#gardenPanel .garden-preferences>button:focus-visible{outline:2px solid #9c865e;outline-offset:2px}
+#gardenPanel .room-actions>button:active,#gardenPanel .garden-preferences>button:active{transform:translateY(1px)}
+#gardenPanel .mine{display:none}
+#gardenPanel #campfireStatus{margin-top:10px;padding-top:8px;border-top:1px solid #e5e0d4;color:#73776b;font-size:10.5px;line-height:1.65;white-space:pre-line;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}
+#gardenPanel #campfireLastCare{margin-top:3px;font-size:10px;line-height:1.55;color:#939183;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}
+#gardenPanel #nowPlaying{margin-top:7px;padding-top:7px;border-top:1px solid #e5e0d4;font-size:10.5px;line-height:1.5;color:#a17749;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}
+#gardenPanel #musicPanel{margin-top:8px;padding:9px;border-radius:10px}
+#gardenPanel #musicPanel button{min-width:0;padding:7px;font-size:11px;line-height:1.4;word-break:keep-all}
+#gardenPanel #musicPanel .mhead{font-size:10.5px;line-height:1.5;word-break:keep-all;text-wrap:pretty}
+@media(max-width:360px){#gardenPanel{width:214px;padding:10px}#gardenPanel .plaque-heading h1{font-size:15px}#gardenPanel .room-actions>button,#gardenPanel .garden-preferences>button{font-size:11px}}
+@media(max-height:520px){#gardenPanel:not(.collapsed){max-height:calc(100dvh - 100px - env(safe-area-inset-top,0px))}}
