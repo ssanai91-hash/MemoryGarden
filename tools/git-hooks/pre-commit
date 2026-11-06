@@ -1,0 +1,16 @@
+#!/bin/sh
+# 커밋마다 정원 버전을 0.1 올린다(tools/bump-version.mjs). 버전 한 줄만 커밋에 넣고,
+# 커밋하지 않은 index.html의 다른 수정은 끌어들이지 않는다.
+# 이미 이 커밋에서 버전을 바꿨다면(직접 수정, --amend 재시도) 다시 올리지 않는다.
+# 건너뛰기: SKIP_VERSION_BUMP=1 git commit …
+[ "$SKIP_VERSION_BUMP" = "1" ] && exit 0
+if git diff --cached -U0 -- index.html | grep -q '^+.*class="entry-version"'; then exit 0; fi
+tmp=$(mktemp) || exit 1
+git show :index.html > "$tmp" || { rm -f "$tmp"; exit 1; }
+version=$(node tools/bump-version.mjs "$tmp") || { rm -f "$tmp"; exit 1; }
+blob=$(git hash-object -w "$tmp") && git update-index --cacheinfo 100644,"$blob",index.html || { rm -f "$tmp"; exit 1; }
+rm -f "$tmp"
+# 작업 폴더의 index.html도 같은 버전으로 맞춘다(다른 수정은 그대로 둔다).
+node tools/bump-version.mjs >/dev/null || exit 1
+[ "$(node tools/bump-version.mjs --show)" = "$version" ] || { echo "버전 불일치: 작업 폴더 index.html을 확인해 주세요" >&2; exit 1; }
+echo "정원 버전 → ver $version"

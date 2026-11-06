@@ -1,1 +1,1 @@
-{"name":"memory-garden-preview","private":true,"type":"module","scripts":{"dev":"node tools/dev-preview.mjs","test":"node --test tests/*.test.cjs"}}
+{"name":"memory-garden-preview","private":true,"type":"module","scripts":{"dev":"node tools/dev-preview.mjs","test":"node --test tests/*.test.cjs","version:show":"node tools/bump-version.mjs --show","version:bump":"node tools/bump-version.mjs"}}

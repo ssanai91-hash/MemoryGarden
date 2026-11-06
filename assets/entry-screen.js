@@ -3,7 +3,7 @@ import {createGardenIdentity} from './garden-identity.js';
 
 // This screen does not import Three.js or open a WebSocket. Loading a saved
 // profile is a read-only preview. Admission waits for saved credentials and a
-// submit (automatic only when resuming the same tab); the 3D scene never waits.
+// submit — always an explicit '입장하기' tap, even when resuming the same tab; the 3D scene never waits.
 export function createEntryScreen({document,storage,crypto,fetcher=(...args)=>fetch(...args)}){
   const $=id=>document.getElementById(id),P=globalThis.GardenPrayer,form=$('nameForm');
   const breeds={dog:['시바','몰티즈','진돗개','푸들','허스키','닥스훈트','래브라도','웰시코기','비글','포메라니안'],cat:['코리안 쇼트헤어','브리티시 쇼트헤어','스코티시 폴드','러시안 블루','샴','랙돌','페르시안','메인쿤']};
@@ -29,11 +29,13 @@ export function createEntryScreen({document,storage,crypto,fetcher=(...args)=>fe
     if(!state.failed)$('entryHint').textContent=state.busy?'입장 정보를 준비하고 있어요':'입장 코드 자동 저장 · 내 정보 확인 후 입장';
     identity.updateEntry(false);
   }
-  let autoEnterSaved=false;
-  const identity=createGardenIdentity({document,storage,crypto,fetcher,now:()=>Date.now()+state.offset,onMode(){autoEnterSaved=false;if(identity.importing())update();else void initialise()}});
+  // 같은 탭의 지난 방문이 남아 있으면 '이어서 입장' 안내만 한다. 자동 입장은 하지 않는다:
+  // 코드가 맞으면 내 정보를 먼저 보여 주고, 사용자가 입장하기를 눌러야 들어간다.
+  let resumeSaved=false;
+  const identity=createGardenIdentity({document,storage,crypto,fetcher,now:()=>Date.now()+state.offset,onMode(){resumeSaved=false;if(identity.importing())update();else void initialise()}});
   try{
     const visit=JSON.parse(sessionStorage.getItem('garden.visit.v1')||'null');
-    autoEnterSaved=sessionStorage.getItem('garden.visit.left.v1')!=='1'&&visit?.v===1&&/^[a-f0-9]{64}$/.test(visit.token||'')&&!!text(visit.name)&&!!identity.credentials().personalCode&&visit.personal?.personalCode===identity.credentials().personalCode;
+    resumeSaved=sessionStorage.getItem('garden.visit.left.v1')!=='1'&&visit?.v===1&&/^[a-f0-9]{64}$/.test(visit.token||'')&&!!text(visit.name)&&!!identity.credentials().personalCode&&visit.personal?.personalCode===identity.credentials().personalCode;
   }catch{}
   async function initialise(){
     if(state.busy)return false;state.busy=true;state.failed=false;state.ready=false;controls(true);update();
@@ -56,7 +58,7 @@ export function createEntryScreen({document,storage,crypto,fetcher=(...args)=>fe
     }catch(e){state.failed=true;$('entryHint').textContent=e.message||'입장 정보를 준비하지 못했어요. 다시 눌러 주세요.';return false}
     finally{
       state.busy=false;controls(false);update();
-      if(state.ready&&autoEnterSaved){autoEnterSaved=false;if(text($('nameInput').value))void submit({preventDefault(){}})}
+      if(state.ready&&resumeSaved&&!state.failed)$('entryHint').textContent='내 정보를 확인하고 입장하기를 눌러 주세요 · 지난 자리에서 이어져요';
     }
   }
   async function submit(event){
