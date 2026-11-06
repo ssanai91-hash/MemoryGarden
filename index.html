@@ -798,11 +798,14 @@ import {createPixelCharacters,pixelLookForName} from './assets/pixel-characters.
 import {createFramePacer,qualityDecision,createShadowBudget,disableActorShadows,createPowerSaving} from './assets/garden-performance.js';
 import {createGardenLightSlots} from './assets/garden-light-slots.js';
 import {makeBlackPoodle,isPhotoPoodle} from './assets/black-poodle.js';
+import {createGardenIdentity} from './assets/garden-identity.js';
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
 THREE.ColorManagement.enabled=false;
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}};
 const $=id=>document.getElementById(id);
+const gardenIdentity=createGardenIdentity({document,storage:store,crypto,now:()=>serverNow(),onMode:()=>updateEntryForm(),onSwitch(){leaveGarden(false);beginManualEntry()}});
+$('nameForm').noValidate=true;
 const LEFT_KEY='garden.visit.left.v1';
 function readExitFlag(){try{return sessionStorage.getItem(LEFT_KEY)==='1'}catch(e){return false}}
 // window.close() may silently do nothing on a user-opened browser tab.
@@ -2431,7 +2434,7 @@ function posePerson(P,pose,dt,t){
   P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)-P.g.position.y)*Math.min(1,dt*12);
   const seatY=seatSurfaceY(P.g.position.x,P.g.position.z,personSpace);
   if(pixelCharacters.update(P,{pose,dt,time:t,camera,reduced:reduceHaloMotion.matches,seated:seatY!==null,seatHeight:seatY,groundHeight:P.g.position.y,surfaceHeight:personSpace==='listening'?0:Math.max(P.g.position.y,prayerSurfaceAt(P.g.position.x,P.g.position.z)),pocha:personSpace==='garden'&&seatY===.755,daylight:personSpace==='listening'?.7:gardenEnvironment.frame(serverNow()).daylight,slots:personSpace==='garden'?gardenLights?.slots:[]})){
-    if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.pixel.anchor,markBloom);P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches);
+    if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.pixel.anchor,markBloom,{person:P});P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches,P.haloLevel||1);
     if(P.bubble)P.bubble.userData.baseY=P.tag.position.y+.15+P.bubble.scale.y/2;return;
   }
   if(P.eyes){P.blinkT-=dt;const close=P.blinkT<0&&P.blinkT>-.13;P.eyes.forEach(e=>e.scale.y=close?.012:.075);if(P.blinkT<-.13)P.blinkT=2+Math.random()*4}
@@ -2489,8 +2492,8 @@ function posePerson(P,pose,dt,t){
     }
     if(Number.isFinite(lowest)&&lowest<surface+.012)P.rig.position.y+=surface+.012-lowest;
   }
-  if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.head,markBloom);
-  P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches);
+  if(P.haloUntil>serverNow()&&!P.halo)P.halo=createBowHalo(P.head,markBloom,{person:P});
+  P.halo?.update(P.haloUntil,serverNow(),t,reduceHaloMotion.matches,P.haloLevel||1);
   P.tag.position.y=L(P.tag.position.y,tagY);
   if(P.bubble)P.bubble.userData.baseY=P.tag.position.y+.15+P.bubble.scale.y/2;
 }
@@ -2956,7 +2959,7 @@ function goToFriend(auto){
 const lastSent={};
 function sendPresence(){
   if(!room)return;const p=me.g.position;
-  const patch={space:worldSpace,x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,u:myUmbrella,wc:fireAction?.count||0,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow()),look:myLook,dog:myDog,uid:myId,nick:myNick||null};
+  const patch={space:worldSpace,x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,u:myUmbrella,wc:fireAction?.count||0,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow()),haloLevel:practice.haloLevel||0,halos:practice.halos,look:myLook,dog:myDog,uid:myId,nick:myNick||null};
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
@@ -2979,7 +2982,7 @@ function onPeerList(change){
     }
     const nextSpace=s.space==='listening'?'listening':'garden';if(e.space!==undefined&&e.space!==nextSpace){e.P.g.position.set(s.x,0,s.z);e.D.g.position.set(s.x+.8,0,s.z)}e.space=nextSpace;
     e.x=Math.max(-WORLD_R,Math.min(WORLD_R,s.x));e.z=Math.max(-WORLD_R,Math.min(WORLD_R,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
-    e.P.woodCount=Number.isInteger(s.wc)?Math.max(1,Math.min(5,s.wc)):1;e.P.haloUntil=validBowHaloUntil(s.haloUntil,serverNow());
+    e.P.woodCount=Number.isInteger(s.wc)?Math.max(1,Math.min(5,s.wc)):1;e.halos=s.halos||{whiteUntil:s.haloUntil};e.P.haloUntil=validBowHaloUntil(s.haloUntil,serverNow());e.P.haloLevel=s.haloLevel||1;
     e.bow=s.bow||null;
     e.nick=typeof s.nick==='string'?stripInvisible(s.nick).slice(0,12):'';e.away=!!s.away;e.umbrella=s.u===true;
     if(s.say&&typeof s.say.text==='string'&&Number.isFinite(s.say.at))rememberLastMessage(pr.peer,e.nick||e.nm||'친구',s.say.text,s.say.at);
@@ -3386,13 +3389,30 @@ $('goBtn').onclick=()=>goToFriend(false);
 $('rerollBtn').onclick=()=>{closeOtherMenus('pet');openNameDialog(false);$('nameForm').querySelector('input[name="entryPet"]:checked')?.focus({preventScroll:true})};
 
 /* ---------- prayer practice: durable server clock, lightweight local animation ---------- */
-const BOW_HALO_MS=24*60*60*1000;
+const BOW_HALO_MS=Prayer.HALO_RED_MS;
+function bowGet(key){return typeof gardenIdentity==='undefined'?store.get(key):gardenIdentity.get(key)}
+function bowSet(key,value){return typeof gardenIdentity==='undefined'?store.set(key,value):gardenIdentity.set(key,value)}
 function validBowHaloUntil(value,now){return Number.isFinite(value)&&value>now&&value<=now+BOW_HALO_MS?value:0}
-function completeBowHalo(){practice.haloUntil=serverNow()+BOW_HALO_MS;me.haloUntil=practice.haloUntil;store.set('garden.bowHaloUntil',String(practice.haloUntil));sendDirty=true;saveVisit()}
-const savedBowTarget=store.get('garden.bowTarget')==='3000'?3000:108;
-const practice={mode:'idle',target:savedBowTarget,paused:false,elapsed:0,remote:null,pendingStart:null,pendingControl:null,stoppedId:null,serverRev:0,haloUntil:validBowHaloUntil(Number(store.get('garden.bowHaloUntil')),Date.now()),count:Math.max(0,Math.min(savedBowTarget,parseInt(store.get(savedBowTarget===3000?'garden.bows.3000':'garden.bows')||'0',10)||0))};
+function storedBowHalos(){try{return Prayer.cleanHalos(JSON.parse(bowGet('garden.bowHalos')||'null')||{whiteUntil:Number(bowGet('garden.bowHaloUntil'))},Date.now())}catch{return{whiteUntil:0,redUntil:0}}}
+function setMyHalos(value){const state=Prayer.haloState(value,serverNow());practice.halos={whiteUntil:state.whiteUntil,redUntil:state.redUntil};practice.haloUntil=me.haloUntil=state.until;practice.haloLevel=me.haloLevel=state.level}
+function saveMyHalos(){bowSet('garden.bowHalos',JSON.stringify(practice.halos));bowSet('garden.bowHaloUntil',String(practice.haloUntil))}
+function haloCompleteText(target){return target===3000?'3000배를 마쳤습니다. 현실 시간 일주일 동안 빨간 후광과 몸의 빛이 함께해요':'108배를 마쳤습니다. 현실 시간 3일 동안 머리 위 흰색 후광이 함께해요'}
+function completeBowHalo(){const halos={...practice.halos},now=serverNow();if(practice.target===3000)halos.redUntil=now+Prayer.HALO_RED_MS;else halos.whiteUntil=now+Prayer.HALO_WHITE_MS;setMyHalos(halos);saveMyHalos();sendDirty=true;saveVisit()}
+const savedBowTarget=bowGet('garden.bowTarget')==='3000'?3000:108;
+const practice={mode:'idle',target:savedBowTarget,paused:false,elapsed:0,remote:null,pendingStart:null,pendingControl:null,stoppedId:null,serverRev:0,halos:storedBowHalos(),haloUntil:0,haloLevel:0,count:Math.max(0,Math.min(savedBowTarget,parseInt(bowGet(savedBowTarget===3000?'garden.bows.3000':'garden.bows')||'0',10)||0))};
+setMyHalos(practice.halos);
 function practiceCountKey(target=practice.target){return target===3000?'garden.bows.3000':'garden.bows'}
-function readPracticeCount(target){return Math.max(0,Math.min(target,parseInt(store.get(practiceCountKey(target))||'0',10)||0))}
+function readPracticeCount(target){return Math.max(0,Math.min(target,parseInt(bowGet(practiceCountKey(target))||'0',10)||0))}
+function loadPersonalPractice(){practice.target=bowGet('garden.bowTarget')==='3000'?3000:108;practice.count=readPracticeCount(practice.target);practice.remote=null;practice.pendingStart=null;practice.pendingControl=null;practice.stoppedId=null;practice.serverRev=0;practice.mode='idle';practice.paused=false;practice.elapsed=0;setMyHalos(storedBowHalos());practiceUI()}
+function receivePersonal(person,restore=false){
+  if(!person||!gardenIdentity.credentials().personalCode)return;
+  const changed=gardenIdentity.confirm(person);
+  if(changed){const queued=practice.pendingStart,control=practice.pendingControl;loadPersonalPractice();if(queued){practice.pendingStart={...queued,count:readPracticeCount(queued.target)};practice.target=queued.target;practice.count=readPracticeCount(queued.target);practice.mode=queued.mode;practice.pendingControl=control;pose='bow'}}
+  if(restore&&validLook(person.look)&&validDog(person.dog)){myNick=stripInvisible(person.name).slice(0,12);applyMyLook(person.look,person.dog,false,myNick);store.set('garden.name',myNick);refreshMine()}
+  for(const target of[108,3000])bowSet(practiceCountKey(target),String(person.progress?.[target]||0));
+  setMyHalos(person.halos);saveMyHalos();if(!practice.remote)practice.count=readPracticeCount(practice.target);practiceUI();saveVisit();
+  if(changed)toast('개인 기록을 연결했어요. 메뉴에서 내 입장 코드를 보관해 주세요.');
+}
 function serverPracticeReady(){return typeof room!=='undefined'&&room?.bowVersion===1&&room.connected()}
 function requestPracticeStart(restart=false){
   if(typeof room==='undefined'||room?.bowVersion!==1||!['auto','single'].includes(practice.mode))return false;
@@ -3415,11 +3435,11 @@ function syncRemotePractice(){
   if(!practice.remote)return;
   const f=Prayer.bowProgress(practice.remote,serverNow()),changed=practice.target!==f.target||practice.count!==f.count||practice.mode!==f.mode||practice.paused!==f.paused;
   practice.target=f.target;practice.count=f.count;practice.elapsed=f.elapsed/1000;practice.mode=f.mode;practice.paused=f.paused;
-  practice.haloUntil=validBowHaloUntil(f.haloUntil,serverNow());me.haloUntil=practice.haloUntil;me.bowPhase=practice.elapsed/8;
+  setMyHalos(f.halos);me.bowPhase=practice.elapsed/8;
   if(['auto','single'].includes(f.mode))pose='bow';else if(pose==='bow'){pose='stand';sendDirty=true;syncPoseButtons()}
-  if(changed){store.set('garden.bowTarget',String(practice.target));store.set(practiceCountKey(),String(practice.count));store.set('garden.bowHaloUntil',String(practice.haloUntil));practiceUI();saveVisit()}
-  if(f.completedAt&&f.count===f.target&&store.get('garden.bowNotified')!==f.id){
-    store.set('garden.bowNotified',f.id);toast(practice.target+'배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요');saveVisit();
+  if(changed){bowSet('garden.bowTarget',String(practice.target));bowSet(practiceCountKey(),String(practice.count));saveMyHalos();practiceUI();saveVisit()}
+  if(f.completedAt&&f.count===f.target&&bowGet('garden.bowNotified')!==f.id){
+    bowSet('garden.bowNotified',f.id);toast(haloCompleteText(practice.target));saveVisit();
   }
 }
 function receivePractice(job,restore=false){
@@ -3463,7 +3483,7 @@ function practiceUI(){
   }
   $('bowBtn').disabled=false;
 }
-function endPractice(notify=true){if(practice.remote)syncRemotePractice();requestPracticeControl('stop');practice.remote=null;practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 이 기기에 보관돼요')}
+function endPractice(notify=true){if(practice.remote)syncRemotePractice();requestPracticeControl('stop');practice.remote=null;practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 내 개인 기록에 보관돼요')}
 function preparePracticeInPlace(){
   cancelFireCare();
   if(worldSpace==='garden'&&Prayer.inside(me.g.position.x,me.g.position.z)){const p=ALTAR_SPOTS.reduce((a,b)=>Math.hypot(a.x-me.g.position.x,a.z-me.g.position.z)<Math.hypot(b.x-me.g.position.x,b.z-me.g.position.z)?a:b);me.g.rotation.y=Math.atan2(p.x-me.g.position.x,p.z-me.g.position.z)}
@@ -3477,10 +3497,10 @@ function startPractice(mode,target=practice.target){
   if(mode==='pray'&&practice.mode==='pray'){endPractice();closePoseMenu();return}
   if(practice.remote)syncRemotePractice();
   if(mode==='pray'||target!==practice.target){requestPracticeControl('stop');practice.remote=null}
-  if(target!==practice.target){store.set(practiceCountKey(),String(practice.count));practice.target=target===3000?3000:108;practice.count=readPracticeCount(practice.target)}
-  store.set('garden.bowTarget',String(practice.target));
+  if(target!==practice.target){bowSet(practiceCountKey(),String(practice.count));practice.target=target===3000?3000:108;practice.count=readPracticeCount(practice.target)}
+  bowSet('garden.bowTarget',String(practice.target));
   const restart=mode==='auto'&&practice.count>=practice.target;
-  if(restart){practice.count=0;store.set(practiceCountKey(),'0')}
+  if(restart){practice.count=0;bowSet(practiceCountKey(),'0')}
   preparePracticeInPlace();
   practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();requestPracticeStart(restart);if(restart)saveVisit();
 }
@@ -3489,14 +3509,15 @@ $('pauseBtn').onclick=()=>{if(practice.remote)syncRemotePractice();practice.paus
 let resetArmed=0;
 $('resetBtn').onclick=()=>{
   if(Date.now()-resetArmed>3000){resetArmed=Date.now();$('resetBtn').textContent='한 번 더 누르면 초기화';setTimeout(()=>{if(Date.now()-resetArmed>=3000)$('resetBtn').textContent='횟수 초기화'},3100);return}
-  resetArmed=0;$('resetBtn').textContent='횟수 초기화';endPractice(false);practice.count=0;store.set(practiceCountKey(),'0');requestPracticeControl('reset');practiceUI();saveVisit();toast('횟수를 0으로 되돌렸어요')};
+  resetArmed=0;$('resetBtn').textContent='횟수 초기화';endPractice(false);practice.count=0;bowSet(practiceCountKey(),'0');requestPracticeControl('reset');practiceUI();saveVisit();toast('횟수를 0으로 되돌렸어요')};
 function updatePractice(dt){
   if(practice.remote){syncRemotePractice();return}
-  me.haloUntil=validBowHaloUntil(practice.haloUntil,serverNow());
+  setMyHalos(practice.halos);
+  if(typeof gardenIdentity!=='undefined'&&gardenIdentity.credentials().personalCode)return; // personal rewards require the server clock
   if(!['auto','single'].includes(practice.mode)||practice.paused)return;
   practice.elapsed+=dt;
-  if(practice.elapsed>=8){const previous=practice.count;practice.elapsed-=8;practice.count=Math.min(practice.target,practice.count+1);store.set(practiceCountKey(),String(practice.count));
-    if(practice.count>=practice.target||practice.mode==='single'){const complete=previous<practice.target&&practice.count===practice.target;endPractice(false);if(complete){completeBowHalo();toast(practice.target+'배를 마쳤습니다. 24시간 동안 오로라 후광이 함께해요')}}practiceUI();
+  if(practice.elapsed>=8){const previous=practice.count;practice.elapsed-=8;practice.count=Math.min(practice.target,practice.count+1);bowSet(practiceCountKey(),String(practice.count));
+    if(practice.count>=practice.target||practice.mode==='single'){const complete=previous<practice.target&&practice.count===practice.target;endPractice(false);if(complete){completeBowHalo();toast(haloCompleteText(practice.target))}}practiceUI();
   }
   me.bowPhase=practice.elapsed/8;
 }
@@ -4449,7 +4470,8 @@ function updateEntryForm(){
   $('nameInput').setCustomValidity('');syncEntryPetControls();
   const kind=entrySelection('entryPet');
   const petComplete=['dog','cat'].includes(kind)&&validDog(entryPetSpec());
-  const complete=['male','female'].includes(entrySelection('entryGender'))&&!!stripInvisible($('nameInput').value).slice(0,12)&&petComplete;
+  gardenIdentity.updateEntry(hasEntered);
+  const complete=!hasEntered&&gardenIdentity.importing()?gardenIdentity.valid():['male','female'].includes(entrySelection('entryGender'))&&!!stripInvisible($('nameInput').value).slice(0,12)&&petComplete;
   $('nameSubmit').disabled=!complete;return complete;
 }
 function selectEntryValue(group,value){for(const input of $('nameForm').querySelectorAll('input[name="'+group+'"]'))input.checked=!input.disabled&&input.value===value}
@@ -4469,10 +4491,13 @@ $('nameForm').addEventListener('input',updateEntryForm);
 $('nameForm').addEventListener('change',updateEntryForm);
 $('nameForm').onsubmit=e=>{
   e.preventDefault();if(visitEnded||!updateEntryForm())return;
-  const name=stripInvisible($('nameInput').value).slice(0,12),gender=entrySelection('entryGender');
+  const initial=!hasEntered;if(initial&&!gardenIdentity.prepare())return;
+  const importing=initial&&gardenIdentity.importing();
+  const name=stripInvisible($('nameInput').value).slice(0,12)||(importing?'친구':''),gender=entrySelection('entryGender')||(importing?myLook.gender||'male':'');
   const look={...myLook,gender,hs:gender==='female'?1:0,hat:false};
   if(myLook.gender!==gender||!Number.isInteger(myLook.st))Object.assign(look,randLook(gender));
-  const pet=entryPetSpec();if(!validDog(pet))return;applyMyLook(look,pet,false,name);
+  const pet=importing?myDog:entryPetSpec();if(!validDog(pet))return;applyMyLook(look,pet,false,name);
+  if(initial){loadPersonalPractice()}
   myNick=name;store.set('garden.name',name);store.set('garden.gender',gender);store.set('garden.pet',petKind(pet));hasEntered=true;
   if(!visitToken)visitToken=newVisitToken();
   refreshMine();restoreLastBubble('me',shownName());renderVisitors();sendDirty=true;
@@ -4773,15 +4798,16 @@ function clearVisit(){try{sessionStorage.removeItem(VISIT_KEY)}catch(e){}}
 function saveVisit(){
   if(visitEnded||readExitFlag()||!hasEntered||!visitToken)return false;
   const p=me.g.position,message=lastMessages.get('me');
-  const snapshot={v:1,space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
+  const snapshot={v:1,personal:gardenIdentity.credentials(),space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
     x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
-    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,target:practice.target,haloUntil:practice.haloUntil,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
+    practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,target:practice.target,haloUntil:practice.haloUntil,halos:practice.halos,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
   let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
   lastVisitSave=performance.now();return stored;
 }
 function restoreVisit(){
   const saved=readVisit();if(!saved)return false;
+  gardenIdentity.restore(saved.personal);if(!gardenIdentity.credentials().personalCode)gardenIdentity.prepare();
   visitToken=saved.token;myNick=stripInvisible(saved.name).slice(0,12);hasEntered=true;
   store.set('garden.name',myNick);
   if(typeof saved.umbrella==='boolean'){myUmbrella=saved.umbrella;store.set('garden.umbrella',myUmbrella?'1':'0')}syncUmbrellaButtons();
@@ -4808,7 +4834,7 @@ function restoreVisit(){
   if(['beer','soda','soju','makgeolli'].includes(saved.lastDrink))me.lastDrink=saved.lastDrink;
   if(typeof saved.chatDraft==='string')$('chatInput').value=saved.chatDraft.slice(0,200);
   const pr=saved.practice||{};
-  practice.haloUntil=validBowHaloUntil(Math.max(practice.haloUntil,Number(pr.haloUntil)||0),serverNow());
+  setMyHalos(pr.halos||{whiteUntil:Math.max(practice.haloUntil,Number(pr.haloUntil)||0)});
   const savedTarget=pr.target===3000?3000:108;if(practice.target!==savedTarget){practice.target=savedTarget;practice.count=readPracticeCount(savedTarget)}
   if(Number.isInteger(pr.count))practice.count=Math.min(practice.target,Math.max(practice.count,pr.count));
   practice.mode=['pray','single','auto'].includes(pr.mode)?pr.mode:'idle';
@@ -4949,7 +4975,7 @@ function connectRoomServer(base,code){
     send(o){if(!stop&&ws&&ws.readyState===1){try{ws.send(JSON.stringify(o));return true}catch(e){}}return false},
     onPeers(fn){peerL.push(fn)},onConnection(fn){connL.push(fn);fn(connected)},
     presence(patch){Object.assign(local,patch);
-      const st={space:local.space==='listening'?'listening':'garden',x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp,u:local.u===true,wc:local.wc,haloUntil:validBowHaloUntil(local.haloUntil,serverNow())},k=JSON.stringify(st);
+      const st={space:local.space==='listening'?'listening':'garden',x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp,u:local.u===true,wc:local.wc,haloUntil:validBowHaloUntil(local.haloUntil,serverNow()),haloLevel:local.haloLevel,halos:local.halos},k=JSON.stringify(st);
       if(k!==sentState&&Number.isFinite(st.x)&&connected&&api.send({t:'state',s:st}))sentState=k;
       if(connected&&('look' in patch||'dog' in patch||'nick' in patch))api.profile();
       return Promise.resolve()},
@@ -5000,7 +5026,7 @@ function connectRoomServer(base,code){
     let socket;try{socket=new WebSocket(base+'/room/'+code);ws=socket}catch(e){disconnected('친구 연결을 다시 시도하는 중…');return}
     handshakeTimer=setTimeout(()=>{if(ws===socket&&!connected)disconnected('친구 연결이 지연되고 있어요 · 다시 시도하는 중…')},12000);
     socket.onopen=()=>{if(stop||visitEnded||!hasEntered||ws!==socket)return;const p=me.g.position;lastReceived=Date.now();
-      api.send({t:'hello',resumeToken:visitToken,away:document.hidden,name:myNick,look:myLook,dog:myDog,s:{space:worldSpace,x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0,u:myUmbrella,wc:fireAction?.count||0,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow())}});
+      api.send({t:'hello',...gardenIdentity.credentials(),resumeToken:visitToken,away:document.hidden,name:myNick,look:myLook,dog:myDog,s:{space:worldSpace,x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0,u:myUmbrella,wc:fireAction?.count||0,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow()),haloLevel:practice.haloLevel,halos:practice.halos}});
       clearInterval(pingTimer);pingTimer=setInterval(()=>{
         if(Date.now()-lastReceived>60000){disconnected('연결이 끊어졌어요 · 다시 연결하는 중…');return}
         api.send({t:'ping',c:Date.now()});
@@ -5008,8 +5034,12 @@ function connectRoomServer(base,code){
     socket.onmessage=ev=>{if(stop||visitEnded||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;
+          if(gardenIdentity.credentials().personalCode&&m.features?.personal!==1){api.close();room=null;hasEntered=false;clearVisit();openNameDialog();gardenIdentity.fail('개인 기록을 지원하는 최신 정원에 연결해 주세요.');break}
+          api.clockOffset=(m.now||Date.now())-Date.now();if(m.personal)receivePersonal(m.personal,true);
           api.selfId=you;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});if(api.bowVersion){practice.serverRev=0;if(practice.pendingStart)api.send(practice.pendingStart);else if(m.bow)receivePractice(m.bow,true);else if(['auto','single'].includes(practice.mode)){const paused=practice.paused;requestPracticeStart();if(paused)requestPracticeControl('pause')}if(practice.pendingControl)api.send(practice.pendingControl)}break;
+        case 'personal_state':receivePersonal(m.personal);break;
+        case 'personal_error':{const message=m.code==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':m.code==='storage'?'개인 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.':'개인 코드 형식을 확인해 주세요.';api.close();room=null;hasEntered=false;clearVisit();practice.remote=null;practice.mode='idle';openNameDialog();gardenIdentity.fail(message);break}
         case 'bow_state':if(m.id===you){receivePractice(m.job)}else if(m.peer){peersById.set(m.id,{...m.peer,quiet:true});emit()}else{const p=peersById.get(m.id);if(p){p.bow=m.job;emit()}}break;
         case 'bow_error':toast(m.code==='storage'?'수행 저장을 확인하지 못했어요. 다시 연결해 확인해 주세요.':'수행 상태를 다시 확인하고 있어요');if(m.code==='invalid')api.send({t:'bow_sync'});break;
         case 'candles_state':case 'candle_lit':case 'candle_error':candleUI?.receive(m);break;
@@ -5022,10 +5052,10 @@ function connectRoomServer(base,code){
           toast(messages[m.code]||'게임 상태를 다시 확인해 주세요.');renderRps();updateRpsInvite();
           if(m.code==='ended'||m.code==='locked')api.send({t:'rps_sync'});break;
         }
-        case 'replaced':api.close();setConn(false,'다른 창에서 정원을 이어서 열었어요');break;
+        case 'replaced':api.close();leaveGarden(false,false);setConn(false,'다른 기기에서 내 기록으로 입장했어요');break;
         case 'prayer_place':break; // Ignore legacy seat-allocation messages: prayer stays in place.
         case 'visit_ended':leaveGarden(false,false);break;
-        case 'join':if(m.peer&&m.peer.id!==you){for(const [id,p] of peersById)if(p.away&&p.name===m.peer.name)peersById.delete(id);peersById.set(m.peer.id,{...m.peer,quiet:false});emit()}break;
+        case 'join':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,{...m.peer,quiet:false});emit()}break;
         case 'resume':case 'away':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,{...m.peer,quiet:true});emit()}break;
         case 'state':{const p=peersById.get(m.id);if(p){p.s=m.s;emit()}break}
         case 'profile':{const p=peersById.get(m.id);if(p){p.name=m.name;p.look=m.look;p.dog=m.dog;emit()}break}
@@ -5107,7 +5137,11 @@ gardenBoard.bind({
   closed(fromHistory){if(!fromHistory&&historyReady&&history.state?.gardenView==='board')history.back();if(!$('ctxBtn').hidden)$('ctxBtn').focus({preventScroll:true})}
 });
 
-if(visitEnded){showExitScreen();updateWho()}else if(!restoreVisit()){openNameDialog();updateWho()}
+function restorePersonalEntry(){
+  const person=gardenIdentity.saved();if(!person||!validLook(person.look)||!validDog(person.dog)||!stripInvisible(person.name))return false;
+  myNick=stripInvisible(person.name).slice(0,12);applyMyLook(person.look,person.dog,false,myNick);hasEntered=true;visitToken=newVisitToken();loadPersonalPractice();pose='stand';closeNameDialog();startGardenConnection();saveVisit();return true;
+}
+if(visitEnded){showExitScreen();updateWho()}else if(!restoreVisit()&&!restorePersonalEntry()){openNameDialog();updateWho()}
 installGardenHistory();
 
 
@@ -5293,7 +5327,8 @@ function tick(){
     P.g.rotation.y=angLerp(P.g.rotation.y,e.h,k);
     const sp=Math.hypot(P.g.position.x-px,P.g.position.z-pz)/Math.max(dt,1e-4);
     P.speed+=(Math.min(sp,4)-P.speed)*Math.min(1,dt*8);
-    const bow=Prayer.bowProgress(e.bow,serverNow());if(bow){if(['auto','single'].includes(bow.mode)){e.pose='bow';P.bowPhase=bow.elapsed/Prayer.BOW_MS}else if(e.pose==='bow')e.pose='stand';P.haloUntil=validBowHaloUntil(bow.haloUntil,serverNow())}
+    const reward=Prayer.haloState(e.halos,serverNow());P.haloUntil=reward.until;P.haloLevel=reward.level;
+    const bow=Prayer.bowProgress(e.bow,serverNow());if(bow){if(['auto','single'].includes(bow.mode)){e.pose='bow';P.bowPhase=bow.elapsed/Prayer.BOW_MS}else if(e.pose==='bow')e.pose='stand';P.haloUntil=validBowHaloUntil(bow.haloUntil,serverNow());P.haloLevel=bow.haloLevel}
     posePerson(P,e.pose,dt,t);
     {const si=seatAt(P.g.position.x,P.g.position.z,e.space||'garden');if(si>=200&&P.speed<.3){const o=pochaLocal(STOOLS[si-200].lx>0?3.7:-3.7,2.3+((si-200)%4)*.5);updateDog(e.D,o.x,o.z,POCHA.h,'sit',false,dt,t)}else updateDog(e.D,P.g.position.x,P.g.position.z,P.g.rotation.y,e.pose,P.speed>.3,dt,t)}
   }

@@ -83,20 +83,20 @@ function cleanDog(d) {
   return { b: d.b, n: clean(d.n, 8), ...(d.coat === undefined ? {} : { coat: d.coat }) };
 }
 // Cosmetic completion expiry is an absolute timestamp; presence/reconnect never refreshes it.
-function cleanBowHalo(value,now=Date.now()){return Number.isFinite(value)&&value>now&&value<=now+86400000?value:0}
+function cleanBowHalo(value,now=Date.now()){return Number.isFinite(value)&&value>now&&value<=now+7*86400000?value:0}
 function cleanState(s) {
   if (!s || typeof s !== 'object') return null;
   const x = num(s.x, -WORLD_R, WORLD_R), z = num(s.z, -WORLD_R, WORLD_R);
   if (x === null || z === null) return null;
   const space=spaceOf(s);
-  return { space,x:space==='listening'?num(x,-5.6,5.6):x,z:space==='listening'?num(z,-3,5.3):z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true,haloUntil:cleanBowHalo(s.haloUntil) };
+  return { space,x:space==='listening'?num(x,-5.6,5.6):x,z:space==='listening'?num(z,-3,5.3):z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true,haloUntil:cleanBowHalo(s.haloUntil),haloLevel:s.haloLevel===2?2:1,halos:Prayer.cleanHalos(s.halos||{whiteUntil:s.haloUntil},Date.now()) };
 }
 
 export class GardenRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.rate = new Map();
-    this.rps = [];this.visits={};
+    this.rps = [];this.visits={};this.personalViews=new Map();
     ctx.blockConcurrencyWhile(async () => {
       this.shared = (await ctx.storage.get('shared')) || {
         flowers: [], music:{track:null,startedAt:0,videoId:null}, weather: 'auto', chat: [],
@@ -125,6 +125,41 @@ export class GardenRoom extends DurableObject {
     });
   }
 
+  async personalIdentity(ws,a,m,legacyId){
+    if(m.personalCode===undefined)return null; // old clients retain temporary visits
+    if(!Prayer.validCode(m.personalCode)||!['create','restore'].includes(m.personalAction))throw Error('code');
+    const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(v=>v.toString(16).padStart(2,'0')).join('');
+    const codeHash=await hash('garden-code-v1:'+Prayer.normalizeCode(m.personalCode)),id=(await hash('garden-person-v1:'+codeHash)).slice(0,20),now=Date.now(),session=crypto.randomUUID();
+    const result=await this.ctx.storage.transaction(async txn=>{
+      const key='person.'+id,jobs=(await txn.get('bowPractices'))||{};
+      let person=await txn.get(key);
+      if(!person){
+        if(m.personalAction!=='create')throw Error('missing');
+        person={id,codeHash,createdAt:now,updatedAt:now,name:clean(m.name,12)||'친구',look:cleanLook(m.look,m.name),dog:cleanDog(m.dog),progress:{108:0,3000:0},completed:{108:0,3000:0},totalBows:0,highestHalo:0,halos:{whiteUntil:0,redUntil:0},bow:null};
+        // Claim only a server-confirmed previous visit, once. Local numbers and
+        // client halo timestamps never grant rewards to a permanent profile.
+        const legacy=legacyId&&jobs[legacyId],claimed=legacyId&&await txn.get('person.claim.'+legacyId);
+        if(legacy&&!claimed){const f=Prayer.bowProgress(legacy,now);person.progress={...person.progress,...legacy.progress,[f.target]:f.count};person.totalBows=(person.progress[108]||0)+(person.progress[3000]||0);person.bow={...legacy,accountedCount:f.count};delete jobs[legacyId];await txn.put('person.claim.'+legacyId,id)}
+      }else if(person.codeHash!==codeHash)throw Error('code');
+      let job=person.bow||{id:crypto.randomUUID().replace(/-/g,''),rev:0,mode:'idle',target:108,count:person.progress[108]||0,elapsed:0,at:now,paused:false,progress:{...person.progress},halos:person.halos,accountedCount:person.progress[108]||0,position:cleanState(m.s)};
+      const settled=Prayer.accountProfile(person,job,now);person=settled.profile;job={...settled.job,progress:{...person.progress},expiresAt:now+VISIT_MEMORY_MS*2};person.bow=job;jobs[id]=job;
+      person.session=session;await txn.put(key,person);await txn.put('bowPractices',jobs);return{person,jobs};
+    });
+    this.bows=result.jobs;this.personalViews.set(id,Prayer.profileView(result.person,now));
+    if(legacyId!==id)for(const prior of this.readyPeers().filter(p=>p.a.id===legacyId)){prior.a.ready=false;prior.ws.serializeAttachment(prior.a);try{prior.ws.send(JSON.stringify({t:'replaced'}));prior.ws.close(4002,'personal profile resumed')}catch{}this.broadcast({t:'leave',id:legacyId})}
+    a.id=id;a.personal=true;a.personalSession=session;
+    return result.person;
+  }
+  async rememberPersonal(a){
+    if(!a.personal)return;
+    const person=await this.ctx.storage.transaction(async txn=>{const key='person.'+a.id,p=await txn.get(key);if(!p||p.session!==a.personalSession)return null;const next={...p,name:a.name,look:a.look,dog:a.dog,updatedAt:Date.now()};await txn.put(key,next);return next});
+    if(person)this.personalViews.set(a.id,Prayer.profileView(person,Date.now()));
+  }
+  personalHalos(a){
+    const f=Prayer.bowProgress(this.bows[a.id],Date.now()),v=this.personalViews.get(a.id),state=Prayer.haloState(f?.halos||v?.halos,Date.now());
+    return{halos:{whiteUntil:state.whiteUntil,redUntil:state.redUntil},haloUntil:state.until,haloLevel:state.level};
+  }
+
   async fetch() {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
@@ -138,7 +173,8 @@ export class GardenRoom extends DurableObject {
   }
   peerInfo(a) {
     const job=this.bows?.[a.id]||null,f=Prayer.bowProgress(job,Date.now()),s={...a.s};
-    if(f){if(['auto','single'].includes(f.mode)){Object.assign(s,job.position,{p:'bow',bp:f.elapsed/Prayer.BOW_MS})}else if(s.p==='bow')s.p='stand';s.haloUntil=Math.max(s.haloUntil||0,f.haloUntil||0)}
+    if(a.personal)Object.assign(s,this.personalHalos(a));
+    if(f){s.halos=f.halos;s.haloLevel=f.haloLevel;if(['auto','single'].includes(f.mode)){Object.assign(s,job.position,{p:'bow',bp:f.elapsed/Prayer.BOW_MS})}else if(s.p==='bow')s.p='stand';s.haloUntil=Math.max(s.haloUntil||0,f.haloUntil||0)}
     return { id: a.id, name: a.name, look: a.look, dog: a.dog, lastChat: a.lastChat || null, away:!!a.away, bow:job, s };
   }
 
@@ -157,7 +193,7 @@ export class GardenRoom extends DurableObject {
   }
   async rememberVisit(a,awayUntil=null){
     this.visits[a.id]={peer:this.peerInfo(a),lastSeen:Date.now(),awayUntil,expiresAt:Date.now()+VISIT_MEMORY_MS};
-    await this.saveVisits();
+    await this.saveVisits();await this.rememberPersonal(a);
   }
   async advanceVisits(now=Date.now()){
     let changed=false;const leaves=[],live=new Set(this.readyPeers().map(p=>p.a.id));
@@ -188,13 +224,22 @@ export class GardenRoom extends DurableObject {
     await this.ctx.storage.put('shared', this.shared);
   }
 
-  async editBow(id,change){
+  async editBow(id,change,personalSession=null){
     const result=await this.ctx.storage.transaction(async txn=>{
       const jobs=(await txn.get('bowPractices'))||{};
-      const value=change(jobs[id]||null);if(value)jobs[id]=value;else delete jobs[id];
-      await txn.put('bowPractices',jobs);return jobs;
+      let old=jobs[id]||null,person=await txn.get('person.'+id);
+      if(personalSession&&person?.session!==personalSession)return{jobs,person:null};
+      if(person&&old){const settled=Prayer.accountProfile(person,old,Date.now());person=settled.profile;old=settled.job}
+      let value=change(old);
+      if(person){
+        if(value){const settled=Prayer.accountProfile(person,value,Date.now());person=settled.profile;value=settled.job}
+        else if(old)person.bow={...old,mode:'idle',paused:false,elapsed:0};
+        await txn.put('person.'+id,person);
+      }
+      if(value)jobs[id]=value;else delete jobs[id];
+      await txn.put('bowPractices',jobs);return{jobs,person};
     });
-    this.bows=result;return result[id]||null;
+    this.bows=result.jobs;if(result.person)this.personalViews.set(id,Prayer.profileView(result.person,Date.now()));return result.jobs[id]||null;
   }
   publishBow(id){
     const live=this.readyPeers().find(p=>p.a.id===id),visit=this.visits[id];
@@ -203,6 +248,7 @@ export class GardenRoom extends DurableObject {
     const peer=this.peerInfo(a);a.s=peer.s;if(live)live.ws.serializeAttachment(a);
     if(visit?.peer)visit.peer=peer;
     this.broadcast({t:'bow_state',id,job:this.bows[id]||null,peer});
+    if(live?.a.personal)live.ws.send(JSON.stringify({t:'personal_state',personal:this.personalViews.get(id)}));
   }
   async advanceBows(now=Date.now()){
     const ids=Object.keys(this.bows||{}).filter(id=>Prayer.bowProgress(this.bows[id],now).done||this.bows[id].expiresAt<=now);
@@ -229,14 +275,14 @@ export class GardenRoom extends DurableObject {
         if(m.t==='bow_start'){
           if(old?.id===m.request)return old; // retry never restarts or grants a second reward
           const f=Prayer.bowProgress(old,now),progress={...(old?.progress||{})};if(f)progress[f.target]=f.count;
-          const count=m.restart?0:Math.max(m.count,progress[target]||0);
-          return{id:m.request,rev:(old?.rev||0)+1,mode:m.mode,target,progress,count:m.mode==='auto'&&count>=target?0:count,elapsed:0,at:now,paused:false,
-            position:{space:spaceOf(a.s),x:a.s.x,z:a.s.z,h:a.s.h},haloUntil:Math.max(f?.haloUntil||0,a.s.haloUntil||0),expiresAt:now+VISIT_MEMORY_MS*2};
+          const count=m.restart?0:a.personal?(progress[target]||0):Math.max(m.count,progress[target]||0),startCount=m.mode==='auto'&&count>=target?0:count;
+          return{id:m.request,rev:(old?.rev||0)+1,mode:m.mode,target,progress,count:startCount,elapsed:0,at:now,paused:false,
+            position:{space:spaceOf(a.s),x:a.s.x,z:a.s.z,h:a.s.h},accountedCount:startCount,halos:f?.halos||Prayer.cleanHalos(a.personal?null:a.s.halos,now),haloUntil:a.personal?(f?.haloUntil||0):Math.max(f?.haloUntil||0,a.s.haloUntil||0),expiresAt:now+VISIT_MEMORY_MS*2};
         }
         if(!old||old.id!==m.id)return old; // stale controls cannot cancel a newer practice
-        const next=Prayer.settleBow(old,now);if(m.action==='stop'||m.action==='reset'){next.mode='idle';next.paused=false;next.elapsed=0;if(m.action==='reset')next.count=0}
+        const next=Prayer.settleBow(old,now);if(m.action==='stop'||m.action==='reset'){next.mode='idle';next.paused=false;next.elapsed=0;if(m.action==='reset'){next.count=0;next.accountedCount=0;next.progress={...next.progress,[next.target]:0}}}
         else if(['auto','single'].includes(next.mode))next.paused=m.action==='pause';return next;
-      });
+      },a.personalSession||null);
       // Visibility/disconnection may have changed the attachment while storage was pending.
       a=ws.deserializeAttachment()||a;const oldVisit=this.visits[a.id],f=Prayer.bowProgress(this.bows[a.id],now);
       this.publishBow(a.id);
@@ -544,9 +590,11 @@ export class GardenRoom extends DurableObject {
         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.resumeToken));
         a.id = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('').slice(0, 20);
       }
+      const legacyId=a.id;let personal=null;
+      try{personal=await this.personalIdentity(ws,a,m,legacyId)}catch(error){a.handshaking=false;ws.serializeAttachment(a);ws.send(JSON.stringify({t:'personal_error',code:['code','missing'].includes(error.message)?error.message:'storage'}));ws.close(4004,'personal profile unavailable');return}
       await this.advanceBows();await this.advanceVisits();
       const previous=this.visits[a.id];
-      if(previous&&previous.revoked){ws.send(JSON.stringify({t:'visit_ended'}));ws.close(4003,'visit ended');return}
+      if(previous&&previous.revoked&&!a.personal){ws.send(JSON.stringify({t:'visit_ended'}));ws.close(4003,'visit ended');return}
       const duplicates = this.readyPeers().filter(p => p.a.id === a.id);
       const resumed=!!previous||duplicates.length>0;
       if (this.readyPeers().length - duplicates.length >= MAX_PEERS) {
@@ -561,10 +609,11 @@ export class GardenRoom extends DurableObject {
         prior.ws.serializeAttachment(prior.a);
         try { prior.ws.send(JSON.stringify({ t: 'replaced' })); prior.ws.close(4002, 'session resumed'); } catch (e) {}
       }
-      a.name = clean(m.name, 12) || '친구';
-      a.look = cleanLook(m.look,a.name);
-      a.dog = cleanDog(m.dog);
+      a.name = personal?.name||clean(m.name, 12) || '친구';
+      a.look = personal?.look||cleanLook(m.look,a.name);
+      a.dog = personal?.dog||cleanDog(m.dog);
       a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0, u:false };
+      if(a.personal)Object.assign(a.s,this.personalHalos(a));
       if(a.s.p.startsWith('wood'))a.s.p='stand';
       a.ready = true;a.away=!!m.away;
       const continuing=Prayer.bowProgress(this.bows[a.id],Date.now());if(continuing&&['auto','single'].includes(continuing.mode))a.s=this.peerInfo(a).s;
@@ -573,11 +622,11 @@ export class GardenRoom extends DurableObject {
       await this.advanceRps();
       await this.rememberVisit(a);
       // 같은 이름으로 '잠시 자리 비움'인 예전 접속이 있으면 같은 사람이 새로 들어온 것으로 보고 지운다.
-      const ghosts=Object.entries(this.visits).filter(([id,v])=>id!==a.id&&v.peer&&!v.revoked&&v.awayUntil&&v.peer.name===a.name&&!this.readyPeers().some(p=>p.a.id===id)).map(([id])=>id);
+      const ghosts=Object.entries(this.visits).filter(([id,v])=>!a.personal&&id!==a.id&&v.peer&&!v.revoked&&v.awayUntil&&v.peer.name===a.name&&!this.readyPeers().some(p=>p.a.id===id)).map(([id])=>id);
       for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
       if(ghosts.length)await this.saveVisits();
       const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', features:{board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      ws.send(JSON.stringify({ t: 'welcome', features:{personal:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }
@@ -608,6 +657,7 @@ export class GardenRoom extends DurableObject {
         s.wc=s.p.startsWith('wood')?a.fireCarry?.count||1:0;
         const activeBow=Prayer.bowProgress(this.bows[a.id],Date.now());
         if(activeBow&&['auto','single'].includes(activeBow.mode)&&(s.p!=='bow'||spaceOf(s)!==spaceOf(a.s)||Math.hypot(s.x-a.s.x,s.z-a.s.z)>.15))await this.handleBows(ws,a,{t:'bow_control',id:activeBow.id,action:'stop'});
+        if(a.personal)Object.assign(s,this.personalHalos(a));
         a.s = s;
         ws.serializeAttachment(a);
         this.broadcast({ t: 'state', id: a.id, s: a.s }, ws);
@@ -620,6 +670,7 @@ export class GardenRoom extends DurableObject {
         a.look = cleanLook(m.look,a.name) || cleanLook(a.look,a.name);
         a.dog = cleanDog(m.dog) || a.dog;
         ws.serializeAttachment(a);
+        await this.rememberPersonal(a);
         this.broadcast({ t: 'profile', id: a.id, name: a.name, look: a.look, dog: a.dog }, ws);
         return;
       }
@@ -743,7 +794,9 @@ export class GardenRoom extends DurableObject {
       a.ready=false;ws.serializeAttachment(a);
       if(!this.readyPeers().some(p=>p.a.id===a.id)){
         if(explicit){
-          await this.editBow(a.id,job=>job?{...Prayer.settleBow(job,Date.now()),mode:'idle',paused:false,elapsed:0}:null);
+          await this.editBow(a.id,job=>job?{...Prayer.settleBow(job,Date.now()),mode:'idle',paused:false,elapsed:0}:null,a.personalSession||null);
+          if(this.readyPeers().some(p=>p.a.id===a.id))return;
+          await this.rememberPersonal(a);
           this.visits[a.id]={revoked:true,lastSeen:Date.now(),expiresAt:Date.now()+VISIT_MEMORY_MS};
           await this.saveVisits();this.broadcast({t:'leave',id:a.id});
         }else{

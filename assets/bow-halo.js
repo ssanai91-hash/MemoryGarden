@@ -1,35 +1,43 @@
 import * as THREE from 'three';
 
-// Three shared, lightweight bands behind the head. No extra light or per-frame geometry.
-let bands;
+// Head-top rings and a red additive body pass. No point lights or shared actor
+// material changes: earning a reward never recolours another person's clothes.
+let shared;
 function geometry(){
- if(bands)return bands;
- const ring=new THREE.RingGeometry(.72,.9,80,2),colors=[];
- const p=ring.attributes.position;
- for(let i=0;i<p.count;i++){
-  const a=Math.atan2(p.getY(i),p.getX(i)),c=new THREE.Color().setHSL(.43+.32*(.5+.5*Math.sin(a*2)),.68,.72);
-  colors.push(c.r,c.g,c.b);
- }
- ring.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
- const stars=new THREE.BufferGeometry(),positions=[];
- for(let i=0;i<20;i++){const a=i/20*Math.PI*2,r=.97+.035*Math.sin(i*2.4);positions.push(Math.cos(a)*r,Math.sin(a)*r,0)}
- stars.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
- return bands={ring,gold:new THREE.TorusGeometry(.65,.025,6,80),stars};
+  return shared||(shared={ring:new THREE.TorusGeometry(.34,.022,6,64),veil:new THREE.RingGeometry(.29,.4,64)});
 }
-export function createBowHalo(head,markBloom){
- const geo=geometry(),group=new THREE.Group();group.position.set(0,.08,-.52);group.visible=false;head.add(group);
- const options={transparent:true,depthWrite:false,toneMapped:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide};
- const gold=new THREE.MeshBasicMaterial({...options,color:0xffdf8c,opacity:.95});
- const aurora=new THREE.MeshBasicMaterial({...options,vertexColors:true,opacity:.65});
- const dust=new THREE.PointsMaterial({...options,color:0xffe5a6,size:.037,opacity:.75,sizeAttenuation:true});
- for(const mat of[gold,aurora,dust])markBloom(mat,1.8);
- const inner=new THREE.Mesh(geo.gold,gold),veil=new THREE.Mesh(geo.ring,aurora),stars=new THREE.Points(geo.stars,dust);
- veil.position.z=-.035;stars.position.z=-.055;group.add(veil,inner,stars);
- return{group,update(until,now,t,reduced=false){
-  group.visible=Number.isFinite(until)&&until>now&&until<=now+86400000;
-  if(!group.visible)return;
-  const wave=reduced?0:Math.sin(t*.9),breath=1+wave*.025;
-  group.scale.setScalar(breath);veil.rotation.z=reduced?0:t*.12;stars.rotation.z=reduced?0:-t*.08;
-  aurora.opacity=.64+wave*.1;gold.opacity=.92+wave*.06;dust.opacity=.65+wave*.12;
- },dispose(){head.remove(group);for(const mat of[gold,aurora,dust])mat.dispose()}};
+export function createBowHalo(head,markBloom,{person=null}={}){
+  const geo=geometry(),group=new THREE.Group(),root=person?.g||head,point=new THREE.Vector3(),worldRotation=new THREE.Quaternion();
+  group.name='personal-head-halo';group.visible=false;root.add(group);
+  const options={transparent:true,depthWrite:false,toneMapped:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide};
+  const ringMaterial=new THREE.MeshBasicMaterial({...options,color:0xffffff,opacity:.95}),veilMaterial=new THREE.MeshBasicMaterial({...options,color:0xffffff,opacity:.18});
+  markBloom(ringMaterial,1.7);markBloom(veilMaterial,1.4);
+  const ring=new THREE.Mesh(geo.ring,ringMaterial),veil=new THREE.Mesh(geo.veil,veilMaterial);ring.rotation.x=veil.rotation.x=-Math.PI/2;group.add(ring,veil);
+  const overlays=[];let bodyBuilt=false;
+  function addBodyGlow(){
+    if(bodyBuilt||!person)return;bodyBuilt=true;
+    const nodes=[];person.rig.traverse(n=>{if(n.isMesh&&!n.userData.handProp&&!n.isInstancedMesh)nodes.push(n)});
+    if(person.pixel?.ready){for(const n of person.g.children)if(n!==person.tag&&n!==person.bubble&&(n.isSprite||n===person.pixel.rest?.mesh))nodes.push(n)}
+    for(const source of nodes){
+      const original=Array.isArray(source.material)?source.material[0]:source.material;
+      if(!original)continue;
+      const opts={...options,color:0xff3838,opacity:.28,map:original.map||null,alphaTest:original.alphaTest||0,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1};
+      const material=source.isSprite?new THREE.SpriteMaterial(opts):new THREE.MeshBasicMaterial(opts);
+      const mesh=source.isSprite?new THREE.Sprite(material):new THREE.Mesh(source.geometry,material);
+      mesh.name='personal-body-glow';mesh.castShadow=mesh.receiveShadow=false;mesh.visible=false;mesh.renderOrder=source.renderOrder+.1;
+      source.add(mesh);markBloom(material,1.6);overlays.push({source,mesh,material});
+    }
+  }
+  return{group,overlays,update(until,now,t,reduced=false,level=1){
+    const active=Number.isFinite(until)&&until>now&&until<=now+(level===2?7:3)*86400000;
+    group.visible=active;const red=active&&level===2;if(red)addBodyGlow();
+    for(const item of overlays){item.mesh.visible=red;item.material.opacity=.25+(reduced?0:Math.sin(t*1.4)*.045);if(item.source.isSprite){item.mesh.center.copy(item.source.center);item.material.rotation=item.source.material.rotation;item.material.map=item.source.material.map}}
+    if(!active)return;
+    const wave=reduced?0:Math.sin(t*.9),size=level===2?1.3:1;
+    group.scale.setScalar(size*(1+wave*.018));ringMaterial.color.setHex(red?0xff3030:0xffffff);veilMaterial.color.copy(ringMaterial.color);veilMaterial.opacity=(red?.25:.14)+wave*.035;
+    // Keep the ring horizontally above the actual head, including bowing,
+    // seated sprites and lying volumes, rather than behind the face.
+    if(person){head.getWorldPosition(point);point.y+=person.pixel?.ready ? .38 : .58;root.worldToLocal(point);group.position.copy(point);root.getWorldQuaternion(worldRotation);group.quaternion.copy(worldRotation).invert()}
+    else group.position.set(0,.62,0);
+  },dispose(){root.remove(group);ringMaterial.dispose();veilMaterial.dispose();for(const {source,mesh,material}of overlays){source.remove(mesh);material.dispose()}}};
 }
