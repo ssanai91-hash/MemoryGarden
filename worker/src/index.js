@@ -239,7 +239,7 @@ export class GardenRoom extends DurableObject {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ id: crypto.randomUUID().replace(/-/g, '').slice(0, 10), ready: false,loginRateKey:req?.headers.get('CF-Connecting-IP')||null });
+    server.serializeAttachment({ acceptedAt:Date.now(),id: crypto.randomUUID().replace(/-/g, '').slice(0, 10), ready: false,loginRateKey:req?.headers.get('CF-Connecting-IP')||null });
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -250,7 +250,7 @@ export class GardenRoom extends DurableObject {
     const job=this.bows?.[a.id]||null,f=Prayer.bowProgress(job,Date.now()),s={...a.s};
     if(a.personal)Object.assign(s,this.personalHalos(a));
     if(f){s.halos=f.halos;s.haloLevel=f.haloLevel;if(['auto','single'].includes(f.mode)){Object.assign(s,job.position,{p:'bow',bp:f.elapsed/Prayer.BOW_MS})}else if(s.p==='bow')s.p='stand';s.haloUntil=Math.max(s.haloUntil||0,f.haloUntil||0)}
-    return { id: a.id, name: a.name, look: a.look, dog: a.dog, lastChat: a.lastChat || null, away:!!a.away, bow:job, s };
+    return { id: a.id, enteredAt:a.enteredAt||null,name: a.name, look: a.look, dog: a.dog, lastChat: a.lastChat || null, away:!!a.away, bow:job, s };
   }
 
   visiblePeers(exceptId){
@@ -267,7 +267,7 @@ export class GardenRoom extends DurableObject {
     await this.ctx.storage.put('visits',this.visits);await this.armRpsAlarm();
   }
   async rememberVisit(a,awayUntil=null){
-    this.visits[a.id]={peer:this.peerInfo(a),lastSeen:Date.now(),awayUntil,expiresAt:Date.now()+VISIT_MEMORY_MS};
+    this.visits[a.id]={peer:this.peerInfo(a),enteredAt:a.enteredAt||this.visits[a.id]?.enteredAt||Date.now(),lastSeen:Date.now(),awayUntil,expiresAt:Date.now()+VISIT_MEMORY_MS};
     await this.saveVisits();await this.rememberPersonal(a);
   }
   async advanceVisits(now=Date.now()){
@@ -664,6 +664,7 @@ export class GardenRoom extends DurableObject {
     try{personal=await this.personalIdentity(ws,a,m,legacyId)}catch(error){a.handshaking=false;ws.serializeAttachment(a);ws.send(JSON.stringify({t:'personal_error',code:['code','missing','name_taken'].includes(error.message)?error.message:'storage'}));ws.close(4004,'personal profile unavailable');return}
     await this.advanceBows();await this.advanceVisits();
     const previous=this.visits[a.id];
+    a.enteredAt=previous&&!previous.revoked?(previous.enteredAt||previous.peer?.enteredAt||previous.lastSeen||a.acceptedAt||Date.now()):(a.acceptedAt||Date.now());
     if(previous&&previous.revoked&&!a.personal){ws.send(JSON.stringify({t:'visit_ended'}));ws.close(4003,'visit ended');return}
     if(!personal&&this.nameInUse(clean(m.name,12)||'친구',a.id)){ws.send(JSON.stringify({t:'personal_error',code:'name_taken'}));ws.close(4004,'name in use');return}
     const duplicates = this.readyPeers().filter(p => p.a.id === a.id);
@@ -698,6 +699,53 @@ export class GardenRoom extends DurableObject {
     return;
   }
 
+  async kickDuplicateVisitors(ws){
+    const admin=ws.deserializeAttachment();if(!admin?.ready||!admin.admin)return;
+    const now=Date.now(),visitors=new Map();
+    for(const p of this.readyPeers())visitors.set(p.a.id,p.a);
+    for(const [id,v]of Object.entries(this.visits)){
+      if(visitors.has(id)||v.revoked||!v.peer||v.expiresAt<=now)continue;
+      const bow=Prayer.bowProgress(this.bows[id],now);
+      if(v.awayUntil>now||bow&&['auto','single'].includes(bow.mode))visitors.set(id,v.peer);
+    }
+    const groups=new Map();
+    for(const [id,a]of visitors){
+      const key=nameKey(a.name),visit=this.visits[id],bow=Prayer.bowProgress(this.bows[id],now);
+      const entry={id,count:bow?.count||0,enteredAt:a.enteredAt||visit?.enteredAt||visit?.lastSeen||0};
+      if(!groups.has(key))groups.set(key,[]);groups.get(key).push(entry);
+    }
+    const remove=[];
+    for(const group of groups.values()){
+      group.sort((a,b)=>b.count-a.count||b.enteredAt-a.enteredAt||b.id.localeCompare(a.id));
+      remove.push(...group.slice(1));
+    }
+    let count=0;
+    try{
+      for(const {id}of remove){
+        const sockets=this.readyPeers().filter(p=>p.a.id===id),previousVisit=this.visits[id];
+        // Stop new commands before settling any command already saving this person's bows.
+        for(const p of sockets){p.a.ready=false;p.ws.serializeAttachment(p.a)}
+        try{
+          const pending=this.bowQueue.get(id);if(pending)await pending.catch(()=>{});
+          await this.editBow(id,job=>job?{...Prayer.settleBow(job,Date.now()),mode:'idle',paused:false,elapsed:0}:null);
+          this.visits[id]={revoked:true,lastSeen:Date.now(),expiresAt:Date.now()+VISIT_MEMORY_MS};
+          await this.saveVisits();
+        }catch(error){
+          if(previousVisit)this.visits[id]=previousVisit;else delete this.visits[id];
+          for(const p of sockets){p.a.ready=true;p.ws.serializeAttachment(p.a)}
+          this.publishBow(id);throw error;
+        }
+        await this.cancelRpsFor(id,'disconnected').catch(()=>{});
+        this.broadcast({t:'leave',id});
+        for(const p of sockets){try{p.ws.send(JSON.stringify({t:'kicked',reason:'duplicate'}));p.ws.close(4003,'duplicate name removed')}catch{}}
+        count++;
+      }
+      try{ws.send(JSON.stringify({t:'duplicates_done',count}))}catch{}
+    }catch{
+      try{ws.send(JSON.stringify({t:'duplicates_error',count}))}catch{}
+    }
+  }
+
   async webSocketMessage(ws, raw) {
     if (typeof raw !== 'string' || raw.length > 4096) return;
     let m;
@@ -724,6 +772,9 @@ export class GardenRoom extends DurableObject {
         await this.departVisit(ws,true);
         return;
       }
+      case 'kick_duplicates':
+        if(!a.admin||!this.allow(a,'kick',1))return;
+        return this.queueAdmission(()=>this.kickDuplicateVisitors(ws));
       case 'kick_all': {
         // 관리자만. 접속 중인 다른 사람과 자리 비움으로 남은 사람을 모두 내보낸다.
         // 각자의 절 진행·기록·외형은 일반 '나가기'와 같은 경로로 저장되고, 같은 코드로 다시 들어올 수 있다.
