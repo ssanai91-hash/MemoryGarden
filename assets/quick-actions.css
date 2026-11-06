@@ -1,17 +1,20 @@
 /* Four picture cards share the joystick's vertical space above the chat dock. */
-:root{--joy-size:120px;--joy-left:calc(max(16px,env(safe-area-inset-left,0px)) + 6px);--joy-bottom:calc(24px + env(safe-area-inset-bottom,0px));--quick-grid-size:84px}
+:root{--joy-size:156px;--joy-knob-size:59.8px;--joy-left:calc(max(16px,env(safe-area-inset-left,0px)) + 6px);--joy-bottom:calc(24px + env(safe-area-inset-bottom,0px));--quick-grid-size:109.2px;--quick-grid-gap:5.2px}
 body.chat-docked{--joy-bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 14px)}
 #joy,.chat-docked #joy{width:var(--joy-size);height:var(--joy-size);left:var(--joy-left);bottom:var(--joy-bottom)}
-#quickActions{position:fixed;left:calc(var(--joy-left) + var(--joy-size) + 8px);bottom:var(--joy-bottom);z-index:5;width:var(--quick-grid-size);height:var(--quick-grid-size);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:4px}
-#quickActions button{box-sizing:border-box;display:grid;place-items:center;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:6px;border:1px solid #f9f4e4d9;border-radius:11px;background:#faf6eee8;color:#62563f;box-shadow:0 2px 7px #171c1829;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-#quickActions svg{display:block;width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-#quickActions button[aria-pressed="true"]{background:#6f8054;color:#fff;border-color:#e2e9d5;box-shadow:0 0 0 2px #70865133}
-#quickActions #umbrellaBtn[aria-pressed="true"]{background:#557ea5;border-color:#d4e4f3}
+#joy #knob{width:var(--joy-knob-size);height:var(--joy-knob-size);margin:calc(var(--joy-knob-size) / -2) 0 0 calc(var(--joy-knob-size) / -2)}
+#quickActions{position:fixed;left:calc(var(--joy-left) + var(--joy-size) + 8px);bottom:var(--joy-bottom);z-index:5;width:var(--quick-grid-size);height:var(--quick-grid-size);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:var(--quick-grid-gap)}
+#quickActions button{box-sizing:border-box;display:block;position:relative;overflow:hidden;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:0;border:0;border-radius:22%;background:#f8efdf;box-shadow:0 2px 7px #171c1829;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#quickActions img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit;pointer-events:none;user-select:none;-webkit-user-drag:none}
+#quickActions button[aria-pressed="true"]{box-shadow:0 0 0 2px #718554,0 2px 7px #171c1829}
+#quickActions #umbrellaBtn[aria-pressed="true"]{box-shadow:0 0 0 2px #557ea5,0 2px 7px #171c1829}
 #quickActions button:focus-visible{outline:2px solid #d5b975;outline-offset:2px}
 #quickActions button:active{transform:translateY(1px)}
 /* Leave space between the cards and the two chat/action menu buttons. */
 #dockActions{width:min(198px,calc(100vw - var(--joy-left) - var(--joy-size) - var(--quick-grid-size) - 28px));grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 #dockActions button{padding:5px 3px;font-size:11px}
+#bowCounter{bottom:calc(var(--joy-bottom) + var(--joy-size) + 10px)}
 .entry-open #quickActions,.sky-view #quickActions,.visit-ended #quickActions,.rps-open #quickActions,body.board-open #quickActions{display:none}
 body.listening-room #quickActions #umbrellaBtn{visibility:hidden;pointer-events:none}
-@media(max-width:650px){:root{--joy-size:84px;--joy-left:max(12px,env(safe-area-inset-left,0px));--joy-bottom:calc(14px + env(safe-area-inset-bottom,0px));--quick-grid-size:78px}body.chat-docked{--joy-size:78px}}
+@media(max-width:650px){:root{--joy-size:109.2px;--joy-knob-size:44.2px;--joy-left:max(12px,env(safe-area-inset-left,0px));--joy-bottom:calc(14px + env(safe-area-inset-bottom,0px));--quick-grid-size:101.4px}body.chat-docked{--joy-size:101.4px}}
+@media(max-width:360px){#dockActions{grid-template-columns:1fr}.chat-docked .poses{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 92px)}}
