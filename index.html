@@ -274,7 +274,7 @@ body.listening-room #campfireLastCare{display:none}
 #exitCloseStatus:empty{display:none}
 #exitCloseHelp{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#eee7d9;font-size:13px;line-height:1.7;word-break:keep-all}
 #exitCloseHelp p{margin:6px 0 0}
-body.listening-room #skyViewBtn,body.listening-room #firePlayList,body.listening-room #firePlayBtn,body.listening-room #pFuel,body.listening-room #auroraBtn,body.listening-room #fireworksBtn,body.listening-room #jarBtn,body.listening-room #campfireStatus{display:none!important}
+body.listening-room #firePlayList,body.listening-room #firePlayBtn,body.listening-room #pFuel,body.listening-room #auroraBtn,body.listening-room #fireworksBtn,body.listening-room #jarBtn,body.listening-room #campfireStatus{display:none!important}
 #listeningControls{display:flex;flex-direction:column;gap:4px;pointer-events:auto}
 #listeningRecords{display:grid;gap:8px;margin:14px 0}
 #listeningRecords button{text-align:left;border-radius:12px;padding:12px 14px;min-height:58px}
@@ -532,22 +532,17 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
   <div class="count-line"><span role="status"><b id="bowCount">0</b> / <span id="bowTarget">108</span>배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
 </section>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 메뉴"><div id="rightMenuBody"><div id="poseList" role="group" aria-label="동작" hidden>
-<button id="pProne" type="button" aria-pressed="false">엎드리기</button>
-<button id="skyViewBtn" type="button" aria-pressed="false">밤하늘 보기</button>
-<button id="pFuel" type="button">장작 넣기</button>
-<button id="auroraBtn" type="button">오로라 가루 넣기</button>
-<button id="fireworksBtn" type="button">불꽃놀이</button>
-</div></div><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><div class="plaza-bar" id="plazaBar" role="group" aria-label="절하기" hidden><button id="autoBowBtn" type="button">108배
+<div class="poses" id="rightMenu" role="group" aria-label="정원 상황별 메뉴"><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><div class="plaza-bar" id="plazaBar" role="group" aria-label="절하기" hidden><button id="autoBowBtn" type="button">108배
 하기</button><button id="auto3000Btn" type="button">3000배
 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
-<div class="dock-actions" id="dockActions" role="group" aria-label="대화 목록과 동작" hidden><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button><button class="fold" id="poseToggle" type="button" aria-expanded="false" aria-controls="poseList">동작 ▴</button></div>
+<div class="dock-actions" id="dockActions" role="group" aria-label="대화 목록" hidden><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
-<div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div><div id="quickActions" role="group" aria-label="빠른 동작">
+<div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div><div id="quickActions" role="group" aria-label="그림 동작 카드 5개">
 <button id="umbrellaBtn" type="button" aria-pressed="false" aria-label="우산 쓰기" title="우산 쓰기"><img src="assets/action-umbrella-v1.webp" width="384" height="384" alt="" aria-hidden="true" decoding="async"></button>
 <button id="pWave" type="button" aria-pressed="false" aria-label="손 흔들기" title="손 흔들기"><img src="assets/action-wave-v1.webp" width="384" height="384" alt="" aria-hidden="true" decoding="async"></button>
 <button id="pLie" type="button" aria-pressed="false" aria-label="누워있기" title="누워있기"><img src="assets/action-lie-v1.webp" width="384" height="384" alt="" aria-hidden="true" decoding="async"></button>
-<button id="pSit" type="button" aria-pressed="false" aria-label="앉기" title="앉기"><img src="assets/action-sit-v1.webp" width="384" height="384" alt="" aria-hidden="true" decoding="async"></button>
+<button id="pSit" type="button" aria-pressed="false" aria-label="제자리 앉기" title="제자리 앉기"><img src="assets/action-sit-v1.webp" width="384" height="384" alt="" aria-hidden="true" decoding="async"></button>
+<button id="skyViewBtn" type="button" aria-pressed="false" aria-label="밤하늘 보기" title="밤하늘 보기"><img src="assets/action-sky-v1.webp" width="384" height="384" alt="" aria-hidden="true" decoding="async"></button>
 </div>
 <div class="toast" id="toast"></div>
 <div id="speechLayer" class="bubbles" aria-label="말풍선"></div>
@@ -585,7 +580,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 1.0</small>
+    <small class="entry-version">ver 1.1</small>
   </form>
  </main>
 </div>
@@ -1655,7 +1650,7 @@ const onPyeongsang=(x,z)=>{const l=hutToLocal(x,z);return l.lx>-2.2&&l.lx<-.05&&
 const nearFallsCalm=(x,z)=>{const d=Math.hypot(x-FALLS.x,z-FALLS.z);return d>FALLS.poolR+.3&&d<11};
 const fmtMin=sec=>{sec=Math.floor(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')};
 function startCalm(mode){
-  if(calm.mode)return;closePoseMenu();endPractice(false);target=null;marker.visible=false;
+  if(calm.mode)return;endPractice(false);target=null;marker.visible=false;
   if(mode==='nap'){me.g.position.x=NAP_SPOT.x;me.g.position.z=NAP_SPOT.z;me.g.rotation.y=HUT.h+Math.PI/2;pose='lie';cam.yaw=HUT.h;cam.dist=6.5;cam.pitch=.38}
   else{const dx=FALLS.x-me.g.position.x,dz=FALLS.z-me.g.position.z;me.g.rotation.y=Math.atan2(dx,dz);pose='sit';cam.yaw=Math.atan2(-dx,-dz);cam.dist=7.5;cam.pitch=.16}
   calm.mode=mode;calm.start=performance.now();calm.told5=false;sendDirty=true;syncPoseButtons();
@@ -2787,10 +2782,15 @@ function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${petDescription(d)})
 function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 걷는 '+(petKind(myDog)==='cat'?'고양이: ':'강아지: ')+petDescription(myDog)}
 refreshMine();
 let pose='stand',sendDirty=true;
-function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie',prone:'pProne'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
-function setPose(p){cancelFireCare();if(worldSpace==='listening'&&p==='sit'){sitListening();return}const previous=pose;endPractice(false);pose=previous===p?'stand':p;target=null;marker.visible=false;pendingStoke=false;
-  if(pose==='sit')sitNearest();
-  syncPoseButtons();sendDirty=true;closePoseMenu()}
+function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
+// Picture actions never choose a seat or move the visitor to another location.
+function setPose(p){
+  if(!hasEntered||visitEnded)return;
+  cancelFireCare();const previous=pose;endPractice(false);pose=previous===p?'stand':p;
+  target=null;marker.visible=false;pendingStoke=false;move={x:0,y:0};knob.style.transform='';me.speed=0;
+  Object.keys(keys).forEach(key=>delete keys[key]);
+  syncPoseButtons();sendDirty=true;saveVisit();
+}
 let pendingStoke=false,fuelTimer=0,pendingFireAction='stoke';
 function syncUmbrellaButtons(){
   const b=$('umbrellaBtn');b.setAttribute('aria-pressed',String(myUmbrella));b.setAttribute('aria-label',myUmbrella?'우산 접기':'우산 쓰기');b.title=b.getAttribute('aria-label');
@@ -2825,7 +2825,7 @@ function sitAtFire(){
   myDogObj.g.position.set(sp.x*1.18,0,sp.z*1.18);cam.yaw=me.g.rotation.y+Math.PI;cam.pitch=.22;cam.dist=7.5;
 }
 function stokeFire(){
-  closePoseMenu();if(CENTERPIECE!=='campfire')return;
+  if(CENTERPIECE!=='campfire')return;
   if(pendingFireAction!=='aurora'){openFireLoad();return}
   const d=Math.hypot(me.g.position.x,me.g.position.z);
   if(d<=3.6){doStoke();return}
@@ -2875,7 +2875,7 @@ function startFireCare(count=1){
   fireAction={phase:'approach',elapsed:0,total:0,request,count,path:[]};pose='stand';sendDirty=true;
   const side=p.z<0?-1:1,points=[];
   if(p.x>6.2){points.push({x:p.x,z:side*2.15},{x:5.9,z:side*2.15})}
-  points.push({x:5.9,z:0});firePath(points);closePoseMenu();
+  points.push({x:5.9,z:0});firePath(points);
 }
 function updateFireCare(dt){
   const a=fireAction;if(!a)return;me.woodCount=a.count||1;
@@ -2931,7 +2931,7 @@ function renderCampfireStatus(){
   const key=text+'|'+detail;if(key===fireStatusKey)return;fireStatusKey=key;
   $('campfireStatus').textContent=text;$('campfireLastCare').textContent=detail;
 }
-$('pWave').onclick=()=>setPose('wave');$('pFuel').onclick=()=>{pendingFireAction='stoke';stokeFire()};$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');$('pProne').onclick=()=>setPose('prone');
+$('pWave').onclick=()=>setPose('wave');$('pSit').onclick=()=>setPose('sit');$('pLie').onclick=()=>setPose('lie');
 
 
 function startStandingPrayer(){preparePracticeInPlace();setPose('standing_pray')}
@@ -3337,38 +3337,15 @@ function closeOtherMenus(keep){
   if(keep!=='candles')candleUI?.close();
   if(keep!=='listening'&&$('listeningAudio').open)$('listeningAudio').close();
   if(keep!=='board'&&gardenBoard.isOpen())gardenBoard.close();
-  if(keep!=='poses')closePoseMenu();
   if(keep!=='history')toggleChatHistory(false,false);
   if(keep!=='chat')blurChatInput();
   if(keep!=='order')toggleOrderMenu(false);
   if(keep!=='garden')setGardenExpanded(false);
 }
-function actionMenuOpen(){return !$('poseList').hidden}
-function setPoseMenu(open){
-  if(open)closeOtherMenus('poses');
-  $('poseList').hidden=!open;$('poseToggle').setAttribute('aria-expanded',String(open));
-  $('poseToggle').textContent=open?'동작 접기 ▾':'동작 ▴';
-  store.set('garden.ui.poses',open?'1':'0');syncMenuSections();
-}
-$('poseToggle').onclick=()=>setPoseMenu(!actionMenuOpen());
 function syncMenuSections(){
-  const open=['poseList','chatHistory','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
+  const open=['chatHistory','orderPanel','gardenDetails'].some(id=>!$(id).hidden);
   $('rightMenu').classList.toggle('submenu-open',open);
-  $('rightMenu').classList.toggle('poses-open',actionMenuOpen());
-  document.body.classList.toggle('actions-open',actionMenuOpen());syncActionMenuSize();
 }
-function syncActionMenuSize(){
-  if(!actionMenuOpen())return;
-  const list=$('poseList');
-  const menu=$('rightMenu'),count=Array.from(list.children).filter(button=>!button.hidden).length;
-  const available=menu.getBoundingClientRect().height;
-  const gap=available<380?2:4,height=Math.min(32,Math.max(14,Math.floor((available-gap*Math.max(0,count-1))/Math.max(1,count))));
-  menu.style.setProperty('--action-height',height+'px');menu.style.setProperty('--action-gap',gap+'px');menu.style.setProperty('--action-font',height<25?'10px':'11px');menu.style.setProperty('--action-padding',height<22?'0px':'2px');
-}
-addEventListener('resize',syncActionMenuSize);
-if(window.visualViewport)visualViewport.addEventListener('resize',syncActionMenuSize);
-if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncActionMenuSize).observe($('poseList'));
-function closePoseMenu(){setPoseMenu(false)}
 function toggleOrderMenu(open){
   if(open){closeOtherMenus('order');if(typeof setOrderPage==='function')setOrderPage(false);syncJar()}
   $('orderPanel').hidden=!open;$('dOrder').setAttribute('aria-expanded',String(open));syncMenuSections();
@@ -3382,9 +3359,7 @@ function setGardenExpanded(open){
   store.set('garden.ui.panel',open?'1':'0');syncMenuSections();
 }
 // 정원 설정 창은 시작할 때 항상 닫아 둔다.
-const initialPoseMenu=store.get('garden.ui.poses')==='1',initialGardenMenu=false;
-setPoseMenu(initialPoseMenu&&!initialGardenMenu);
-setGardenExpanded(initialGardenMenu);
+setGardenExpanded(false);
 $('gardenToggle').onclick=()=>setGardenExpanded($('gardenDetails').hidden);
 
 
@@ -3503,7 +3478,7 @@ function preparePracticeInPlace(){
 }
 function startPractice(mode,target=practice.target){
   if(mode==='auto'&&target===3000&&typeof room!=='undefined'&&room?.bowVersion===1&&!room.bowTargets?.includes(3000)){toast('3000배를 지원하는 최신 정원에 연결한 뒤 다시 눌러 주세요');return}
-  if(mode==='pray'&&practice.mode==='pray'){endPractice();closePoseMenu();return}
+  if(mode==='pray'&&practice.mode==='pray'){endPractice();return}
   if(practice.remote)syncRemotePractice();
   if(mode==='pray'||target!==practice.target){requestPracticeControl('stop');practice.remote=null}
   if(target!==practice.target){bowSet(practiceCountKey(),String(practice.count));practice.target=target===3000?3000:108;practice.count=readPracticeCount(practice.target)}
@@ -3511,7 +3486,7 @@ function startPractice(mode,target=practice.target){
   const restart=mode==='auto'&&practice.count>=practice.target;
   if(restart){practice.count=0;bowSet(practiceCountKey(),'0')}
   preparePracticeInPlace();
-  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;closePoseMenu();requestPracticeStart(restart);if(restart)saveVisit();
+  practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;requestPracticeStart(restart);if(restart)saveVisit();
 }
 $('autoBowBtn').onclick=()=>startPractice('auto',108);$('auto3000Btn').onclick=()=>startPractice('auto',3000);
 $('pauseBtn').onclick=()=>{if(practice.remote)syncRemotePractice();practice.paused=!practice.paused;requestPracticeControl(practice.paused?'pause':'resume');practiceUI();saveVisit()};$('finishBtn').onclick=()=>endPractice();
@@ -4107,8 +4082,6 @@ function watchFireworks(){
   const dx=FIREWORK_BEACH.x-me.g.position.x,dz=FIREWORK_BEACH.z-me.g.position.z;
   cam.yaw=Math.atan2(-dx,-dz);cam.skyPitch=Math.atan2(48,Math.max(1,Math.hypot(dx,dz)));cam.skyFov=75;resize();
 }
-$('auroraBtn').onclick=()=>{pendingFireAction='aurora';stokeFire()};
-$('fireworksBtn').onclick=()=>{if(requestFirePlay('fireworks'))watchFireworks()};
 {
   const shore=new THREE.Mesh(new THREE.CircleGeometry(4.1,40),F(0xcbbd92,{roughness:1}));
   shore.rotation.x=-Math.PI/2;shore.position.set(FIREWORK_BEACH.x,.04,FIREWORK_BEACH.z);shore.receiveShadow=true;scene.add(shore);
@@ -4393,8 +4366,6 @@ function updateContext(dt){
   renderCampfireStatus();
   $('candleActions').hidden=!(hasEntered&&worldSpace==='garden'&&Prayer.nearBox(x,z)&&!fireAction);
   const nearWood=worldSpace==='garden'&&Math.hypot(x-Fire.PILE.x,z-Fire.PILE.z)<=Fire.PILE.r;
-  $('pFuel').disabled=!hasEntered||!nearWood||!!fireAction||!room?.connected()||room.fireVersion!==1;
-  $('pFuel').title=nearWood?'장작을 집어 모닥불에 넣어요':'모닥불 오른쪽 장작 더미로 가까이 가 주세요';
   if(fireAction){b.textContent='장작 옮기기 멈추기';b.dataset.act='fireCancel';b.hidden=false;return}
   if(worldSpace==='listening'){b.hidden=true;return}
   if(hasEntered&&Prayer.nearBox(x,z)){b.hidden=true;return}
@@ -4412,11 +4383,11 @@ function updateContext(dt){
   if(nearT||nearF){b.textContent=nearT?'테이블에 앉기':'모닥불에 앉기';b.dataset.act='sit';b.hidden=false}else b.hidden=true;
 }
 $('ctxBtn').onclick=()=>{
-  closePoseMenu();
+  
   const act=$('ctxBtn').dataset.act;if(act==='candles'){candleUI?.open();return}if(act==='firewood'){openFireLoad();return}if(act==='fireCancel'){cancelFireCare(true);return}if(act==='listening'){enterListening();return}if(act==='board'){gardenBoard.open();return}
   if(act==='firefly'||act==='nap'||act==='meditate'){if(act==='firefly')catchFirefly();else startCalm(act);ctxTick=1;updateContext(0);return}if(act==='enter'){enterPocha();ctxTick=1;updateContext(0);return}if(act==='leave'){leavePocha();ctxTick=1;updateContext(0);return}
   if(act==='up'){const sp=me.g.position,h=me.g.rotation.y;pose='stand';const [x,z]=collide(sp.x-Math.sin(h)*.8,sp.z-Math.cos(h)*.8,.4);me.g.position.x=x;me.g.position.z=z;sendDirty=true;syncPoseButtons()}
-  else setPose('sit');
+  else{setPose('sit');if(pose==='sit')sitNearest()}
   ctxTick=1;updateContext(0);
 };
 
@@ -4643,7 +4614,7 @@ function setVisitorsExpanded(open){
   $('visitorToggle').setAttribute('aria-expanded',String(open));
   $('visitorToggle').textContent=open?'접기 ▴':'펼치기 ▾';
   store.set('garden.ui.visitors',open?'1':'0');
-  syncRightMenuBounds();syncActionMenuSize();
+  syncRightMenuBounds();
 }
 $('visitorToggle').onclick=()=>setVisitorsExpanded($('visitorNames').hidden);
 setVisitorsExpanded(store.get('garden.ui.visitors')!=='0');
@@ -4662,7 +4633,7 @@ function syncChatDock(){
   document.documentElement.style.setProperty('--keyboard-lift',keyboardLift+'px');
   document.documentElement.style.setProperty('--chat-height',height+'px');
   document.documentElement.style.setProperty('--chat-clearance',height?height+12+'px':'0px');
-  syncActionMenuSize();
+  
 }
 function blurChatInput(){$('chatInput').blur();syncChatDock()}
 $('chatInput').addEventListener('focus',()=>{
@@ -4781,7 +4752,7 @@ function dismissRps(){
   if(rpsActive())return;
   if(rpsGame)rpsDismissed=rpsGame.id;
   rpsGame=null;rpsPending=null;renderRps();updateRpsInvite();
-  if(!$('rpsInviteBtn').hidden)$('rpsInviteBtn').focus();else $('poseToggle').focus();
+  if(!$('rpsInviteBtn').hidden)$('rpsInviteBtn').focus();else $('pWave').focus();
 }
 function updateRps(dt){
   rpsTick+=dt;if(rpsTick<.1)return;rpsTick=0;
@@ -4869,7 +4840,6 @@ async function restoreVisit({connect=true,identity=true}={}){
   if(practice.mode==='pray')pose='pray';
   else if(['single','auto'].includes(practice.mode))pose='bow';
   else if(pose==='pray'||pose==='bow')pose='stand';
-  if(worldSpace==='listening'&&pose==='sit'&&listeningSeatAt(me.g.position.x,me.g.position.z)<0)pose='stand';
   practice.pendingStart=pr.pendingStart&&Prayer.nonce(pr.pendingStart.request)?pr.pendingStart:null;practice.pendingControl=pr.pendingControl&&Prayer.nonce(pr.pendingControl.id)?pr.pendingControl:null;practice.stoppedId=pr.stoppedId||null;
   if(pr.remote&&Prayer.nonce(pr.remote.id)){practice.remote=pr.remote;syncRemotePractice()}
   me.bowPhase=practice.elapsed/8;me.speed=0;
@@ -4909,7 +4879,7 @@ function leaveGarden(closeWindow=true,notifyServer=true,keepDevice=false){
   rpsGame=null;rpsPending=null;rpsDismissed=null;renderRps();
   for(const key of [...peers.keys()])removePeer(key);
   disposeBubble('me');me.bubble=null;pendingHello=[];autoJoined=false;userMoved=false;
-  endPractice(false);closePoseMenu();blurChatInput();toggleChatHistory(false);
+  endPractice(false);blurChatInput();toggleChatHistory(false);
   Object.keys(lastSent).forEach(key=>delete lastSent[key]);
   $('chatLog').textContent='';historyKeys.clear();sharedFlowers=null;renderFlowers(localFlowers);
   showExitScreen();updateWho();
