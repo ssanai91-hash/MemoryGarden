@@ -173,13 +173,20 @@ export class GardenRoom extends DurableObject {
     });
     this.bows=result.jobs;this.personalViews.set(id,Prayer.profileView(result.person,now));
     if(legacyId!==id)for(const prior of this.readyPeers().filter(p=>p.a.id===legacyId)){prior.a.ready=false;prior.ws.serializeAttachment(prior.a);try{prior.ws.send(JSON.stringify({t:'replaced'}));prior.ws.close(4002,'personal profile resumed')}catch{}this.broadcast({t:'leave',id:legacyId})}
-    a.id=id;a.personal=true;a.personalSession=session;a.admin=admin;
+    a.id=id;a.personal=true;a.personalSession=session;a.profileRev=result.person.profileRev||0;a.admin=admin;
     return result.person;
   }
-  async rememberPersonal(a){
+  async rememberPersonal(a,editing=false){
     if(!a.personal)return;
-    const person=await this.ctx.storage.transaction(async txn=>{const key='person.'+a.id,p=await txn.get(key);if(!p||p.session!==a.personalSession)return null;const next={...p,name:a.name,look:a.look,dog:a.dog,updatedAt:Date.now()};await txn.put(key,next);return next});
+    const person=await this.ctx.storage.transaction(async txn=>{
+      const key='person.'+a.id,p=await txn.get(key);if(!p||p.session!==a.personalSession)return null;
+      // A background/bow save captured before an edit must never restore the old appearance.
+      if(!editing&&(p.profileRev||0)>(a.profileRev||0))return p;
+      const next={...p,name:a.name,look:a.look,dog:a.dog,profileRev:(p.profileRev||0)+(editing?1:0),updatedAt:Date.now()};
+      await txn.put(key,next);return next;
+    });
     if(person)this.personalViews.set(a.id,Prayer.profileView(person,Date.now()));
+    return person;
   }
   personalHalos(a){
     const f=Prayer.bowProgress(this.bows[a.id],Date.now()),v=this.personalViews.get(a.id),state=Prayer.haloState(f?.halos||v?.halos,Date.now());
@@ -694,7 +701,7 @@ export class GardenRoom extends DurableObject {
     await this.advanceRps();
     await this.rememberVisit(a);
     const peers = this.visiblePeers(a.id);
-    ws.send(JSON.stringify({ t: 'welcome', admin:a.admin?1:0, features:{personal:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+    ws.send(JSON.stringify({ t: 'welcome', admin:a.admin?1:0, features:{personal:1,profileEdit:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
     this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
     return;
   }
@@ -813,16 +820,22 @@ export class GardenRoom extends DurableObject {
       }
       case 'profile': return this.queueAdmission(async()=>{
         const current=ws.deserializeAttachment();if(!current?.ready)return;
-        if(!this.allow(current,'p',2))return;
-        const name=clean(m.name,12)||current.name;
-        if(nameKey(name)!==nameKey(current.name)&&this.nameInUse(name,current.id)){
-          ws.send(JSON.stringify({t:'profile_error',code:'name_taken',name:current.name,look:current.look,dog:current.dog}));return;
-        }
-        const renamed=name!==current.name;
-        current.name=name;current.look=cleanLook(m.look)||cleanLook(current.look);current.dog=cleanDog(m.dog)||current.dog;
-        ws.serializeAttachment(current);
-        if(renamed)await this.rememberVisit(current);else await this.rememberPersonal(current);
-        this.broadcast({t:'profile',id:current.id,name:current.name,look:current.look,dog:current.dog},ws);
+        const error=code=>ws.send(JSON.stringify({t:'profile_error',request:m.request,code,name:current.name,look:current.look,dog:current.dog}));
+        if(m.request!==undefined&&!Prayer.nonce(m.request)){error('invalid');return}
+        if(!this.allow(current,'p',2)){if(m.request)error('slow');return}
+        const name=clean(m.name,12)||current.name,look=cleanLook(m.look)||cleanLook(current.look),dog=cleanDog(m.dog)||current.dog;
+        if(m.request&&(!clean(m.name,12)||!cleanLook(m.look)||!cleanDog(m.dog))){error('invalid');return}
+        if(nameKey(name)!==nameKey(current.name)&&this.nameInUse(name,current.id)){error('name_taken');return}
+        try{
+          // Persist first; the editor applies the new appearance only after this acknowledgement.
+          const personal=await this.rememberPersonal({...current,name,look,dog},true);
+          if(current.personal&&!personal){error('connection');return}
+          const latest=ws.deserializeAttachment();if(!latest?.ready)return;
+          Object.assign(latest,{name,look,dog,profileRev:personal?.profileRev||0});ws.serializeAttachment(latest);
+          const visit=this.visits[latest.id];if(visit?.peer){visit.peer=this.peerInfo(latest);await this.saveVisits()}
+          this.broadcast({t:'profile',id:latest.id,name,look,dog},ws);
+          if(m.request)ws.send(JSON.stringify({t:'profile_saved',request:m.request,name,look,dog,personal:personal?this.personalViews.get(latest.id):null}));
+        }catch{error('storage')}
       });
       case 'chat': {
         if (!this.allow(a, 'c', 1)) return;

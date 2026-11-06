@@ -400,6 +400,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <link rel="stylesheet" href="./assets/entry-screen.css">
 <link rel="stylesheet" href="./assets/garden-panel.css">
 <link rel="stylesheet" href="./assets/quick-actions.css">
+<link rel="stylesheet" href="./assets/profile-editor.css">
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
@@ -575,7 +576,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 1.6</small>
+    <small class="entry-version">ver 1.7</small>
   </form>
  </main>
 </div>
@@ -833,6 +834,7 @@ import {addAlpineRange} from './assets/garden-mountains.js';
 import {createFramePacer,qualityDecision,createShadowBudget,disableActorShadows,createPowerSaving} from './assets/garden-performance.js';
 import {createGardenLightSlots} from './assets/garden-light-slots.js';
 import {makeBlackPoodle,isPhotoPoodle} from './assets/black-poodle.js';
+import {createProfileEditor} from './assets/profile-editor.js';
 const entryScreen=await window.gardenEntryReady;
 (function(){
 // Preserve r128's explicit C(hex).convertSRGBToLinear() inputs. Output remains sRGB.
@@ -2387,7 +2389,7 @@ function puffDust(x,z){
   const d=dust.pool[dust.i++%dust.pool.length];d.life=1;d.sp.visible=true;d.sp.position.set(x+(Math.random()-.5)*.2,.12,z+(Math.random()-.5)*.2);d.sp.scale.setScalar(.25);
 }
 function updateDust(dt){for(const d of dust.pool){if(!d.sp.visible)continue;d.life-=dt*1.6;if(d.life<=0){d.sp.visible=false;continue}d.sp.position.y+=dt*.35;d.sp.scale.setScalar(.25+(1-d.life)*.45);d.sp.material.opacity=d.life*.55}}
-function makePerson(L){
+function makePerson(L,parent=scene,preview=false){
   const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);rig.scale.setScalar(.9);
   const legs=[],arms=[];
   const soft=c=>matCache['s'+c]||(matCache['s'+c]=new THREE.MeshStandardMaterial({color:C(c),roughness:.75}));
@@ -2445,6 +2447,7 @@ function makePerson(L){
     mesh(SPH,fm,0,-.035,.42,.05,.012,.012,head);
   }
   if(L.hat){const hm=soft(L.shirt);mesh(personGeo.crown,hm,0,.33,-.02,1,1,1,head);mesh(personGeo.brim,hm,0,.24,.06,1,1,.95,head)}
+  if(preview){parent.add(g);return{g}}
   const cup=new THREE.Group(),mug=new THREE.Mesh(new THREE.CylinderGeometry(.044,.04,.11,14),M(0xf2efe8));cup.add(mug);
   const coffee=new THREE.Mesh(new THREE.CylinderGeometry(.037,.037,.004,14),M(0x4a2c1a));coffee.position.y=.052;cup.add(coffee);
   const mugHandle=new THREE.Mesh(new THREE.TorusGeometry(.03,.007,6,14),M(0xf2efe8));mugHandle.position.x=.053;cup.add(mugHandle);
@@ -2469,7 +2472,7 @@ function makePerson(L){
   });
   const wood=makeCarriedFirewood();wood.position.set(0,.27,.46);wood.visible=false;torso.add(wood);wood.traverse(n=>n.userData.handProp=true);
   const tag=makeTag('');tag.position.y=2.25;g.add(tag);
-  scene.add(g);
+  parent.add(g);
   const contactMeshes=[];
   rig.traverse(node=>{if(node.isMesh&&!node.userData.handProp)contactMeshes.push(node)});
   g.add(blobShadow(.62));
@@ -2893,7 +2896,7 @@ function startFireCare(count=1){
 function updateFireCare(dt){
   const a=fireAction;if(!a)return;me.woodCount=a.count||1;
   a.elapsed+=dt;a.total+=dt;
-  if(worldSpace!=='garden'||!room?.connected()||visitEnded||a.total>38||cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('fireLoadDialog').open||$('listeningAudio').open||calm.mode||rpsGame?.status==='playing'){cancelFireCare();return}
+  if(worldSpace!=='garden'||!room?.connected()||visitEnded||a.total>38||cam.sky||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('profileEditor')?.open||$('fireLoadDialog').open||$('listeningAudio').open||calm.mode||rpsGame?.status==='playing'){cancelFireCare();return}
   const expected={approach:'stand',waiting:'stand',pickup:'woodpick',carry:'woodcarry',feed:'woodfeed',confirm:'woodfeed'}[a.phase];
   if(pose!==expected||target&&!target.fireCare){cancelFireCare();return}
   if(a.phase==='approach'||a.phase==='carry'){
@@ -2949,7 +2952,31 @@ $('pWave').onclick=()=>setPose('wave');$('pSit').onclick=()=>setPose('sit');$('p
 
 function startStandingPrayer(){preparePracticeInPlace();setPose('standing_pray')}
 
-$('lookBtn').onclick=()=>{const g=myLook.gender||store.get('garden.gender');applyMyLook(randLook(g),myDog,true);if(room&&room.kind==='ws')room.profile();toast('새 모습이에요 · 마음에 들 때까지 눌러 보세요')};
+const profileEditor=createProfileEditor({
+  THREE,randomLook:randLook,
+  current:()=>hasEntered&&!visitEnded?{name:myNick,look:myLook}:null,
+  makePreview(look,parent){
+    const actor=makePerson(look,parent,true);
+    const sharedGeometry=new Set([BOX,...Object.values(personGeo).filter(v=>v.isBufferGeometry)]);
+    const sharedMaterials=new Set([...Object.values(matCache),...Object.values(personGeo).filter(v=>v.isMaterial)]);
+    return{root:actor.g,dispose(){
+      actor.g.removeFromParent();const geometries=new Set(),materials=new Set();
+      actor.g.traverse(node=>{if(node.geometry&&!sharedGeometry.has(node.geometry))geometries.add(node.geometry);for(const m of(Array.isArray(node.material)?node.material:[node.material]))if(m&&!sharedMaterials.has(m))materials.add(m)});
+      geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());
+    }};
+  },
+  prepare(){closeOtherMenus('profile');cancelFireCare();target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k])},
+  async save(draft){
+    if(!room?.connected())throw Error('connection');
+    const saved=await room.saveProfile({...draft,dog:myDog});
+    if(visitEnded||!hasEntered)return;
+    myNick=saved.name;store.set('garden.name',myNick);applyMyLook(saved.look,saved.dog,false);store.set('garden.gender',myLook.gender);
+    if(saved.personal)receivePersonal(saved.personal);
+    refreshMine();restoreLastBubble('me',shownName());renderVisitors();sendDirty=true;saveVisit();toast('이름과 모습을 저장했어요');
+  },
+  onClose(){Object.keys(keys).forEach(k=>delete keys[k]);resetQualitySampling();if(hasEntered&&!visitEnded)$('lookBtn').focus({preventScroll:true})}
+});
+$('lookBtn').onclick=()=>profileEditor.open();
 function syncStandingPrayerBubble(key,P,state,name){
   const praying=state==='standing_pray'&&P.speed<.3;P.standingPrayer=praying;
   if(praying){P.prayerBubble=true;showBubble(key,name,'기도중...')}
@@ -2977,7 +3004,7 @@ function setSkyView(open,fromHistory=false){
 $('skyViewBtn').onclick=()=>setSkyView(true);
 $('skyReturn').onclick=()=>setSkyView(false);
 const keys={};
-addEventListener('keydown',e=>{if(!$('welcome').hidden||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('fireLoadDialog').open||$('listeningAudio').open||e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;keys[e.code]=true});
+addEventListener('keydown',e=>{if(!$('welcome').hidden||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('profileEditor')?.open||$('fireLoadDialog').open||$('listeningAudio').open||e.target.closest?.('input,textarea,select,[contenteditable=true]'))return;keys[e.code]=true});
 addEventListener('keyup',e=>keys[e.code]=false);
 let move={x:0,y:0},target=null;
 const joy=$('joy'),knob=$('knob');let joyId=null;
@@ -3090,8 +3117,9 @@ if(document.fonts)document.fonts.ready.then(()=>{refreshMine();resolveNames()});
 
 function applyMyLook(look,dog,save){
   const pos=me.g.position.clone(),rot=me.g.rotation.y,dpos=myDogObj.g.position.clone();
+  const motion={speed:me.speed,walkT:me.walkT,bowPhase:me.bowPhase,lastDrink:me.lastDrink,haloUntil:me.haloUntil,haloLevel:me.haloLevel};
   disposeUmbrella(me);me.halo?.dispose();me.g.parent?.remove(me.g);myDogObj.dispose?.();myDogObj.g.parent?.remove(myDogObj.g);
-  myLook=look;myDog=dog;me=makePerson(myLook);myDogObj=makeDog(myDog);
+  myLook=look;myDog=dog;me=makePerson(myLook);Object.assign(me,motion);myDogObj=makeDog(myDog);
   me.g.position.copy(pos);me.g.rotation.y=rot;myDogObj.g.position.copy(dpos);syncListeningActors();refreshMine();restoreLastBubble('me',shownName());
   store.set('mem.look',JSON.stringify(myLook));savePetPreference(myDog);store.set('garden.pet',petKind(myDog));
   if(save&&db&&myId)db.doc('data/users/'+myId+'/garden').set({look:myLook,dog:myDog}).catch(()=>{});
@@ -4889,7 +4917,7 @@ function showExitScreen(){
 }
 function leaveGarden(closeWindow=true,notifyServer=true,keepDevice=false){
   if(worldSpace==='listening')exitListening(true);
-  candleUI?.endVisit();gardenBoard.close(true);if($('fireLoadDialog').open)$('fireLoadDialog').close();if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
+  profileEditor.close(true);candleUI?.endVisit();gardenBoard.close(true);if($('fireLoadDialog').open)$('fireLoadDialog').close();if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
   clearVisit(keepDevice);visitToken='';fireWelcomeShown=false;isGardenAdmin=false;$('kickAllBtn').hidden=true;$('kickDuplicatesBtn').hidden=true;
   const old=room;room=null;
@@ -4961,6 +4989,7 @@ addEventListener('popstate',event=>{
   const view=event.state&&event.state.gardenView;
   if(candleUI?.isOpen()){candleUI.close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
   if($('fireLoadDialog').open){$('fireLoadDialog').close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
+  if(profileEditor.isOpen()){profileEditor.close();if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if($('qualityDialog').open){$('qualityDialog').close();if(worldSpace==='listening')history.pushState({gardenView:'listening'},'',location.href);else if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
   if($('listeningAudio').open){$('listeningAudio').close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
   if(view==='listening'){enterListening(true);return}
@@ -4999,6 +5028,7 @@ function startGardenConnection(){
 function connectRoomServer(base,code){
   const peersById=new Map(),connL=[],peerL=[];
   let ws=null,connected=false,you=null,retry=0,stop=false,emitQueued=false,local={},sentState='';
+  let profileSave=null;
   let pingTimer=null,retryTimer=null,handshakeTimer=null,lastReceived=0,connectionStartedAt=0,connectionStatus='정원에 연결하는 중…';
   const api={kind:'ws',code,clockOffset:0,
     connected:()=>connected,status:()=>connectionStatus,
@@ -5009,10 +5039,20 @@ function connectRoomServer(base,code){
       if(k!==sentState&&Number.isFinite(st.x)&&connected&&api.send({t:'state',s:st}))sentState=k;
       if(connected&&('look' in patch||'dog' in patch||'nick' in patch))api.profile();
       return Promise.resolve()},
-    profile(){if(connected)api.send({t:'profile',name:myNick,look:myLook,dog:myDog})},
+    profile(){if(connected&&!profileSave)api.send({t:'profile',name:myNick,look:myLook,dog:myDog})},
+    saveProfile(draft){
+      if(!connected)return Promise.reject(Error('connection'));
+      if(api.profileEditorVersion!==1)return Promise.reject(Error('unsupported'));
+      if(profileSave)return Promise.reject(Error('slow'));
+      const request=crypto.randomUUID().replace(/-/g,'');
+      return new Promise((resolve,reject)=>{
+        profileSave={request,resolve,reject,timer:setTimeout(()=>{failProfileSave('connection');api.reconnect()},12000)};
+        if(!api.send({t:'profile',request,...draft}))failProfileSave('connection');
+      });
+    },
     reconnect(){if(stop||visitEnded||!hasEntered)return false;disconnected('정원 연결을 다시 확인하는 중…');clearTimeout(retryTimer);retryTimer=null;open();return true},
     close(){
-      stop=true;clearTimeout(retryTimer);clearTimeout(handshakeTimer);clearInterval(pingTimer);
+      stop=true;failProfileSave('connection');clearTimeout(retryTimer);clearTimeout(handshakeTimer);clearInterval(pingTimer);
       removeEventListener('online',wake);removeEventListener('focus',wake);removeEventListener('pageshow',wake);
       document.removeEventListener('visibilitychange',wake);document.removeEventListener('resume',wake);
       const socket=ws;ws=null;if(socket)try{socket.close(1000,'left garden')}catch(e){}
@@ -5021,7 +5061,8 @@ function connectRoomServer(base,code){
   function emit(){if(emitQueued||stop)return;emitQueued=true;requestAnimationFrame(()=>{emitQueued=false;if(stop)return;
     const list=[...peersById.values()].map(p=>({peer:p.id,quiet:!!p.quiet,sameTab:false,kind:'viewer',by:null,guest:false,presence:Object.assign({},p.s||{},{look:p.look,dog:p.dog,nick:p.name,say:p.lastChat||null,away:!!p.away,bow:p.bow||null})}));
     peerL.forEach(fn=>fn({peers:list}))})}
-  function setConn(c,message){connected=c;if(!c)cancelFireCare();gardenBoard.connection(c);candleUI?.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
+  function failProfileSave(code){if(!profileSave)return;const pending=profileSave;profileSave=null;clearTimeout(pending.timer);pending.reject(Error(code))}
+  function setConn(c,message){connected=c;if(!c)failProfileSave('connection');if(!c)cancelFireCare();gardenBoard.connection(c);candleUI?.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
   function applyShared(sh){
     if(!sh)return;
     if(sh.campfire){
@@ -5066,11 +5107,17 @@ function connectRoomServer(base,code){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;isGardenAdmin=m.admin===1;$('kickAllBtn').hidden=!isGardenAdmin;$('kickDuplicatesBtn').hidden=!isGardenAdmin;
           if(gardenIdentity.credentials().personalCode&&m.features?.personal!==1){api.close();room=null;hasEntered=false;clearVisit();openNameDialog();gardenIdentity.fail('개인 기록을 지원하는 최신 정원에 연결해 주세요.');break}
           api.clockOffset=(m.now||Date.now())-Date.now();if(m.personal){receivePersonal(m.personal,true);personalUpdatePending=false;}
-          api.selfId=you;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
+          api.selfId=you;api.profileEditorVersion=m.features?.profileEdit===1?1:0;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});if(api.bowVersion){practice.serverRev=0;if(practice.pendingStart)api.send(practice.pendingStart);else if(m.bow)receivePractice(m.bow,true);else if(['auto','single'].includes(practice.mode)){const paused=practice.paused;requestPracticeStart();if(paused)requestPracticeControl('pause')}if(practice.pendingControl)api.send(practice.pendingControl)}break;
         case 'personal_state':receivePersonal(m.personal);break;
         case 'personal_error':{const message=m.code==='name_taken'?'이미 정원에 같은 이름이 있어요. 다른 이름으로 입장해 주세요.':m.code==='slow'?'잠시 후 다시 입장해 주세요.':m.code==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':m.code==='storage'?'개인 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.':'개인 코드 형식을 확인해 주세요.';api.close();room=null;hasEntered=false;if(m.code!=='name_taken')clearVisit();practice.remote=null;practice.mode='idle';openNameDialog();gardenIdentity.fail(message);break}
+        case 'profile_saved':{
+          if(!profileSave||m.request!==profileSave.request)break;
+          if(typeof m.name!=='string'||!validLook(m.look)||!validDog(m.dog)){failProfileSave('invalid');break}
+          const pending=profileSave;profileSave=null;clearTimeout(pending.timer);pending.resolve(m);break;
+        }
         case 'profile_error':{
+          if(m.request){if(m.request===profileSave?.request)failProfileSave(m.code);break}
           if(m.code!=='name_taken')break;
           myNick=m.name;store.set('garden.name',myNick);applyMyLook(m.look,m.dog,false,myNick);refreshMine();restoreLastBubble('me',shownName());sendDirty=true;saveVisit();
           openNameDialog(true);gardenIdentity.fail('이미 정원에 같은 이름이 있어요. 다른 이름으로 변경해 주세요.');break;
@@ -5318,7 +5365,7 @@ function tick(){
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
-  if(cam.sky||candleUI?.isOpen()||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('fireLoadDialog').open||$('listeningAudio').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
+  if(cam.sky||candleUI?.isOpen()||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('profileEditor')?.open||$('fireLoadDialog').open||$('listeningAudio').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
   if(mag>0&&pose!=='stand'&&pose!=='woodcarry'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
   if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
