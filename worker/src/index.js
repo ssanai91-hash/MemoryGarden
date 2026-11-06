@@ -131,17 +131,19 @@ export class GardenRoom extends DurableObject {
     if(m.personalCode===undefined)return null; // old clients retain temporary visits
     if(!Prayer.validCode(m.personalCode)||!['create','restore'].includes(m.personalAction))throw Error('code');
     const hash=personalHash;
+    const admin=Prayer.isAdminCode(m.personalCode);
     const codeHash=await hash('garden-code-v1:'+Prayer.normalizeCode(m.personalCode)),id=(await hash('garden-person-v1:'+codeHash)).slice(0,20),now=Date.now(),session=crypto.randomUUID();
     const result=await this.ctx.storage.transaction(async txn=>{
       const key='person.'+id,jobs=(await txn.get('bowPractices'))||{};
       let person=await txn.get(key);
-      if(/^[0-9]{5}$/.test(Prayer.normalizeCode(m.personalCode))&&m.personalAction==='create'){
+      // 관리자 코드는 발급 예약 없이 쓰고, 기록이 없으면 처음 입장할 때 만든다.
+      if(!admin&&/^[0-9]{5}$/.test(Prayer.normalizeCode(m.personalCode))&&m.personalAction==='create'){
         if(!/^[a-f0-9]{64}$/.test(m.personalRegistration||''))throw Error('code');
         const reservation=await txn.get('personal.code.reserve.'+codeHash),requestHash=await hash('garden-issue-v1:'+m.personalRegistration);
         if(!reservation||reservation.requestHash!==requestHash)throw Error('code');
       }
       if(!person){
-        if(m.personalAction!=='create')throw Error('missing');
+        if(m.personalAction!=='create'&&!admin)throw Error('missing');
         person={id,codeHash,createdAt:now,updatedAt:now,name:clean(m.name,12)||'친구',look:cleanLook(m.look,m.name),dog:cleanDog(m.dog),progress:{108:0,3000:0},completed:{108:0,3000:0},totalBows:0,highestHalo:0,halos:{whiteUntil:0,redUntil:0},bow:null};
         // Claim only a server-confirmed previous visit, once. Local numbers and
         // client halo timestamps never grant rewards to a permanent profile.
@@ -154,7 +156,7 @@ export class GardenRoom extends DurableObject {
     });
     this.bows=result.jobs;this.personalViews.set(id,Prayer.profileView(result.person,now));
     if(legacyId!==id)for(const prior of this.readyPeers().filter(p=>p.a.id===legacyId)){prior.a.ready=false;prior.ws.serializeAttachment(prior.a);try{prior.ws.send(JSON.stringify({t:'replaced'}));prior.ws.close(4002,'personal profile resumed')}catch{}this.broadcast({t:'leave',id:legacyId})}
-    a.id=id;a.personal=true;a.personalSession=session;
+    a.id=id;a.personal=true;a.personalSession=session;a.admin=admin;
     return result.person;
   }
   async rememberPersonal(a){
@@ -183,7 +185,7 @@ export class GardenRoom extends DurableObject {
         // inside this transaction, with a fixed 12.5 KB pool for 100,000 codes.
         const values=new Uint32Array(1);do{crypto.getRandomValues(values)}while(values[0]>=4294900000);
         const start=values[0]%100000;let slot=-1;
-        for(let i=0;i<100000;i++){const candidate=(start+i)%100000;if(!(pool[candidate>>3]&(1<<(candidate&7)))){slot=candidate;break}}
+        for(let i=0;i<100000;i++){const candidate=(start+i)%100000;if(String(candidate).padStart(5,'0')===Prayer.ADMIN_CODE)continue;if(!(pool[candidate>>3]&(1<<(candidate&7)))){slot=candidate;break}}
         if(slot<0)throw Error('full');pool[slot>>3]|=1<<(slot&7);
         const next=String(slot).padStart(5,'0'),codeHash=await personalHash('garden-code-v1:'+next);
         await txn.put('personal.code.pool',pool);await txn.put('personal.code.reserve.'+codeHash,{requestHash});await txn.put('personal.issue.'+requestHash,next);return next;
@@ -659,7 +661,7 @@ export class GardenRoom extends DurableObject {
       for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
       if(ghosts.length)await this.saveVisits();
       const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', features:{personal:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+      ws.send(JSON.stringify({ t: 'welcome', admin:a.admin?1:0, features:{personal:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
       this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
       return;
     }
@@ -679,6 +681,26 @@ export class GardenRoom extends DurableObject {
       }
       case 'leave': {
         await this.departVisit(ws,true);
+        return;
+      }
+      case 'kick_all': {
+        // 관리자만. 접속 중인 다른 사람과 자리 비움으로 남은 사람을 모두 내보낸다.
+        // 각자의 절 진행·기록·외형은 일반 '나가기'와 같은 경로로 저장되고, 같은 코드로 다시 들어올 수 있다.
+        if(!a.admin||!this.allow(a,'kick',1))return;
+        let count=0;const kicked=new Set();
+        for(const p of this.readyPeers()){
+          if(p.ws===ws||p.a.id===a.id)continue;
+          try{p.ws.send(JSON.stringify({t:'kicked'}))}catch{}
+          await this.departVisit(p.ws,true);if(!kicked.has(p.a.id)){kicked.add(p.a.id);count++}
+        }
+        const live=new Set(this.readyPeers().map(p=>p.a.id));
+        for(const [id,visit] of Object.entries(this.visits)){
+          if(id===a.id||live.has(id)||!visit?.peer||visit.revoked)continue;
+          this.visits[id]={revoked:true,lastSeen:Date.now(),expiresAt:Date.now()+VISIT_MEMORY_MS};this.broadcast({t:'leave',id});
+          if(!kicked.has(id)){kicked.add(id);count++}
+        }
+        await this.saveVisits();
+        ws.send(JSON.stringify({t:'kick_done',count}));
         return;
       }
       case 'state': {

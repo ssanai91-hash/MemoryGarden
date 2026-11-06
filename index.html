@@ -398,7 +398,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
   <div id="gardenDetails" hidden>
   <div class="eyebrow">A MOMENT OF STILLNESS</div>
   <div class="sub">마음을 내려놓고, 잠시 머무는 곳</div>
-  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button><button id="homeInstallBtn" type="button">바탕화면에 추가</button><button id="qualityBtn" type="button">화면 품질</button></div>
+  <div class="room-actions"><button class="primary" id="inviteBtn" type="button">친구 부르기</button><button id="refreshBtn" type="button">새로고침</button><button id="leaveBtn" type="button" hidden>나가기</button><button id="kickAllBtn" type="button" hidden>모두 내보내기</button><button id="homeInstallBtn" type="button">바탕화면에 추가</button><button id="qualityBtn" type="button">화면 품질</button></div>
   <div class="who"><span class="dot off" id="dot"></span><span id="whoText" role="status">정원에 연결하는 중…</span></div>
   <div class="garden-actions">
     <div class="garden-action-row"><button id="musicBtn" type="button" aria-expanded="false">소리 · 음악</button><button id="thunderSoundBtn" type="button" aria-pressed="true">천둥 소리 끄기</button></div>
@@ -4909,7 +4909,7 @@ function leaveGarden(closeWindow=true,notifyServer=true){
   if(worldSpace==='listening')exitListening(true);
   candleUI?.endVisit();gardenBoard.close(true);if($('fireLoadDialog').open)$('fireLoadDialog').close();if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
-  clearVisit();visitToken='';fireWelcomeShown=false;
+  clearVisit();visitToken='';fireWelcomeShown=false;isGardenAdmin=false;$('kickAllBtn').hidden=true;
   const old=room;room=null;
   if(old){if(notifyServer)old.send({t:'leave'});old.close()}
   if(cam.sky)setSkyView(false,true);
@@ -4932,6 +4932,15 @@ function beginManualEntry(forceChoose=false){
   clock.getDelta();installGardenHistory();requestGardenFrame();if(!forceChoose&&restorePersonalEntry()){updateWho();return}openNameDialog(true);updateWho();
 }
 $('leaveBtn').onclick=showLeaveConfirm;
+// 관리자(개발자 코드 99999)만 보이는 버튼. 서버도 관리자 접속인지 다시 확인한다.
+var isGardenAdmin=false;
+$('kickAllBtn').onclick=()=>{
+  if(!isGardenAdmin||!room||room.kind!=='ws'||!room.connected()){toast('정원에 연결된 뒤 다시 눌러 주세요');return}
+  const n=peersById.size;
+  if(!confirm(`정원에 있는 ${n?n+'명을 ':'사람을 '}모두 내보낼까요?\n각자의 기록은 저장되고, 같은 코드로 다시 들어올 수 있어요.`))return;
+  $('kickAllBtn').disabled=true;if(!room.send({t:'kick_all'})){$('kickAllBtn').disabled=false;toast('보내지 못했어요')}
+  setTimeout(()=>{$('kickAllBtn').disabled=false},8000);
+};
 
 $('reenterBtn').onclick=()=>beginManualEntry();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveVisit()});
@@ -5065,7 +5074,7 @@ function connectRoomServer(base,code){
       },20000)};
     socket.onmessage=ev=>{if(stop||visitEnded||ws!==socket)return;let m;try{m=JSON.parse(ev.data)}catch(e){return}if(!m||typeof m.t!=='string')return;lastReceived=Date.now();
       switch(m.t){
-        case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;
+        case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;isGardenAdmin=m.admin===1;$('kickAllBtn').hidden=!isGardenAdmin;
           if(gardenIdentity.credentials().personalCode&&m.features?.personal!==1){api.close();room=null;hasEntered=false;clearVisit();openNameDialog();gardenIdentity.fail('개인 기록을 지원하는 최신 정원에 연결해 주세요.');break}
           api.clockOffset=(m.now||Date.now())-Date.now();if(m.personal)receivePersonal(m.personal,true);
           api.selfId=you;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
@@ -5085,6 +5094,8 @@ function connectRoomServer(base,code){
           if(m.code==='ended'||m.code==='locked')api.send({t:'rps_sync'});break;
         }
         case 'replaced':api.close();leaveGarden(false,false);setConn(false,'다른 기기에서 내 기록으로 입장했어요');break;
+        case 'kicked':api.close();leaveGarden(false,false);setConn(false,'관리자가 정원을 정리했어요 · 기록은 저장됐어요');toast('관리자가 정원을 정리했어요 · 기록은 저장됐고 다시 입장할 수 있어요');break;
+        case 'kick_done':$('kickAllBtn').disabled=false;toast(m.count?`${m.count}명을 내보냈어요 · 모두 기록이 저장됐어요`:'내보낼 사람이 없어요');break;
         case 'prayer_place':break; // Ignore legacy seat-allocation messages: prayer stays in place.
         case 'visit_ended':leaveGarden(false,false);break;
         case 'join':if(m.peer&&m.peer.id!==you){peersById.set(m.peer.id,{...m.peer,quiet:false});emit()}break;

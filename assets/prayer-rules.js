@@ -16,6 +16,8 @@
   const CODE_ALPHABET='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   const normalizeCode=value=>typeof value==='string'?value.toUpperCase().replace(/[\s-]/g,''):'';
   const validCode=value=>/^(?:[0-9]{5}|[2-9A-HJ-NP-Z]{20})$/.test(normalizeCode(value));
+  // 개발자·관리자 코드. 일반 발급에서 제외하고, 이 코드로 입장하면 '모두 내보내기'를 쓸 수 있다.
+  const ADMIN_CODE='99999',isAdminCode=value=>normalizeCode(value)===ADMIN_CODE;
   const formatCode=value=>/^[0-9]{5}$/.test(normalizeCode(value))?normalizeCode(value):normalizeCode(value).match(/.{1,4}/g)?.join('-')||'';
   function cleanHalos(value,now){
     const valid=(v,max)=>Number.isFinite(v)&&v>now&&v<=now+max?v:0;
@@ -51,5 +53,5 @@
       halos,haloUntil:halo.until,haloLevel:halo.level,completedAt:earned?finishedAt:job.completedAt||0,finishedAt,done};
   }
   function settleBow(job,now){const f=bowProgress(job,now);if(!f)return null;const {done,finishedAt,...value}=f;return{...value,at:now,rev:job.rev+1}}
-  root.GardenPrayer=Object.freeze({LAYOUT,LIFE_MS,MAX,BOW_MS,DAY_MS,HALO_WHITE_MS,HALO_RED_MS,normalizeCode,validCode,formatCode,cleanHalos,haloState,profileView,accountProfile,bowProgress,settleBow,clean,inside,nearBox,active,display,publicState,nonce});
+  root.GardenPrayer=Object.freeze({LAYOUT,LIFE_MS,MAX,BOW_MS,DAY_MS,HALO_WHITE_MS,HALO_RED_MS,normalizeCode,validCode,formatCode,ADMIN_CODE,isAdminCode,cleanHalos,haloState,profileView,accountProfile,bowProgress,settleBow,clean,inside,nearBox,active,display,publicState,nonce});
 })(globalThis);
