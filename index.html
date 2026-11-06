@@ -580,7 +580,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 1.1</small>
+    <small class="entry-version">ver 1.2</small>
   </form>
  </main>
 </div>
@@ -1539,6 +1539,7 @@ function stopListeningMovement(){cancelFireCare();pendingStoke=false;clearTimeou
 function enterListening(fromHistory=false,restored=null){
   if(!hasEntered||visitEnded||worldSpace==='listening')return;
   if(room&&room.connected()&&!room.listeningVersion){toast('음악방 서버가 아직 준비되지 않았어요. 최신 버전으로 반영해 주세요.');return}
+  restoreSeatCamera();
   const back=restored&&restored.roomReturn;listening.returnPoint=back&&[back.x,back.z,back.h].every(Number.isFinite)?back:{x:me.g.position.x,z:me.g.position.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist}};
   closeOtherMenus('listening');endCalm(true);endPractice(false);if(cam.sky)setSkyView(false,true);
   worldSpace='listening';quietThunder();makeListeningScene();document.body.classList.add('listening-room');
@@ -1549,6 +1550,7 @@ function enterListening(fromHistory=false,restored=null){
 }
 function exitListening(fromHistory=false){
   if(worldSpace!=='listening')return;if($('listeningAudio').open)$('listeningAudio').close();
+  restoreSeatCamera();
   worldSpace='garden';document.body.classList.remove('listening-room');
   const fallback=hutLocal(.6,1.25),back=listening.returnPoint||{...fallback,h:HUT.h+Math.PI},p=collide(back.x,back.z,.4,'garden');
   me.g.position.set(p[0],0,p[1]);me.g.rotation.y=back.h;myDogObj.g.position.set(p[0]+.8,0,p[1]);pose='stand';
@@ -1558,10 +1560,10 @@ function exitListening(fromHistory=false){
 }
 function sitListening(preferred){
   if(worldSpace!=='listening')return;
-  if(listeningSeatAt(me.g.position.x,me.g.position.z)>=0&&pose==='sit'){pose='stand';me.g.position.z+=1.05;stopListeningMovement();return}
+  if(listeningSeatAt(me.g.position.x,me.g.position.z)>=0&&pose==='sit'){pose='stand';me.g.position.z+=1.05;stopListeningMovement();syncPoseButtons();sendPresence();saveVisit();return}
   const seats=LISTENING_SEATS.filter(p=>![...peers.values()].some(e=>e.space==='listening'&&Math.hypot(e.x-p.x,e.z-p.z)<.4));
   seats.sort((a,b)=>Math.hypot(a.x-me.g.position.x,a.z-me.g.position.z)-Math.hypot(b.x-me.g.position.x,b.z-me.g.position.z));
-  if(!seats.length){toast('의자에 친구들이 모두 앉아 있어요');return}const p=Number.isInteger(preferred)&&seats.includes(LISTENING_SEATS[preferred])?LISTENING_SEATS[preferred]:seats[0];endPractice(false);me.g.position.set(p.x,0,p.z);me.g.rotation.y=Math.PI;pose='sit';cam.yaw=0;cam.dist=4.2;cam.pitch=.18;stopListeningMovement();syncPoseButtons();sendPresence();saveVisit();
+  if(!seats.length){toast('의자에 친구들이 모두 앉아 있어요');return}const p=Number.isInteger(preferred)&&seats.includes(LISTENING_SEATS[preferred])?LISTENING_SEATS[preferred]:seats[0];rememberSeatCamera();endPractice(false);me.g.position.set(p.x,0,p.z);me.g.rotation.y=Math.PI;pose='sit';cam.yaw=0;cam.dist=4.2;cam.pitch=.18;stopListeningMovement();syncPoseButtons();sendPresence();saveVisit();
 }
 function listeningCollide(x,z,r){
   x=THREE.MathUtils.clamp(x,-5.55+r,5.55-r);z=THREE.MathUtils.clamp(z,-3.0+r,5.3-r);
@@ -1650,7 +1652,7 @@ const onPyeongsang=(x,z)=>{const l=hutToLocal(x,z);return l.lx>-2.2&&l.lx<-.05&&
 const nearFallsCalm=(x,z)=>{const d=Math.hypot(x-FALLS.x,z-FALLS.z);return d>FALLS.poolR+.3&&d<11};
 const fmtMin=sec=>{sec=Math.floor(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')};
 function startCalm(mode){
-  if(calm.mode)return;endPractice(false);target=null;marker.visible=false;
+  if(calm.mode)return;restoreSeatCamera();endPractice(false);target=null;marker.visible=false;
   if(mode==='nap'){me.g.position.x=NAP_SPOT.x;me.g.position.z=NAP_SPOT.z;me.g.rotation.y=HUT.h+Math.PI/2;pose='lie';cam.yaw=HUT.h;cam.dist=6.5;cam.pitch=.38}
   else{const dx=FALLS.x-me.g.position.x,dz=FALLS.z-me.g.position.z;me.g.rotation.y=Math.atan2(dx,dz);pose='sit';cam.yaw=Math.atan2(-dx,-dz);cam.dist=7.5;cam.pitch=.16}
   calm.mode=mode;calm.start=performance.now();calm.told5=false;sendDirty=true;syncPoseButtons();
@@ -2781,8 +2783,22 @@ const shownName=()=>myNick||myName;
 function dogLabel(d){return `${String(d.n||'').slice(0,8)}(${petDescription(d)})`}
 function refreshMine(){setTag(me.tag,shownName());$('mine').textContent='함께 걷는 '+(petKind(myDog)==='cat'?'고양이: ':'강아지: ')+petDescription(myDog)}
 refreshMine();
-let pose='stand',sendDirty=true;
-function syncPoseButtons(){const map={wave:'pWave',sit:'pSit',lie:'pLie'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k))}
+let pose='stand',sendDirty=true,seatCamera=null;
+const seatedCameraPoses=['sit','coffee','beer','soda','soju','cheers','makgeolli'];
+function rememberSeatCamera(){
+  if(!seatCamera)seatCamera={space:worldSpace,yaw:cam.sky?cam.gardenYaw:cam.yaw,pitch:cam.pitch,dist:cam.dist};
+}
+function restoreSeatCamera(){
+  if(!seatCamera)return;
+  const previous=seatCamera;seatCamera=null;
+  if(previous.space!==worldSpace)return;
+  if(cam.sky)cam.gardenYaw=previous.yaw;else cam.yaw=previous.yaw;
+  cam.pitch=previous.pitch;cam.dist=previous.dist;
+}
+function syncPoseButtons(){
+  if(!seatedCameraPoses.includes(pose))restoreSeatCamera();
+  const map={wave:'pWave',sit:'pSit',lie:'pLie'};for(const k in map)$(map[k]).setAttribute('aria-pressed',String(pose===k));
+}
 // Picture actions never choose a seat or move the visitor to another location.
 function setPose(p){
   if(!hasEntered||visitEnded)return;
@@ -2810,6 +2826,7 @@ function sitNearest(){
   const px=me.g.position.x,pz=me.g.position.z,taken=sp=>[...peers.values()].some(e=>(e.space||'garden')==='garden'&&Math.hypot(e.x-sp.x,e.z-sp.z)<.4);
   let best=null,bd=Infinity;seats.forEach(sp=>{const d=Math.hypot(sp.x-px,sp.z-pz);if(!taken(sp)&&d<bd){bd=d;best=sp}});
   if(!best||bd>18)return;
+  rememberSeatCamera();
   move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
   me.g.position.set(best.x,0,best.z);me.g.rotation.y=best.h;me.speed=0;userMoved=true;
   myDogObj.g.position.set(best.x-Math.sin(best.h)*.9+Math.cos(best.h)*.6,0,best.z-Math.cos(best.h)*.9-Math.sin(best.h)*.6);
@@ -2820,6 +2837,7 @@ function sitAtFire(){
   const taken=i=>[...peers.values()].some(e=>(e.space||'garden')==='garden'&&Math.hypot(e.x-FIRE_SEATS[i].x,e.z-FIRE_SEATS[i].z)<.4);
   let best=-1,bd=Infinity;FIRE_SEATS.forEach((sp,i)=>{const d=Math.hypot(sp.x-me.g.position.x,sp.z-me.g.position.z);if(!taken(i)&&d<bd){bd=d;best=i}});
   if(best<0){toast('모닥불 자리가 가득 찼어요');return}
+  rememberSeatCamera();
   const sp=FIRE_SEATS[best];move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
   me.g.position.set(sp.x,0,sp.z);me.g.rotation.y=Math.atan2(-sp.x,-sp.z);me.speed=0;userMoved=true;
   myDogObj.g.position.set(sp.x*1.18,0,sp.z*1.18);cam.yaw=me.g.rotation.y+Math.PI;cam.pitch=.22;cam.dist=7.5;
@@ -4324,7 +4342,7 @@ function enterPocha(){
   const taken=sp=>[...peers.values()].some(e=>(e.space||'garden')==='garden'&&Math.hypot(e.x-sp.x,e.z-sp.z)<.3);
   const free=STOOLS.filter(sp=>!taken(sp));if(!free.length){toast('포차 자리가 가득 찼어요');return}
   const px=me.g.position.x,pz=me.g.position.z;free.sort((a,b)=>Math.hypot(a.x-px,a.z-pz)-Math.hypot(b.x-px,b.z-pz));const sp=free[0];
-  endPractice(false);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
+  rememberSeatCamera();endPractice(false);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);
   me.g.position.set(sp.x,0,sp.z);me.g.rotation.y=sp.h;me.speed=0;userMoved=true;pose='sit';sendDirty=true;syncPoseButtons();
   const out=pochaLocal(sp.lx>0?3.6:-3.6,2.6);myDogObj.g.position.set(out.x,0,out.z);
   cam.yaw=sp.h+Math.PI;cam.pitch=.62;cam.dist=4.4;
@@ -4333,7 +4351,6 @@ function enterPocha(){
 function leavePocha(){
   const sp=me.g.position,h=me.g.rotation.y,st=STOOLS[mySeatIndex()];pose='stand';toggleOrderMenu(false);
   const out=pochaLocal(st?st.lx*.6:0,2.9);me.g.position.set(out.x,0,out.z);me.g.rotation.y=h+Math.PI;sendDirty=true;syncPoseButtons();
-  cam.yaw=me.g.rotation.y+Math.PI;cam.pitch=.25;cam.dist=6;
 }
 
 /* ---------- convenience-store tables: sit / get up, drinks and cheers ---------- */
@@ -4794,7 +4811,7 @@ function saveVisit(){
   if(visitEnded||readExitFlag()||!hasEntered||!visitToken)return false;
   const p=me.g.position,message=lastMessages.get('me');
   const snapshot={v:1,personal:gardenIdentity.credentials(),space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
-    x:p.x,z:p.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
+    x:p.x,z:p.z,h:me.g.rotation.y,seatCamera,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
     practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,target:practice.target,haloUntil:practice.haloUntil,halos:practice.halos,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
   let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
@@ -4827,6 +4844,15 @@ async function restoreVisit({connect=true,identity=true}={}){
     }
   }
   pose=['stand','sit','lie','prone','wave','coffee','beer','soda','soju','makgeolli','standing_pray','pray2','pray','bow'].includes(saved.pose)?saved.pose:'stand';
+  const previousCamera=saved.seatCamera;
+  seatCamera=previousCamera&&previousCamera.space===worldSpace&&['yaw','pitch','dist'].every(k=>Number.isFinite(previousCamera[k]))?{space:worldSpace,yaw:previousCamera.yaw,pitch:Math.max(.05,Math.min(1.2,previousCamera.pitch)),dist:Math.max(2.5,Math.min(12,previousCamera.dist))}:null;
+  // Older seated visits have no pre-seat camera; standing returns to the room's normal view.
+  if(!seatCamera&&seatedCameraPoses.includes(pose)&&seatAt(me.g.position.x,me.g.position.z)>=0)seatCamera={space:worldSpace,yaw:cam.sky?cam.gardenYaw:cam.yaw,pitch:worldSpace==='listening'?.22:.25,dist:worldSpace==='listening'?4.8:11.5};
+  // Repair the old standing snapshots that kept an exact seat camera preset.
+  const oldSeatViews=worldSpace==='listening'?[[4.2,.18]]:[[4.6,.08],[7.5,.22],[4.4,.62],[6,.25]];
+  if(!Object.hasOwn(saved,'seatCamera')&&pose==='stand'&&oldSeatViews.some(([dist,pitch])=>Math.abs(cam.dist-dist)<.001&&Math.abs(cam.pitch-pitch)<.001)){
+    cam.pitch=worldSpace==='listening'?.22:.25;cam.dist=worldSpace==='listening'?4.8:11.5;
+  }
   if(['beer','soda','soju','makgeolli'].includes(saved.lastDrink))me.lastDrink=saved.lastDrink;
   if(typeof saved.chatDraft==='string')$('chatInput').value=saved.chatDraft.slice(0,200);
   const pr=saved.practice||{};
@@ -5278,7 +5304,7 @@ function tick(){
     if(keys.KeyA||keys.ArrowLeft)cam.yaw+=dt*1.2;
     if(keys.KeyD||keys.ArrowRight)cam.yaw-=dt*1.2;
   }
-  const sy=Math.sin(cam.yaw),cy=Math.cos(cam.yaw);
+  let sy=Math.sin(cam.yaw),cy=Math.cos(cam.yaw);
   let vx=-sy*f+cy*s,vz=-cy*f-sy*s,mag=Math.min(1,Math.hypot(vx,vz));
   if(mag>.08){cancelFireCare();target=null;marker.visible=false;pendingStoke=false;const l=Math.hypot(vx,vz);vx/=l;vz/=l}
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
@@ -5315,6 +5341,7 @@ function tick(){
 
   syncStandingPrayerBubble('me',me,pose,shownName());
   for(const [id,peer] of peers)syncStandingPrayerBubble(id,peer.P,peer.pose,peer.nick||peer.nm||'친구');
+  sy=Math.sin(cam.yaw);cy=Math.cos(cam.yaw);
   const ax=me.g.position.x,az=me.g.position.z,cp=Math.cos(cam.pitch);
   if(worldSpace==='listening'){
     camera.position.set(THREE.MathUtils.clamp(ax+sy*cam.dist*cp,-5.8,5.8),Math.min(4.25,1.65+Math.sin(cam.pitch)*cam.dist),THREE.MathUtils.clamp(az+cy*cam.dist*cp,-5.2,6.5));
