@@ -3437,7 +3437,7 @@ function validBowHaloUntil(value,now){return Number.isFinite(value)&&value>now&&
 function storedBowHalos(){try{return Prayer.cleanHalos(JSON.parse(bowGet('garden.bowHalos')||'null')||{whiteUntil:Number(bowGet('garden.bowHaloUntil'))},Date.now())}catch{return{whiteUntil:0,redUntil:0}}}
 function setMyHalos(value){const state=Prayer.haloState(value,serverNow());practice.halos={whiteUntil:state.whiteUntil,redUntil:state.redUntil};practice.haloUntil=me.haloUntil=state.until;practice.haloLevel=me.haloLevel=state.level}
 function saveMyHalos(){bowSet('garden.bowHalos',JSON.stringify(practice.halos));bowSet('garden.bowHaloUntil',String(practice.haloUntil))}
-function haloCompleteText(target){return target===3000?'3000배를 마쳤습니다. 현실 시간 일주일 동안 빨간 후광과 몸의 빛이 함께해요':'108배를 마쳤습니다. 현실 시간 3일 동안 머리 위 흰색 후광이 함께해요'}
+function haloCompleteText(target){return target===3000?'3000배를 마쳤습니다. 현실 시간 일주일 동안 몸 테두리와 온몸에 붉은빛이 함께해요':'108배를 마쳤습니다. 현실 시간 3일 동안 몸 테두리에 흰빛이 함께해요'}
 function completeBowHalo(){const halos={...practice.halos},now=serverNow();if(practice.target===3000)halos.redUntil=now+Prayer.HALO_RED_MS;else halos.whiteUntil=now+Prayer.HALO_WHITE_MS;setMyHalos(halos);saveMyHalos();sendDirty=true;saveVisit()}
 const savedBowTarget=bowGet('garden.bowTarget')==='3000'?3000:108;
 const practice={mode:'idle',target:savedBowTarget,paused:false,elapsed:0,remote:null,pendingStart:null,pendingControl:null,stoppedId:null,serverRev:0,halos:storedBowHalos(),haloUntil:0,haloLevel:0,count:Math.max(0,Math.min(savedBowTarget,parseInt(bowGet(savedBowTarget===3000?'garden.bows.3000':'garden.bows')||'0',10)||0))};
