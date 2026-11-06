@@ -580,7 +580,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 1.2</small>
+    <small class="entry-version">ver 1.3</small>
   </form>
  </main>
 </div>
@@ -4788,6 +4788,7 @@ $('rpsPanel').addEventListener('keydown',event=>{if(event.key==='Escape'&&!rpsAc
 
 /* ---------- one tab visit: survives reload, ends on explicit leave ---------- */
 const VISIT_KEY='garden.visit.v1';
+const CAMERA_STATE_VERSION=2;
 // 기기 전체 사본: 바로가기가 새 탭을 열거나 휴대폰이 탭을 정리해도, '나가기' 전이면 절하기·모닥불에 앉기·눕기 등
 // 하던 자세와 자리를 입장하기 뒤에 그대로 이어 간다. 같은 입장 코드에만 쓰고, 하루가 지나면 쓰지 않는다.
 const DEVICE_VISIT_KEY='garden.visit.device.v1',DEVICE_VISIT_MS=24*60*60*1000;
@@ -4811,7 +4812,7 @@ function saveVisit(){
   if(visitEnded||readExitFlag()||!hasEntered||!visitToken)return false;
   const p=me.g.position,message=lastMessages.get('me');
   const snapshot={v:1,personal:gardenIdentity.credentials(),space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
-    x:p.x,z:p.z,h:me.g.rotation.y,seatCamera,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
+    x:p.x,z:p.z,h:me.g.rotation.y,cameraStateVersion:CAMERA_STATE_VERSION,seatCamera,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
     practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,target:practice.target,haloUntil:practice.haloUntil,halos:practice.halos,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
   let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
@@ -4844,13 +4845,14 @@ async function restoreVisit({connect=true,identity=true}={}){
     }
   }
   pose=['stand','sit','lie','prone','wave','coffee','beer','soda','soju','makgeolli','standing_pray','pray2','pray','bow'].includes(saved.pose)?saved.pose:'stand';
-  const previousCamera=saved.seatCamera;
+  const cameraStateCurrent=saved.cameraStateVersion===CAMERA_STATE_VERSION;
+  const previousCamera=cameraStateCurrent?saved.seatCamera:null;
   seatCamera=previousCamera&&previousCamera.space===worldSpace&&['yaw','pitch','dist'].every(k=>Number.isFinite(previousCamera[k]))?{space:worldSpace,yaw:previousCamera.yaw,pitch:Math.max(.05,Math.min(1.2,previousCamera.pitch)),dist:Math.max(2.5,Math.min(12,previousCamera.dist))}:null;
   // Older seated visits have no pre-seat camera; standing returns to the room's normal view.
   if(!seatCamera&&seatedCameraPoses.includes(pose)&&seatAt(me.g.position.x,me.g.position.z)>=0)seatCamera={space:worldSpace,yaw:cam.sky?cam.gardenYaw:cam.yaw,pitch:worldSpace==='listening'?.22:.25,dist:worldSpace==='listening'?4.8:11.5};
-  // Repair the old standing snapshots that kept an exact seat camera preset.
-  const oldSeatViews=worldSpace==='listening'?[[4.2,.18]]:[[4.6,.08],[7.5,.22],[4.4,.62],[6,.25]];
-  if(!Object.hasOwn(saved,'seatCamera')&&pose==='stand'&&oldSeatViews.some(([dist,pitch])=>Math.abs(cam.dist-dist)<.001&&Math.abs(cam.pitch-pitch)<.001)){
+  // Old snapshots may contain a seat zoom at any orbit angle, even with seatCamera:null.
+  // Migrate once; subsequent visits preserve deliberate zoom and the true pre-seat view.
+  if(!cameraStateCurrent&&!seatCamera){
     cam.pitch=worldSpace==='listening'?.22:.25;cam.dist=worldSpace==='listening'?4.8:11.5;
   }
   if(['beer','soda','soju','makgeolli'].includes(saved.lastDrink))me.lastDrink=saved.lastDrink;
