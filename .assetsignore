@@ -49,3 +49,7 @@
 !assets/sayu-statues.js
 !assets/sayu-left-hq.glb
 !assets/sayu-right-hq.glb
+!assets/sayu-left-preview.glb
+!assets/sayu-right-preview.glb
+!assets/sayu-prefetch.js
+!_headers

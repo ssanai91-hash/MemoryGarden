@@ -4,30 +4,23 @@ import * as THREE from 'three';
 // 원본: 국립중앙박물관 공개 3D 스캔(공공누리 제1유형). sayuRoom 저장소 GLB를 정원용으로 경량화했다
 // (12만 → 약 8만 삼각형, 색·노멀 2048px, ORM 1024px — 3배 크기에 맞춘 고화질). 자세한 내용은 SAYU_STATUES_HANDOFF.md.
 //
-// 빠른 입장: 정원 화면은 불상을 기다리지 않는다. 받침대는 바로 세우고, 불상은 뒤에서 받아 나타난다.
-// 한 번 받은 파일은 기기의 Cache Storage에 보관해 다음 입장부터 네트워크 없이 즉시 꺼낸다.
-// 주소의 ?v=<내용 해시 8자>가 바뀌면 새 파일을 받고, 옛 버전은 보관함에서 지운다.
-export const SAYU_STATUES=Object.freeze([
-  Object.freeze({side:'left',url:'./assets/sayu-left-hq.glb?v=144e7b2f',label:'금동미륵보살반가사유상 (본관2789)'}),
-  Object.freeze({side:'right',url:'./assets/sayu-right-hq.glb?v=a2f539ae',label:'금동미륵보살반가사유상 (덕수3312)'})
-]);
-export const SAYU_CACHE='garden-statues-v1';
+// 빠른 입장: 정원 화면은 불상을 기다리지 않는다. 받침대는 바로 세우고, 불상은 받는 대로 나타난다.
+// 다운로드는 assets/sayu-prefetch.js가 페이지 맨 처음부터 시작한다(three.js·정원 장면 생성과 동시에).
+// 재방문은 보관함의 고화질본이 즉시, 첫 방문은 미리보기본(약 0.4MB)이 먼저 섰다가 고화질본으로 바뀐다.
+import './sayu-prefetch.js';
+const Prefetch=globalThis.GardenSayuPrefetch;
+export const SAYU_STATUES=Prefetch.STATUES;
+export const SAYU_CACHE=Prefetch.CACHE;
 // 실물 0.815/0.908m를 같은 배율로 키운다(약 8.3/9.3m). 받침대 윗면 위에 앉힌다.
 export const SAYU_SCALE=10.2,SAYU_PEDESTAL_TOP=1.2;
 
-async function cachedBytes(url){
-  let cache=null;
-  try{if(globalThis.caches&&/[?&]v=[0-9a-f]{8}/.test(url))cache=await caches.open(SAYU_CACHE)}catch(_){cache=null}
-  if(cache){try{const hit=await cache.match(url);if(hit)return{bytes:await hit.arrayBuffer(),cached:true}}catch(_){}}
-  const response=await fetch(url);
-  if(!response.ok)throw new Error('응답 '+response.status+' '+url);
-  const bytes=await response.arrayBuffer();
-  if(cache){try{await cache.put(url,new Response(bytes.slice(0),{headers:{'Content-Type':'model/gltf-binary'}}))}catch(_){}}
-  return{bytes,cached:false};
-}
 async function pruneCache(keep){
   try{if(!globalThis.caches)return;const cache=await caches.open(SAYU_CACHE),wanted=new Set(keep.map(u=>new URL(u,location.href).href));
     for(const req of await cache.keys())if(!wanted.has(req.url))await cache.delete(req)}catch(_){}
+}
+function disposeModel(model){
+  model.traverse(n=>{if(!n.isMesh)return;n.geometry.dispose();
+    for(const m of[].concat(n.material)){for(const k of['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap'])m[k]?.dispose();m.dispose()}});
 }
 
 function plaqueTexture(){
@@ -88,7 +81,7 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
     return g;
   });
 
-  function place(gltf,holder){
+  function place(gltf){
     const model=gltf.scene;model.scale.setScalar(SAYU_SCALE);
     const box=new THREE.Box3().setFromObject(model),center=box.getCenter(new THREE.Vector3());
     model.position.set(-center.x,SAYU_PEDESTAL_TOP-box.min.y,-center.z);
@@ -101,20 +94,21 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
         m.envMapIntensity=1.1;addStatueLight(m,light,b.min.y,b.max.y);
       }
     });
-    holder.add(model);
+    return model;
   }
 
-  async function loadOne(item,holder){
-    const {bytes,cached}=await cachedBytes(item.url);
-    const gltf=await new Promise((resolve,reject)=>new GLTFLoader().parse(bytes,'',resolve,reject));
-    place(gltf,holder);state.loaded++;if(cached)state.cached++;onState(state);
+  const parse=bytes=>new Promise((resolve,reject)=>new GLTFLoader().parse(bytes,'',resolve,reject));
+  async function loadOne(job,holder){
+    let shown=null,hq=false;
+    const show=(model,quality)=>{if(hq)return disposeModel(model);if(shown){holder.remove(shown);disposeModel(shown)}shown=model;holder.add(model);holder.userData.sayuQuality=quality};
+    const previewDone=job.preview.then(async bytes=>{if(!bytes)return;const gltf=await parse(bytes);show(place(gltf),'preview')}).catch(()=>{});
+    const bytes=await job.hq,gltf=await parse(bytes),model=place(gltf);
+    await previewDone;show(model,'hq');hq=true;
+    state.loaded++;if(await job.fromCache)state.cached++;onState(state);
   }
-  // 첫 화면 그리기를 먼저 끝내고 받는다. 보관함에 있으면 곧바로, 없으면 하나씩 차례로 받는다.
-  state.ready=new Promise(r=>setTimeout(r,300)).then(async()=>{
-    for(let i=0;i<SAYU_STATUES.length;i++){
-      try{await loadOne(SAYU_STATUES[i],holders[i])}catch(e){state.error=String(e&&e.message||e);onState(state)}
-    }
-    pruneCache(SAYU_STATUES.map(s=>s.url));
+  // 두 조각상을 동시에. 실패한 쪽은 미리보기본이라도 남긴다.
+  state.ready=Promise.all(Prefetch.jobs.map((job,i)=>loadOne(job,holders[i]).catch(e=>{state.error=String(e&&e.message||e);onState(state)}))).then(()=>{
+    pruneCache(SAYU_STATUES.flatMap(s=>[s.preview,s.hq]));
     return state;
   });
   const keyView=new THREE.Vector3(),rimView=new THREE.Vector3();
