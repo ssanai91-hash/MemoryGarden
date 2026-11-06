@@ -575,7 +575,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 1.4</small>
+    <small class="entry-version">ver 1.5</small>
   </form>
  </main>
 </div>
@@ -5062,7 +5062,12 @@ function connectRoomServer(base,code){
           api.selfId=you;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});if(api.bowVersion){practice.serverRev=0;if(practice.pendingStart)api.send(practice.pendingStart);else if(m.bow)receivePractice(m.bow,true);else if(['auto','single'].includes(practice.mode)){const paused=practice.paused;requestPracticeStart();if(paused)requestPracticeControl('pause')}if(practice.pendingControl)api.send(practice.pendingControl)}break;
         case 'personal_state':receivePersonal(m.personal);break;
-        case 'personal_error':{const message=m.code==='slow'?'잠시 후 다시 입장해 주세요.':m.code==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':m.code==='storage'?'개인 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.':'개인 코드 형식을 확인해 주세요.';api.close();room=null;hasEntered=false;clearVisit();practice.remote=null;practice.mode='idle';openNameDialog();gardenIdentity.fail(message);break}
+        case 'personal_error':{const message=m.code==='name_taken'?'이미 정원에 같은 이름이 있어요. 다른 이름으로 입장해 주세요.':m.code==='slow'?'잠시 후 다시 입장해 주세요.':m.code==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':m.code==='storage'?'개인 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.':'개인 코드 형식을 확인해 주세요.';api.close();room=null;hasEntered=false;if(m.code!=='name_taken')clearVisit();practice.remote=null;practice.mode='idle';openNameDialog();gardenIdentity.fail(message);break}
+        case 'profile_error':{
+          if(m.code!=='name_taken')break;
+          myNick=m.name;store.set('garden.name',myNick);applyMyLook(m.look,m.dog,false,myNick);refreshMine();restoreLastBubble('me',shownName());sendDirty=true;saveVisit();
+          openNameDialog(true);gardenIdentity.fail('이미 정원에 같은 이름이 있어요. 다른 이름으로 변경해 주세요.');break;
+        }
         case 'bow_state':if(m.id===you){receivePractice(m.job)}else if(m.peer){peersById.set(m.id,{...m.peer,quiet:true});emit()}else{const p=peersById.get(m.id);if(p){p.bow=m.job;emit()}}break;
         case 'bow_error':toast(m.code==='storage'?'수행 저장을 확인하지 못했어요. 다시 연결해 확인해 주세요.':'수행 상태를 다시 확인하고 있어요');if(m.code==='invalid')api.send({t:'bow_sync'});break;
         case 'candles_state':case 'candle_lit':case 'candle_error':candleUI?.receive(m);break;

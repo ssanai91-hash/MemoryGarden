@@ -54,6 +54,7 @@ function trimPochaOrders(orders){
 const INVISIBLE = /[\u0000-\u001f\u007f​-‏‪-‮⁠-⁤﻿]/g;
 
 const clean = (v, n) => (typeof v === 'string' ? v.replace(INVISIBLE, '').trim().slice(0, n) : '');
+const nameKey=v=>clean(v,12).normalize('NFKC').replace(/\s+/g,'').toLowerCase();
 const num = (v, lo, hi) => (Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v * 100) / 100)) : null);
 
 function cleanLook(l) {
@@ -125,6 +126,22 @@ export class GardenRoom extends DurableObject {
     });
   }
 
+  // Admissions and renames share one queue so simultaneous requests cannot claim a name twice.
+  queueAdmission(change){
+    const previous=this.admissionQueue||Promise.resolve();
+    const task=previous.catch(()=>{}).then(change);this.admissionQueue=task;
+    return task.finally(()=>{if(this.admissionQueue===task)this.admissionQueue=null});
+  }
+  nameInUse(name,id,legacyId=null){
+    const key=nameKey(name),now=Date.now();
+    if(this.readyPeers().some(p=>p.a.id!==id&&p.a.id!==legacyId&&nameKey(p.a.name)===key))return true;
+    return Object.entries(this.visits).some(([other,v])=>{
+      if(other===id||other===legacyId||v.revoked||!v.peer||v.expiresAt<=now||nameKey(v.peer.name)!==key)return false;
+      const bow=Prayer.bowProgress(this.bows[other],now);
+      return v.awayUntil>now||!!(bow&&['auto','single'].includes(bow.mode)&&!bow.done);
+    });
+  }
+
   async personalIdentity(ws,a,m,legacyId){
     if(m.personalCode===undefined)return null; // old clients retain temporary visits
     if(!Prayer.validCode(m.personalCode)||!['create','restore'].includes(m.personalAction))throw Error('code');
@@ -149,6 +166,7 @@ export class GardenRoom extends DurableObject {
         if(legacy&&!claimed){const f=Prayer.bowProgress(legacy,now);person.progress={...person.progress,...legacy.progress,[f.target]:f.count};person.totalBows=(person.progress[108]||0)+(person.progress[3000]||0);person.bow={...legacy,accountedCount:f.count};delete jobs[legacyId];await txn.put('person.claim.'+legacyId,id)}
       }else if(person.codeHash!==codeHash)throw Error('code');
       if(m.personalUpdate===true){person.name=clean(m.name,12)||person.name;person.look=cleanLook(m.look)||person.look;person.dog=cleanDog(m.dog)||person.dog}
+      if(this.nameInUse(person.name,id,legacyId))throw Error('name_taken');
       let job=person.bow||{id:crypto.randomUUID().replace(/-/g,''),rev:0,mode:'idle',target:108,count:person.progress[108]||0,elapsed:0,at:now,paused:false,progress:{...person.progress},halos:person.halos,accountedCount:person.progress[108]||0,position:cleanState(m.s)};
       const settled=Prayer.accountProfile(person,job,now);person=settled.profile;job={...settled.job,progress:{...person.progress},expiresAt:now+VISIT_MEMORY_MS*2};person.bow=job;jobs[id]=job;
       person.session=session;await txn.put(key,person);await txn.put('bowPractices',jobs);return{person,jobs};
@@ -631,6 +649,55 @@ export class GardenRoom extends DurableObject {
     }
   }
 
+  async admit(ws,m){
+    const a=ws.deserializeAttachment();if(!a)return;
+    if (a.ready || a.handshaking) return;
+    a.handshaking = true;
+    ws.serializeAttachment(a);
+    // 탭의 비공개 토큰에서 공개 접속 ID만 파생한다. 원문 토큰은 다른 사람에게 보내지 않는다.
+    if (typeof m.resumeToken === 'string' && /^[a-f0-9]{64}$/.test(m.resumeToken)) {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.resumeToken));
+      a.id = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('').slice(0, 20);
+    }
+    if(a.loginRateKey&&m.personalCode!==undefined&&!this.allow({id:'personal-login:'+a.loginRateKey},'login',3)){ws.send(JSON.stringify({t:'personal_error',code:'slow'}));ws.close(4004,'try later');return}
+    const legacyId=a.id;let personal=null;
+    try{personal=await this.personalIdentity(ws,a,m,legacyId)}catch(error){a.handshaking=false;ws.serializeAttachment(a);ws.send(JSON.stringify({t:'personal_error',code:['code','missing','name_taken'].includes(error.message)?error.message:'storage'}));ws.close(4004,'personal profile unavailable');return}
+    await this.advanceBows();await this.advanceVisits();
+    const previous=this.visits[a.id];
+    if(previous&&previous.revoked&&!a.personal){ws.send(JSON.stringify({t:'visit_ended'}));ws.close(4003,'visit ended');return}
+    if(!personal&&this.nameInUse(clean(m.name,12)||'친구',a.id)){ws.send(JSON.stringify({t:'personal_error',code:'name_taken'}));ws.close(4004,'name in use');return}
+    const duplicates = this.readyPeers().filter(p => p.a.id === a.id);
+    const resumed=!!previous||duplicates.length>0;
+    if (this.readyPeers().length - duplicates.length >= MAX_PEERS) {
+      ws.send(JSON.stringify({ t: 'full', max: MAX_PEERS }));
+      ws.close(4001, 'room full');
+      return;
+    }
+    if (duplicates.length) a.lastChat = duplicates[0].a.lastChat || null;
+    else if(previous&&previous.peer)a.lastChat=previous.peer.lastChat||null;
+    for (const prior of duplicates) {
+      prior.a.ready = false;
+      prior.ws.serializeAttachment(prior.a);
+      try { prior.ws.send(JSON.stringify({ t: 'replaced' })); prior.ws.close(4002, 'session resumed'); } catch (e) {}
+    }
+    a.name = personal?.name||clean(m.name, 12) || '친구';
+    a.look = personal?.look||cleanLook(m.look);
+    a.dog = personal?.dog||cleanDog(m.dog);
+    a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0, u:false };
+    if(a.personal)Object.assign(a.s,this.personalHalos(a));
+    if(a.s.p.startsWith('wood'))a.s.p='stand';
+    a.ready = true;a.away=!!m.away;
+    const continuing=Prayer.bowProgress(this.bows[a.id],Date.now());if(continuing&&['auto','single'].includes(continuing.mode))a.s=this.peerInfo(a).s;
+    a.handshaking = false;
+    ws.serializeAttachment(a);
+    await this.advanceRps();
+    await this.rememberVisit(a);
+    const peers = this.visiblePeers(a.id);
+    ws.send(JSON.stringify({ t: 'welcome', admin:a.admin?1:0, features:{personal:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+    this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
+    return;
+  }
+
   async webSocketMessage(ws, raw) {
     if (typeof raw !== 'string' || raw.length > 4096) return;
     let m;
@@ -638,56 +705,7 @@ export class GardenRoom extends DurableObject {
     const a = ws.deserializeAttachment();
     if (!a || !m || typeof m.t !== 'string') return;
 
-    if (m.t === 'hello') {
-      if (a.ready || a.handshaking) return;
-      a.handshaking = true;
-      ws.serializeAttachment(a);
-      // 탭의 비공개 토큰에서 공개 접속 ID만 파생한다. 원문 토큰은 다른 사람에게 보내지 않는다.
-      if (typeof m.resumeToken === 'string' && /^[a-f0-9]{64}$/.test(m.resumeToken)) {
-        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.resumeToken));
-        a.id = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('').slice(0, 20);
-      }
-      if(a.loginRateKey&&m.personalCode!==undefined&&!this.allow({id:'personal-login:'+a.loginRateKey},'login',3)){ws.send(JSON.stringify({t:'personal_error',code:'slow'}));ws.close(4004,'try later');return}
-      const legacyId=a.id;let personal=null;
-      try{personal=await this.personalIdentity(ws,a,m,legacyId)}catch(error){a.handshaking=false;ws.serializeAttachment(a);ws.send(JSON.stringify({t:'personal_error',code:['code','missing'].includes(error.message)?error.message:'storage'}));ws.close(4004,'personal profile unavailable');return}
-      await this.advanceBows();await this.advanceVisits();
-      const previous=this.visits[a.id];
-      if(previous&&previous.revoked&&!a.personal){ws.send(JSON.stringify({t:'visit_ended'}));ws.close(4003,'visit ended');return}
-      const duplicates = this.readyPeers().filter(p => p.a.id === a.id);
-      const resumed=!!previous||duplicates.length>0;
-      if (this.readyPeers().length - duplicates.length >= MAX_PEERS) {
-        ws.send(JSON.stringify({ t: 'full', max: MAX_PEERS }));
-        ws.close(4001, 'room full');
-        return;
-      }
-      if (duplicates.length) a.lastChat = duplicates[0].a.lastChat || null;
-      else if(previous&&previous.peer)a.lastChat=previous.peer.lastChat||null;
-      for (const prior of duplicates) {
-        prior.a.ready = false;
-        prior.ws.serializeAttachment(prior.a);
-        try { prior.ws.send(JSON.stringify({ t: 'replaced' })); prior.ws.close(4002, 'session resumed'); } catch (e) {}
-      }
-      a.name = personal?.name||clean(m.name, 12) || '친구';
-      a.look = personal?.look||cleanLook(m.look);
-      a.dog = personal?.dog||cleanDog(m.dog);
-      a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0, u:false };
-      if(a.personal)Object.assign(a.s,this.personalHalos(a));
-      if(a.s.p.startsWith('wood'))a.s.p='stand';
-      a.ready = true;a.away=!!m.away;
-      const continuing=Prayer.bowProgress(this.bows[a.id],Date.now());if(continuing&&['auto','single'].includes(continuing.mode))a.s=this.peerInfo(a).s;
-      a.handshaking = false;
-      ws.serializeAttachment(a);
-      await this.advanceRps();
-      await this.rememberVisit(a);
-      // 같은 이름으로 '잠시 자리 비움'인 예전 접속이 있으면 같은 사람이 새로 들어온 것으로 보고 지운다.
-      const ghosts=Object.entries(this.visits).filter(([id,v])=>!a.personal&&id!==a.id&&v.peer&&!v.revoked&&v.awayUntil&&v.peer.name===a.name&&!this.readyPeers().some(p=>p.a.id===id)).map(([id])=>id);
-      for(const id of ghosts){delete this.visits[id];await this.cancelRpsFor(id,'replaced');this.broadcast({t:'leave',id},ws)}
-      if(ghosts.length)await this.saveVisits();
-      const peers = this.visiblePeers(a.id);
-      ws.send(JSON.stringify({ t: 'welcome', admin:a.admin?1:0, features:{personal:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
-      this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
-      return;
-    }
+    if (m.t === 'hello') return this.queueAdmission(()=>this.admit(ws,m));
     if (!a.ready) return;
     if(['bow_start','bow_control','bow_sync'].includes(m.t))return this.handleBows(ws,a,m);
     if(['candle_light','candles_sync'].includes(m.t))return this.handleCandles(ws,a,m);
@@ -742,16 +760,19 @@ export class GardenRoom extends DurableObject {
         await this.checkRpsDistance(a.id);
         return;
       }
-      case 'profile': {
-        if (!this.allow(a, 'p', 2)) return;
-        a.name = clean(m.name, 12) || a.name;
-        a.look = cleanLook(m.look) || cleanLook(a.look);
-        a.dog = cleanDog(m.dog) || a.dog;
-        ws.serializeAttachment(a);
-        await this.rememberPersonal(a);
-        this.broadcast({ t: 'profile', id: a.id, name: a.name, look: a.look, dog: a.dog }, ws);
-        return;
-      }
+      case 'profile': return this.queueAdmission(async()=>{
+        const current=ws.deserializeAttachment();if(!current?.ready)return;
+        if(!this.allow(current,'p',2))return;
+        const name=clean(m.name,12)||current.name;
+        if(nameKey(name)!==nameKey(current.name)&&this.nameInUse(name,current.id)){
+          ws.send(JSON.stringify({t:'profile_error',code:'name_taken',name:current.name,look:current.look,dog:current.dog}));return;
+        }
+        const renamed=name!==current.name;
+        current.name=name;current.look=cleanLook(m.look)||cleanLook(current.look);current.dog=cleanDog(m.dog)||current.dog;
+        ws.serializeAttachment(current);
+        if(renamed)await this.rememberVisit(current);else await this.rememberPersonal(current);
+        this.broadcast({t:'profile',id:current.id,name:current.name,look:current.look,dog:current.dog},ws);
+      });
       case 'chat': {
         if (!this.allow(a, 'c', 1)) return;
         const text = clean(m.text, 200);
