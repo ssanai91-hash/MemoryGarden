@@ -177,11 +177,10 @@ button:disabled{opacity:.5;cursor:default}
 .speech-name{display:block;font-size:calc(49.5 * var(--bubble-unit));font-weight:700;line-height:calc(72 * var(--bubble-unit));margin-bottom:calc(8 * var(--bubble-unit));color:#a36a37;white-space:pre}
 .speech-text{display:block;font-size:calc(58.5 * var(--bubble-unit));line-height:calc(72 * var(--bubble-unit));color:#2b2a33;white-space:pre}
 .sky-view #speechLayer,.visit-ended #speechLayer{display:none}
-.bow-counter{position:fixed;left:12px;bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:4;max-width:calc(100vw - 24px);box-sizing:border-box;padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--paper);backdrop-filter:blur(6px)}
-.bow-counter .count-line{margin:0;gap:6px;font-size:11px}
-.bow-counter .count-line b{font-size:15px;font-weight:700}
-.bow-counter .count-line button{font-size:10px;padding:5px 7px}
-@media(max-width:650px){.bow-counter{bottom:calc(118px + env(safe-area-inset-bottom,0px))}}
+.bow-counter{box-sizing:border-box;padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--paper);backdrop-filter:blur(6px)}
+.bow-counter .count-line{margin:0;gap:4px;font-size:14px;font-weight:700;line-height:1.2;color:#111;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bow-counter .count-line span,.bow-counter .count-line b{margin:0;font-size:inherit;font-weight:inherit}
+.bow-counter #bowCount{color:#123f85}
 /* One right-hand column for action menus and contextual buttons. */
 :root{--right-menu-width:100px;--right-menu-top:180px}
 .poses{right:max(12px,env(safe-area-inset-right,0px));top:var(--right-menu-top);bottom:calc(12px + env(safe-area-inset-bottom,0px) + var(--keyboard-lift,0px) + var(--chat-clearance,0px));width:var(--right-menu-width);max-width:calc(100vw - 24px);min-height:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:4px;z-index:5;pointer-events:none}
@@ -308,7 +307,6 @@ body.listening-room #firePlayList,body.listening-room #firePlayBtn,body.listenin
 .chat-docked .poses{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 52px)}
 /* 정원 패널은 아래 대화창과 '대화 목록·동작' 버튼 줄 위에서 끝나야 볼륨 슬라이더까지 스크롤로 닿는다. */
 .chat-docked #gardenPanel{max-height:calc(100dvh - var(--keyboard-lift,0px) - var(--chat-height,63px) - 66px - env(safe-area-inset-top,0px))}
-.chat-docked .bow-counter{bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 110px)}
 .chat-docked .chat-history{left:max(12px,env(safe-area-inset-left,0px));width:min(420px,calc(100vw - 24px));bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 50px)}
 .sky-view #chatBar,.sky-view #dockActions,.rps-open #chatBar,.rps-open #dockActions,.visit-ended #chatBar,.visit-ended #dockActions,body.board-open #chatBar,body.board-open #dockActions{display:none}
 @media(max-width:650px){.chat-docked #joy{width:78px;height:78px}.chat-docked .umbrella-btn{left:102px;bottom:calc(var(--keyboard-lift,0px) + var(--chat-height,63px) + 25px)}}
@@ -529,13 +527,10 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 </script>
 
 <aside class="visitors" aria-label="들어온 친구"><div class="visitors-title"><span>들어온 친구</span><button id="visitorToggle" class="visitor-toggle" type="button" aria-expanded="true" aria-controls="visitorNames">접기 ▴</button></div><div id="visitorNames" class="visitor-names" aria-live="polite"></div></aside>
-<section class="bow-counter" id="bowCounter" aria-label="절 횟수와 진행 제어" hidden>
-  <div class="count-line"><span role="status"><b id="bowCount">0</b> / <span id="bowTarget">108</span>배</span><button id="pauseBtn" type="button" hidden>잠시 멈춤</button><button id="finishBtn" type="button" hidden>마치기</button></div>
-</section>
 <div class="poses" id="rightMenu" role="group" aria-label="정원 상황별 메뉴"><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><div class="plaza-bar" id="plazaBar" role="group" aria-label="절하기" hidden><button id="autoBowBtn" type="button">108배
 하기</button><button id="auto3000Btn" type="button">3000배
 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
-<div class="dock-actions" id="dockActions" role="group" aria-label="대화 목록" hidden><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button></div>
+<div class="dock-actions" id="dockActions" role="group" aria-label="절 횟수와 대화 목록" hidden><section class="bow-counter" id="bowCounter" aria-label="절 횟수" hidden><div class="count-line" role="status" aria-atomic="true"><b id="bowCount">0</b><span>/</span><span><span id="bowTarget">108</span>배</span></div></section><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div><div id="quickActions" role="group" aria-label="그림 동작 카드 5개">
 <button id="umbrellaBtn" type="button" aria-pressed="false" aria-label="우산 쓰기" title="우산 쓰기"><img src="assets/action-umbrella-v1.webp" width="384" height="384" alt="" aria-hidden="true" decoding="async"></button>
@@ -580,7 +575,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 1.3</small>
+    <small class="entry-version">ver 1.4</small>
   </form>
  </main>
 </div>
@@ -3476,8 +3471,6 @@ function bowFrame(p){
 function practiceUI(){
   $('bowCount').textContent=practice.count;$('bowTarget').textContent=practice.target;$('bowCounter').hidden=!['auto','single'].includes(practice.mode);
   $('resetBtn').hidden=practice.count===0;
-  $('pauseBtn').hidden=!['auto','single'].includes(practice.mode);$('pauseBtn').textContent=practice.paused?'이어 하기':'잠시 멈춤';
-  $('finishBtn').hidden=practice.mode==='idle';
   for(const [target,id]of [[108,'autoBowBtn'],[3000,'auto3000Btn']]){
     const count=practice.target===target?practice.count:readPracticeCount(target);
     $(id).textContent=target+'배\n'+(count>=target?'다시 하기':count?'이어 하기':'하기');$(id).disabled=false;
@@ -3507,7 +3500,6 @@ function startPractice(mode,target=practice.target){
   practice.mode=mode;practice.paused=false;practice.elapsed=0;me.bowPhase=0;pose=mode==='pray'?'pray':'bow';syncPoseButtons();practiceUI();sendDirty=true;requestPracticeStart(restart);if(restart)saveVisit();
 }
 $('autoBowBtn').onclick=()=>startPractice('auto',108);$('auto3000Btn').onclick=()=>startPractice('auto',3000);
-$('pauseBtn').onclick=()=>{if(practice.remote)syncRemotePractice();practice.paused=!practice.paused;requestPracticeControl(practice.paused?'pause':'resume');practiceUI();saveVisit()};$('finishBtn').onclick=()=>endPractice();
 let resetArmed=0;
 $('resetBtn').onclick=()=>{
   if(Date.now()-resetArmed>3000){resetArmed=Date.now();$('resetBtn').textContent='한 번 더 누르면 초기화';setTimeout(()=>{if(Date.now()-resetArmed>=3000)$('resetBtn').textContent='횟수 초기화'},3100);return}

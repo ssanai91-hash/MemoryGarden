@@ -12,10 +12,12 @@ body.chat-docked{--quick-bottom:calc(var(--keyboard-lift,0px) + var(--chat-heigh
 #quickActions button:focus-visible{outline:2px solid #d5b975;outline-offset:2px}
 #quickActions button:active{transform:translateY(1px)}
 /* Context menus and chat history sit beside, rather than under, the cards. */
-#dockActions{right:calc(var(--quick-right) + var(--quick-card-size) + 8px);width:100px;grid-template-columns:minmax(0,1fr);gap:0}
-#dockActions button{padding:5px 3px;font-size:11px}
+#dockActions{right:calc(var(--quick-right) + var(--quick-card-size) + 8px);width:max-content;display:flex;align-items:center;gap:8px}
+#dockActions[hidden]{display:none}
+#dockActions button{width:clamp(76px,23vw,100px);flex:none;padding:5px 3px;font-size:11px}
 #rightMenu{right:calc(var(--quick-right) + var(--quick-card-size) + 8px)}
-#bowCounter{bottom:calc(var(--joy-bottom) + var(--joy-size) + 10px)}
+#bowCounter{position:static;flex:none;display:flex;align-items:center;height:34px;pointer-events:none}
+#bowCounter[hidden]{display:none}
 .entry-open #quickActions,.sky-view #quickActions,.visit-ended #quickActions,.rps-open #quickActions,body.board-open #quickActions{display:none}
 body.listening-room #quickActions #umbrellaBtn{visibility:hidden;pointer-events:none}
-@media(max-width:650px){:root{--joy-size:109.2px;--joy-knob-size:44.2px;--joy-left:max(12px,env(safe-area-inset-left,0px));--joy-bottom:calc(14px + env(safe-area-inset-bottom,0px));--quick-card-size:38.48px}body.chat-docked{--joy-size:101.4px}}
+@media(max-width:650px){:root{--joy-size:109.2px;--joy-knob-size:44.2px;--joy-left:max(12px,env(safe-area-inset-left,0px));--joy-bottom:calc(14px + env(safe-area-inset-bottom,0px));--quick-card-size:38.48px}body.chat-docked{--joy-size:101.4px}#bowCounter .count-line{font-size:12px}}
