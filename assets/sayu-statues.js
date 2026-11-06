@@ -38,7 +38,36 @@ function plaqueTexture(){
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;
 }
 
-export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,onState=()=>{}}){
+// 불상 자체 조명: 박물관처럼 앞 위에서 비추는 따뜻한 주광과 뒤에서 윤곽을 잡는 푸른 테두리광.
+// 장면에 실제 조명을 늘리면 정원의 모든 재질 셰이더가 무거워지므로, 불상 재질 안에서만 계산한다.
+// 밤에 강해지고 낮에는 은은하게 남는다. 받침대 앞 두 등기구가 이 빛의 출처처럼 보이게 한다.
+const KEY_DIR=new THREE.Vector3(-.32,.78,.54).normalize(),RIM_DIR=new THREE.Vector3(.25,.55,-.8).normalize();
+const SAYU_LIGHT_GLSL=`
+float sayuH=clamp((vSayuY-uSayuMinY)/max(uSayuMaxY-uSayuMinY,1e-4),0.,1.);
+float sayuPool=mix(.5,1.15,smoothstep(.15,.92,sayuH));
+float sayuKey=max(dot(normal,uSayuKeyDir),0.)*sayuPool;
+float sayuFacing=max(dot(normal,normalize(vViewPosition)),0.);
+float sayuRim=pow(1.-sayuFacing,2.6)*max(dot(normal,uSayuRimDir)+.35,0.);
+totalEmissiveRadiance+=diffuseColor.rgb*uSayuKeyColor*(sayuKey*uSayuKey+.12*uSayuKey)+uSayuRimColor*sayuRim*uSayuRim;
+`;
+function addStatueLight(material,uniforms,minY,maxY){
+  const own={uSayuMinY:{value:minY},uSayuMaxY:{value:maxY}};
+  material.onBeforeCompile=sh=>{
+    Object.assign(sh.uniforms,uniforms,own);
+    sh.vertexShader='varying float vSayuY;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvSayuY=position.y;');
+    sh.fragmentShader='varying float vSayuY;uniform float uSayuMinY,uSayuMaxY,uSayuKey,uSayuRim;uniform vec3 uSayuKeyDir,uSayuRimDir,uSayuKeyColor,uSayuRimColor;\n'+
+      sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n'+SAYU_LIGHT_GLSL);
+  };
+  material.customProgramCacheKey=()=>'sayu-statue-light';
+  material.needsUpdate=true;
+}
+
+export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,markBloom=m=>m,onState=()=>{}}){
+  const light={uSayuKey:{value:.2},uSayuRim:{value:.05},uSayuKeyDir:{value:KEY_DIR.clone()},uSayuRimDir:{value:RIM_DIR.clone()},
+    uSayuKeyColor:{value:new THREE.Color(0xffd7a0).convertSRGBToLinear()},uSayuRimColor:{value:new THREE.Color(0xa9c3ff).convertSRGBToLinear()}};
+  const lens=markBloom(new THREE.MeshStandardMaterial({color:0xfff0d0,emissive:0xffc77a,emissiveIntensity:.3,roughness:.4}),1.5);
+  const housing=new THREE.MeshStandardMaterial({color:0x2c2a26,roughness:.55,metalness:.6});
+  const HOUSING=new THREE.CylinderGeometry(.16,.2,.34,16),LENS=new THREE.CircleGeometry(.14,20);
   const root=new THREE.Group();root.name='sayu-statues';scene.add(root);
   const state={loaded:0,cached:0,error:null,ready:null};
   const plaque=new THREE.MeshBasicMaterial({map:plaqueTexture(),toneMapped:false});
@@ -49,6 +78,12 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
     const upper=new THREE.Mesh(new THREE.CylinderGeometry(2.55,2.75,.75,56),stone(0xbab3a5));upper.position.y=.825;
     for(const m of[lower,upper]){m.castShadow=m.receiveShadow=true;g.add(m)}
     const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.4,.375),plaque);sign.position.set(0,.82,2.71);sign.rotation.x=-.07;g.add(sign);
+    // 받침대 아랫단 앞쪽 두 등기구: 불상 얼굴 쪽을 향해 기울어 있다.
+    for(const sx of[-1,1]){
+      const f=new THREE.Group();f.position.set(sx*1.55,.45,2.55);f.rotation.set(-.65,sx*.35,0);g.add(f);
+      const body=new THREE.Mesh(HOUSING,housing);body.rotation.x=Math.PI/2;body.position.z=-.05;body.castShadow=true;f.add(body);
+      const glass=new THREE.Mesh(LENS,lens);glass.position.z=.125;f.add(glass);
+    }
     obstacles.push({x:spot.x,z:spot.z,r:3.2});
     return g;
   });
@@ -60,9 +95,11 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
     model.traverse(n=>{
       if(!n.isMesh)return;n.castShadow=n.receiveShadow=true;
       const m=n.material;
-      // 밤에도 금동 표면이 어둠에 묻히지 않게 원본 색을 아주 약하게 스스로 밝힌다.
       for(const t of[m&&m.map,m&&m.normalMap])if(t)t.anisotropy=8;
-      if(m&&m.map){m.emissiveMap=m.map;m.emissive=new THREE.Color(0x3d2c14);m.emissiveIntensity=.55;m.envMapIntensity=1.1;m.needsUpdate=true}
+      if(m&&m.isMeshStandardMaterial){
+        if(!n.geometry.boundingBox)n.geometry.computeBoundingBox();const b=n.geometry.boundingBox;
+        m.envMapIntensity=1.1;addStatueLight(m,light,b.min.y,b.max.y);
+      }
     });
     holder.add(model);
   }
@@ -80,5 +117,13 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
     pruneCache(SAYU_STATUES.map(s=>s.url));
     return state;
   });
-  return{root,holders,state};
+  const keyView=new THREE.Vector3(),rimView=new THREE.Vector3();
+  // night 0(낮)~1(밤). 빛 방향은 카메라 기준으로 바꿔 셰이더에 넘긴다.
+  function update(night,camera){
+    const n=Math.min(1,Math.max(0,night||0));
+    light.uSayuKey.value=.2+n*1.05;light.uSayuRim.value=.05+n*.38;lens.emissiveIntensity=.3+n*2.4;
+    if(camera){camera.updateMatrixWorld();light.uSayuKeyDir.value.copy(keyView.copy(KEY_DIR).transformDirection(camera.matrixWorldInverse));
+      light.uSayuRimDir.value.copy(rimView.copy(RIM_DIR).transformDirection(camera.matrixWorldInverse))}
+  }
+  return{root,holders,state,update,light};
 }

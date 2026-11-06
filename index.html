@@ -2064,7 +2064,7 @@ if(CENTERPIECE==='campfire'&&PLAZA_STATUES==='classic'){
   obstacles.push({x:ALTAR_SPOTS[0].x,z:ALTAR_SPOTS[0].z,r:2.7});
 }
 const maryStatue=new THREE.Group();maryStatue.position.set(ALTAR_SPOTS[1].x,Prayer.LAYOUT.floor,ALTAR_SPOTS[1].z);
-const sayuStatues=PLAZA_STATUES==='sayu'?createSayuStatues({scene,GLTFLoader,spots:ALTAR_SPOTS,floor:Prayer.LAYOUT.floor,stone:F,obstacles}):null;
+const sayuStatues=PLAZA_STATUES==='sayu'?createSayuStatues({scene,GLTFLoader,spots:ALTAR_SPOTS,floor:Prayer.LAYOUT.floor,stone:F,obstacles,markBloom}):null;
 if(PLAZA_STATUES==='classic'){scene.add(maryStatue);
   const ivory=F(0xf3eee3,{roughness:.8,emissive:C(0x38352e),emissiveIntensity:.3});
   const blue=F(0x719bc4,{roughness:.83,emissive:C(0x1c2a42),emissiveIntensity:.28}),face=F(0xeadfcd,{roughness:.85,emissive:C(0x353027),emissiveIntensity:.25});
@@ -3650,7 +3650,7 @@ function updateEnvironment(dt,t){
   ambient.color.set(0x8193c8).lerp(new THREE.Color(0xe1edfa),daylight);ambient.groundColor.set(0x2b2a22).lerp(new THREE.Color(0x617448),daylight);
   setGardenLight(ambient,.2+daylight*.5*(1-cloud*.35));
   // Existing central lanterns only. Hut windows, eaves, waterfall lights and wildlife are the next integration stage.
-  setGardenLight(glow,.15+phase.night*.1);lanterns.forEach(l=>setGardenLight(l,.15+phase.night*.75));lanternGlow.emissiveIntensity=.4+phase.night*1.4;halo.material.opacity=.3+phase.night*.65;
+  setGardenLight(glow,.15+phase.night*.1);lanterns.forEach(l=>setGardenLight(l,.15+phase.night*.75));lanternGlow.emissiveIntensity=.4+phase.night*1.4;sayuStatues?.update(phase.night,camera);halo.material.opacity=.3+phase.night*.65;
   clouds.forEach((c,i)=>{
     if(!c.userData.weatherBase){c.userData.weatherBase=c.position.clone();c.renderOrder=3}
     const base=c.userData.weatherBase,seconds=now/1000;
