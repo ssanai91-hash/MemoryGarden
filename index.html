@@ -567,7 +567,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 0.4</small>
+    <small class="entry-version">ver 0.5</small>
   </form>
  </main>
 </div>
@@ -954,6 +954,10 @@ const TABLE_SPOTS=[0.95,4.4].map((a,i)=>({x:Math.round(Math.sin(a)*1420)/100,z:M
 const nearTable=(x,z,r)=>TABLE_SPOTS.some(t=>Math.hypot(t.x-x,t.z-z)<r);
 // 주황 포장마차: 모닥불 뒤쪽 나무 아래. 앞(입구)은 모닥불을 향한다.
 const ALTAR_SPOTS=[Prayer.LAYOUT.buddha,Prayer.LAYOUT.mary];
+// Keep the moon above the statues' actual midpoint, including when viewed
+// from the side. Project this world anchor onto the distant sky each frame.
+const ALTAR_MOON_ANCHOR=new THREE.Vector3((ALTAR_SPOTS[0].x+ALTAR_SPOTS[1].x)/2,Prayer.LAYOUT.floor+12,(ALTAR_SPOTS[0].z+ALTAR_SPOTS[1].z)/2);
+const altarMoonDirection=new THREE.Vector3();
 // 기도 광장의 조각상: 'sayu'(사유의 방 반가사유상 2점) 또는 'classic'(옛 좌불상·성모 마리아상).
 const PLAZA_STATUES='sayu';
 const nearAltar=(x,z,r)=>ALTAR_SPOTS.some(p=>Math.hypot(x-p.x,z-p.z)<r);
@@ -3531,7 +3535,7 @@ function createGardenEnvironment({dayMinutes=24,epoch=Date.UTC(2026,0,1),now=Dat
       period:h<6.5||h>=19.5?'night':h<8.5?'dawn':h<16.5?'day':'dusk',
       dawn:smooth(h,6.5,7.3)*(1-smooth(h,7.6,8.5)),dusk:smooth(h,16.5,17.5)*(1-smooth(h,18.8,19.5)),
       sun:direction(-Math.cos(angle),Math.sin(angle)*.94,-.45),moon:direction(Math.cos(angle),-Math.sin(angle)*.94,-.45),
-      // Change at noon, while the moon is below the horizon; midnight never changes its phase.
+      // Change at noon, while daylight hides the moon; midnight never changes its phase.
       moonPhase:mod(dayIndex-(h<12?1:0),28)/28};
   }
   function front(slot){
@@ -3797,7 +3801,7 @@ function updateBonfire(dt,t){
   setGardenLight(bonfire.light,3.6*f*(1+s*.35)*power);setGardenLight(bonfire.fill,1.4*f*(1+s*.6)*Math.max(power,heat*.12));
   bonfire.glow.material.opacity=.34*f*(1+s*.24)*power;bonfire.glow.scale.set((5+power*4)*(1+s*.2),(4+power*3.5)*(1+s*.25),1);
 }
-/* ---------- moving sun and moon: shared 24-minute day, one lunar phase per night ---------- */
+/* ---------- altar-centred moon: shared 24-minute day, one lunar phase per night ---------- */
 const nightSky={group:new THREE.Group(),moonLight:1,moonPhoto:null,moonPhotoReady:false};scene.add(nightSky.group);nightSky.group.visible=true;
 
 function fantasyGalaxyTexture(){
@@ -3886,10 +3890,11 @@ function updateNightSky(now,weather,phase){
   nightSky.group.visible=darkness>.001;nightSky.mat.uniforms.uTime.value=(now%3600000)/1000;
   nightSky.mat.uniforms.uOpacity.value=darkness*weather.brightness*(1-cloud*.8)*1.35;nightSky.galaxy.material.opacity=darkness*(1-cloud*.8);nightSky.mat.uniforms.uDensity.value=weather.density;
   nightSky.moonLight=(1-Math.cos(phase.moonPhase*Math.PI*2))*.5;
+  altarMoonDirection.copy(ALTAR_MOON_ANCHOR).sub(camera.position).normalize();
   nightSky.moons.forEach(moon=>{
     if(nightSky.moonPhotoReady&&moon.userData.phase!==phase.moonPhase){moon.material.map=moonTexture(phase.moonPhase,moon);moon.userData.phase=phase.moonPhase;moon.material.needsUpdate=true}
-    moon.position.copy(camera.position).addScaledVector(new THREE.Vector3(phase.moon.x,phase.moon.y,phase.moon.z),245);
-    moon.material.opacity=darkness*(1-cloud*.94)*THREE.MathUtils.smoothstep(phase.moon.y,-.035,.1);moon.visible=nightSky.moonPhotoReady&&moon.material.opacity>.001;
+    moon.position.copy(camera.position).addScaledVector(altarMoonDirection,245);
+    moon.material.opacity=darkness*(1-cloud*.94);moon.visible=nightSky.moonPhotoReady&&moon.material.opacity>.001;
   });
   // These effects must continue in daylight even when the star group is hidden.
   updateMeteors(now,weather,darkness);updateThunderStorm(now,weather);updateFireworks(now);
