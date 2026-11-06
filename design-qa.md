@@ -1,41 +1,23 @@
-# Candle cabinet, option 1
+# Entry screen design QA
 
-final result: passed
+Final result: **passed** for the selected entry screen and its settings/identity flow.
+Date: 2026-11-06. Source baseline: `5b773d3`.
 
-Scope: the selected portrait cabinet viewer and its compact entry / candle-reading flow. Production 3D GPU rendering on a physical phone remains a separate device check.
+The approved third portrait mockup was compared at the same 390 × 844 aspect ratio with the rendered implementation. Evidence: [`comparison.jpg`](docs/entry-qa/comparison.jpg), approved source on the left and browser implementation on the right; [`entry-screen-mobile.png`](docs/entry-qa/entry-screen-mobile.png).
 
-## Evidence
+| Area | Result |
+| --- | --- |
+| Layout | Dusk forest/lantern, boy, black curly poodle and fire above a cream sheet with rounded upper corners. Same ordering and two-column controls. |
+| Type and colour | Korean title, green heading/CTA, cream background, underlined existing-code action and tiny bottom-right `ver 0.1`. Live form text remains editable/selectable. |
+| Requested copy | `강아지`, `고양이`, `남자`, `여자`; default dog selection is black poodle. |
+| Mobile fit | Browser checked 390 × 844 and 320 × 568 iframe viewports against the real page. No form overflow: at 320 × 568 the primary button ends at y496 and helper at y546. Short screens reduce the illustration area. |
+| Existing identity | Local saved code loads server nickname, gender and companion into settings; refresh remains on settings until explicit entry. Existing-code import first loads settings, then requires another explicit entry press. |
+| New identity | Unique server reservation is saved locally before settings. Pending reservation survives response loss/reload; no duplicate registration on retry. |
+| Read-only preview | Preview does not create visits/presence, replace another device, or mutate stored prayer/counter/halo state. Explicit entry may update the displayed profile edits. |
+| Accessibility | Native labelled input/select/radio controls, visible focus indication, disabled pending submit, status text and semantic fieldsets. |
 
-- Selected concept: generated option 1, 853 × 1844 pixels, normalized to 432 × 936 for comparison.
-- Actual cloud Chromium viewport: 1363 × 936 CSS pixels; cabinet region x465.016, y0, width432.969, height936. Screenshot clipped to the cabinet, 432 × 936 pixels. No phone bezel or browser chrome in either comparison.
-- Same six-candle / first-page state: [side-by-side](design/candle-cabinet-comparison.jpg), [shelf and lettering detail](design/candle-cabinet-detail.jpg), [actual screenshot](design/candle-cabinet-final.jpg).
-- Source and browser capture inspected together, including the focused shelf comparison. Gallery preserves the source's 2 × 3 spacious presentation. Four pages provide 20 total places; the last has two places. The world uses five columns and four shelves.
+Checks: `npm test` (27 passed); JS syntax checks; real pinned Three r170 upgrade compatibility test; `git diff --check`.
 
-## Five fidelity surfaces
+Known visual differences: generated hero artwork has small differences in character/fire proportions from the approved bitmap; thumbnails reuse existing male/female/cat art. Form geometry, colour and text remain native responsive UI. This is a close implementation rather than a pixel-identical screenshot.
 
-| Surface | Result |
-|---|---|
-| Fonts / typography | Original image lettering retained on the wooden signs and CTA. Actual editable names/wishes use the garden's Gowun fonts; name and three-line preview stay on cream wax. Full wish scrolls inside enlarged candle. |
-| Layout / spacing | Reference cabinet, shelf floors, candle centers, plaques and footer preserved. Fixed flame/shelf overlap, floating coasters, and short-wish clipping during comparison. Responsive portrait stage preserves artwork proportions; landscape uses dark green side margins. |
-| Colors / tokens | Same golden wood, dark garden background, cream wax and warm orange/yellow flame imagery. Fixed enlarged-candle text contrast. |
-| Image quality | Real generated cabinet, wax and transparent flame assets. Flames animated independently. No fabricated replacement shelf or flame drawings. Wood/paper textures reused from the existing board. |
-| Copy / content | Korean heading and CTA match the source. Real names, wishes, remaining time and 20-place count are live text. Full/connection/storage feedback keeps the draft. |
-
-## Interaction verification
-
-Cloud browser exercised initial six candles, blank places, pages 1 through 4 (only 19/20 on last page), enlarged reading, entry, pending state, successful ACK closing both views, reopening to the newly added candle, and full-capacity feedback preserving both fields. Verified CSS `candle-dance` animation and wax text bounds. No production room writes were made.
-
-Node tests verify server-authoritative 24 real hours, capacity20, idempotent/concurrent requests, rollback, alarm/restart/expiry, UI retry identity and late-ACK protection. Actual r170 geometry test verifies 20 instanced candles, changing flame transforms, exact-millisecond expiry and last-candle light extinction. Existing paving, renderer, board, campfire and nature tests pass.
-
-## Limits and remaining notes
-
-- Cloud browser cannot create a WebGL context, so the production garden's GPU/bloom appearance, physical phone frame rate and app switching still need the user's normal Cloudflare/device check. This limitation does not affect the captured HTML cabinet viewer.
-- The compact entry and enlarged reading views extend the selected source; they use its wood, paper and candle assets.
-- Long wishes are intentionally previewed on the small candle and fully readable by tapping it. No unresolved P0/P1/P2 findings within the captured cabinet flow. P3: compare final bloom strength in the production night scene on the phone.
-
-## Touch rail follow-up
-
-- Replaced page-by-page DOM replacement with four persistent horizontal panels (6/6/6/2). Native touch panning and scroll snap keep candles under the finger; the cabinet frame and background remain fixed.
-- Cloud browser mouse dragging traversed panels 1→2→3→4, without opening the wish overlay. Tapping a candle on panel 4 still opened its complete wish. Settled scroll position and panel bounds were checked in the DOM.
-- Node regression covers drag following/settling, post-drag click suppression, ordinary taps, native scroll counter updates, unchanged panel identity during refresh, last-panel boundary, arrow keys, close/reopen position, and touch cancellation. Existing 14 tests pass.
-- Physical Android/iOS touch feel remains a device check. No live garden records were written.
+Scope limit: this QA verifies the entry UI and identity protocol. The local preview uses disposable memory-backed profile handlers; no production room data was written. Actual garden WebGL rendering and physical-phone keyboard/system-bar behaviour remain device checks. Existing garden rendering, prayer rules and admin controls are preserved. Prior candle QA is archived at [`docs/candle-design-qa.md`](docs/candle-design-qa.md).

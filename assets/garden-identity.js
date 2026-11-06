@@ -33,15 +33,15 @@ export function createGardenIdentity({document,storage,crypto,onSwitch,onMode,no
   const entry=document.createElement('section');entry.className='personal-entry';entry.setAttribute('aria-label','개인 기록');
   const label=document.createElement('strong'),summary=document.createElement('p'),row=document.createElement('div');row.className='row';
   const restore=document.createElement('button'),fresh=document.createElement('button'),input=document.createElement('input'),error=document.createElement('p');
-  restore.type=fresh.type='button';restore.textContent='내 코드로 돌아오기';fresh.textContent='새 코드 만들기';
+  restore.type=fresh.type='button';restore.textContent='코드 불러오기';fresh.textContent='새 코드 만들기';
   input.id='personalEntryCode';input.type='text';input.placeholder='5자리 입장 코드';input.inputMode='numeric';input.autocomplete='off';input.spellcheck=false;input.maxLength=32;input.setAttribute('aria-label','개인 입장 코드');input.setAttribute('autocapitalize','characters');
   error.setAttribute('role','status');error.className='personal-status';row.append(restore,fresh);entry.append(label,summary,input,row,error);
   document.getElementById('nameForm').prepend(entry);
-  const style=document.createElement('style');style.textContent='.personal-entry{padding:.7rem;border:1px solid #8b9a7a66;border-radius:12px;margin-bottom:.9rem;text-align:left}.personal-entry p{margin:.35rem 0;font-size:.86rem}.personal-entry input{width:100%;box-sizing:border-box}.personal-entry .row{display:flex;gap:.4rem;flex-wrap:wrap}.personal-entry button{font-size:.82rem}.personal-restoring>:not(.personal-entry):not(#nameSubmit):not(#entryHint):not(#nameCancel){display:none!important}.personal-code{font-size:1.05rem;letter-spacing:.07em;word-break:break-word;user-select:all}.personal-stats{white-space:pre-line;line-height:1.7}.personal-status{color:#815332}';document.head.append(style);
+  const style=document.createElement('style');style.textContent='.personal-entry{padding:.7rem;border:1px solid #8b9a7a66;border-radius:12px;margin-bottom:.9rem;text-align:left}.personal-entry p{margin:.35rem 0;font-size:.86rem}.personal-entry input{width:100%;box-sizing:border-box}.personal-entry .row{display:flex;gap:.4rem;flex-wrap:wrap}.personal-entry button{font-size:.82rem}.personal-restoring>:not(.personal-entry):not(.entry-footer):not(#nameSubmit):not(#entryHint):not(#nameCancel){display:none!important}.personal-code{font-size:1.05rem;letter-spacing:.07em;word-break:break-word;user-select:all}.personal-stats{white-space:pre-line;line-height:1.7}.personal-status{color:#815332}';document.head.append(style);
   function renderEntry(){
     label.textContent=mode==='restore'?'기존 개인 코드로 입장':mode!=='new'&&active?.registered?'내 기록으로 입장':'처음 방문 · 5자리 코드 발급';
     summary.textContent=mode==='restore'?'다른 기기에서도 같은 코드로 기록을 이어갑니다.':mode!=='new'&&active?.registered?'절 횟수와 후광 기록을 불러옵니다.':'입장 전에 5자리 코드를 발급받아 이 기기에 저장합니다.';
-    input.hidden=mode!=='restore';document.getElementById('nameForm').classList.toggle('personal-restoring',mode==='restore');
+    entry.hidden=mode!=='restore';input.hidden=mode!=='restore';document.getElementById('nameForm').classList.toggle('personal-restoring',mode==='restore');
   }
   restore.onclick=()=>{mode='restore';error.textContent='';renderEntry();input.focus();onMode?.()};
   fresh.onclick=()=>{create();error.textContent='입장하면 새 5자리 코드를 만듭니다.'};
@@ -65,7 +65,7 @@ export function createGardenIdentity({document,storage,crypto,onSwitch,onMode,no
   function confirm(person){const different=cache().profile?.id!==person.id;legacyAllowed=false;active.registered=true;active.action='restore';storage.set(KEY,JSON.stringify(active));view=person;const c=cache();c.profile=person;c.values={...c.values,'garden.bows':String(person.progress?.[108]||0),'garden.bows.3000':String(person.progress?.[3000]||0),'garden.bowTarget':String(person.target||108),'garden.bowHalos':JSON.stringify(person.halos||{}),'garden.bowHaloUntil':String(rules.haloState(person.halos,now()).until)};saveCache(c);error.textContent='';renderEntry();if(dialog.open)render();return different}
   renderEntry();
   return{
-    updateEntry(entered){entry.hidden=entered;if(!entered)renderEntry()},importing:()=>mode==='restore',valid:()=>mode!=='restore'||rules.validCode(input.value),
+    updateEntry(entered){entry.hidden=entered||mode!=='restore';if(!entered)renderEntry()},importing:()=>mode==='restore',valid:()=>mode!=='restore'||rules.validCode(input.value),
     async prepare(draft=null){
       if(preparing)return preparing;
       for(const control of[restore,fresh,input])control.disabled=true;
@@ -77,6 +77,7 @@ export function createGardenIdentity({document,storage,crypto,onSwitch,onMode,no
             if(!storage.set(KEY,JSON.stringify(next)))throw Error('local');active=next;view=null;return true;
           }
           if(mode==='new'||!active)return await allocate(draft);
+          if(draft&&!active.registered){const c=cache();c.draft=draft;if(!saveCache(c))throw Error('local')}
           if(!storage.set(KEY,JSON.stringify(active)))throw Error('local');return true;
         }catch(e){const messages={local:'코드를 이 기기에 저장하지 못했어요. 브라우저의 저장 허용 설정을 확인해 주세요.',slow:'잠시 후 다시 입장해 주세요.',full:'발급 가능한 코드가 모두 사용 중이에요.',storage:'코드를 발급하지 못했어요. 다시 시도해 주세요.'};error.textContent=messages[e.message]||'코드 발급을 확인하지 못했어요. 연결을 확인하고 다시 눌러 주세요.';return false}
       })();try{return await preparing}finally{preparing=null;for(const control of[restore,fresh,input])control.disabled=false}
@@ -84,6 +85,10 @@ export function createGardenIdentity({document,storage,crypto,onSwitch,onMode,no
     credentials(){return active?{personalCode:active.code,personalAction:active.registered?'restore':'create',...(!active.registered&&active.registration?{personalRegistration:active.registration}:{})}:{}},
     restore(saved){if(rules.validCode(saved?.personalCode)){active={code:rules.formatCode(saved.personalCode),registered:saved.personalAction==='restore',action:saved.personalAction,registration:saved.personalRegistration};view=null}},
     saved:()=>active?(cache().profile||cache().draft||null):null,
+    bind(next){if(next.onMode)onMode=next.onMode;if(next.onSwitch)onSwitch=next.onSwitch;if(next.now)now=next.now},
+    useExisting(){restore.onclick()},
+    showSettings(){mode='saved';renderEntry()},
+    errorText:()=>error.textContent,
     confirm,open,
     get(key){if(mode==='new')return null;const c=cache();return c.values?.[key]??(legacyAllowed&&!active?.registered&&mode!=='restore'?storage.get(key):null)},
     set(key,value){if(!active)return storage.set(key,value);const c=cache();c.values={...c.values,[key]:value};return saveCache(c)},

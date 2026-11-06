@@ -150,6 +150,7 @@ export class GardenRoom extends DurableObject {
         const legacy=legacyId&&jobs[legacyId],claimed=legacyId&&await txn.get('person.claim.'+legacyId);
         if(legacy&&!claimed){const f=Prayer.bowProgress(legacy,now);person.progress={...person.progress,...legacy.progress,[f.target]:f.count};person.totalBows=(person.progress[108]||0)+(person.progress[3000]||0);person.bow={...legacy,accountedCount:f.count};delete jobs[legacyId];await txn.put('person.claim.'+legacyId,id)}
       }else if(person.codeHash!==codeHash)throw Error('code');
+      if(m.personalUpdate===true){person.name=clean(m.name,12)||person.name;person.look=cleanLook(m.look,person.name)||person.look;person.dog=cleanDog(m.dog)||person.dog}
       let job=person.bow||{id:crypto.randomUUID().replace(/-/g,''),rev:0,mode:'idle',target:108,count:person.progress[108]||0,elapsed:0,at:now,paused:false,progress:{...person.progress},halos:person.halos,accountedCount:person.progress[108]||0,position:cleanState(m.s)};
       const settled=Prayer.accountProfile(person,job,now);person=settled.profile;job={...settled.job,progress:{...person.progress},expiresAt:now+VISIT_MEMORY_MS*2};person.bow=job;jobs[id]=job;
       person.session=session;await txn.put(key,person);await txn.put('bowPractices',jobs);return{person,jobs};
@@ -167,6 +168,29 @@ export class GardenRoom extends DurableObject {
   personalHalos(a){
     const f=Prayer.bowProgress(this.bows[a.id],Date.now()),v=this.personalViews.get(a.id),state=Prayer.haloState(f?.halos||v?.halos,Date.now());
     return{halos:{whiteUntil:state.whiteUntil,redUntil:state.redUntil},haloUntil:state.until,haloLevel:state.level};
+  }
+
+  async previewPersonalProfile(req){
+    const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
+    if(req.method!=='POST')return reply({error:'method'},405);
+    let message;try{const text=await req.text();if(text.length>512)throw Error();message=JSON.parse(text);if(!Prayer.validCode(message.personalCode))throw Error()}catch{return reply({error:'code'},400)}
+    const ip=req.headers.get('CF-Connecting-IP')||'unknown';if(!this.allow({id:'profile-preview:'+ip},'preview',3))return reply({error:'slow'},429);
+    try{
+      const now=Date.now(),codeHash=await personalHash('garden-code-v1:'+Prayer.normalizeCode(message.personalCode)),id=(await personalHash('garden-person-v1:'+codeHash)).slice(0,20);
+      const person=await this.ctx.storage.get('person.'+id);
+      if(!person){
+        if(Prayer.isAdminCode(message.personalCode))return reply({personal:null,pending:true,now});
+        if(message.personalAction==='create'){
+          if(/^[0-9]{5}$/.test(Prayer.normalizeCode(message.personalCode))){const reservation=await this.ctx.storage.get('personal.code.reserve.'+codeHash);if(!/^[a-f0-9]{64}$/.test(message.personalRegistration||'')||reservation?.requestHash!==await personalHash('garden-issue-v1:'+message.personalRegistration))return reply({error:'code'},403)}
+          return reply({personal:null,pending:true,now});
+        }return reply({error:'missing'},404);
+      }
+      if(person.codeHash!==codeHash)return reply({error:'code'},403);
+      // Preview is read-only: no presence, session replacement, practice stop or
+      // stored clock change occurs until the owner presses the entry button.
+      const projected=Prayer.accountProfile(person,this.bows[id]||person.bow,now).profile;
+      return reply({personal:Prayer.profileView(projected,now),now});
+    }catch{return reply({error:'storage'},503)}
   }
 
   async allocatePersonalCode(req){
@@ -195,6 +219,7 @@ export class GardenRoom extends DurableObject {
 
   async fetch(req) {
     if(req&&new URL(req.url).pathname==='/personal/allocate')return this.allocatePersonalCode(req);
+    if(req&&new URL(req.url).pathname==='/personal/profile')return this.previewPersonalProfile(req);
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
@@ -876,7 +901,7 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === '/health') return new Response('ok',{headers:{'X-Garden-Protocol':'board-v2'}});
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{6,40})$/);
-    const allocating=url.pathname==='/personal/allocate';
+    const allocating=['/personal/allocate','/personal/profile'].includes(url.pathname);
     if (!m&&!allocating) {
       if (env.ASSETS) {
         const response=await env.ASSETS.fetch(req);

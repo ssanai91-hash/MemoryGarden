@@ -24,9 +24,9 @@ a.storage.set('garden.bows','99');a.fresh.onclick();assert.equal(await a.identit
 a.restore.onclick();a.input.value=credentials.personalCode;await a.identity.prepare();assert.equal(a.identity.get('garden.bows'),'37');
 // Modal keeps the code private until opened; switching is an explicit action.
 a.identity.open();assert.equal(a.dialog.open,true);const switchButton=a.dialog.children.find(n=>n.textContent==='다른 코드로 입장');switchButton.onclick();assert.equal(a.switches,1);assert.equal(a.dialog.open,false);
-const html=fs.readFileSync(__dirname+'/../index.html','utf8');assert.ok(html.includes('else if(!await restoreVisit()&&!restorePersonalEntry())'));assert.ok(html.includes('...gardenIdentity.credentials(),resumeToken:visitToken'));assert.ok(html.includes("if(m.personal)receivePersonal(m.personal,true)"));assert.ok(html.includes("personal rewards require the server clock"));assert.ok(!html.includes("searchParams.set('personal"));assert.ok(html.indexOf('const $=id=>')<html.indexOf('const gardenIdentity='));
+const html=fs.readFileSync(__dirname+'/../index.html','utf8');assert.ok(html.includes('await entryScreen.waitForEntry()'));assert.ok(!html.includes('function restorePersonalEntry')); assert.ok(html.includes('...gardenIdentity.credentials(),personalUpdate:personalUpdatePending,resumeToken:visitToken'));assert.ok(html.includes("receivePersonal(m.personal,true)"));assert.ok(html.includes("personal rewards require the server clock"));assert.ok(!html.includes("searchParams.set('personal"));assert.ok(html.indexOf('const $=id=>')<html.indexOf('const gardenIdentity='));
 assert.equal(credentials.personalCode,'00042');assert.match(credentials.personalRegistration,/^[a-f0-9]{64}$/);assert.equal(a.c.GardenPrayer.formatCode('00042'),'00042');
-console.log('PASS: server-issued five-digit code, pending registration/reload, existing-code-only restore, per-person local cache, same-device automatic entry source, private modal/code switching, no credentials in invite URLs and server-clock-only personal rewards.');
+console.log('PASS: server-issued five-digit code, pending registration/reload, existing-code-only restore, per-person local cache, explicit entry button gate, private modal/code switching, no credentials in invite URLs and server-clock-only personal rewards.');
 
 // Allocation response loss retries the same persisted request instead of issuing twice.
 const dropped=new Map();let calls=0;
@@ -36,9 +36,7 @@ const retried=client(dropped);assert.equal(await retried.identity.prepare(),true
 const blocked=client(new Map(),async()=>{throw Error('must not issue before local storage works')});blocked.storage.set=()=>false;assert.equal(await blocked.identity.prepare(),false);assert.equal(blocked.identity.credentials().personalCode,undefined);
 // Existing long codes keep their exact value and never call the issuer.
 const oldCode='ABCD-EFGH-JKLM-NPQR-STUV',legacy=client(new Map([['garden.identity.v1',JSON.stringify({code:oldCode,registered:true})]]),()=>{throw Error('legacy reissue')});assert.equal(await legacy.identity.prepare(),true);assert.equal(legacy.identity.credentials().personalCode,oldCode);
-// A code alone is enough to enter automatically; the server loads real metadata.
-const codeOnly=client(new Map([['garden.identity.v1',JSON.stringify({code:'00123',registered:true})]]));let joined=false;
-const auto={gardenIdentity:codeOnly.identity,myNick:'',myLook:{},myDog:{},hasEntered:false,pose:'',stripInvisible:v=>String(v||''),validLook:()=>false,validDog:()=>false,applyMyLook(){},newVisitToken:()=> 'token',loadPersonalPractice(){},closeNameDialog(){},startGardenConnection(){joined=true},saveVisit(){}};vm.createContext(auto);
-vm.runInContext(html.slice(html.indexOf('function restorePersonalEntry(){'),html.indexOf('(async()=>{if(visitEnded)',html.indexOf('function restorePersonalEntry(){')))+';this.result=restorePersonalEntry();',auto);assert.equal(auto.result,true);assert.equal(joined,true);assert.equal(auto.hasEntered,true);
-console.log('PASS: store-before-entry, zero-preserving five-digit format, response-loss retry, old long-code compatibility and automatic code-only server restore.');
+// Saved codes prepare without joining; the independent settings controller owns entry.
+const codeOnly=client(new Map([['garden.identity.v1',JSON.stringify({code:'00123',registered:true})]]),()=>{throw Error('must not allocate a saved code')});assert.equal(await codeOnly.identity.prepare(),true);assert.equal(codeOnly.identity.credentials().personalCode,'00123');assert.equal(codeOnly.entry.hidden,true);codeOnly.identity.useExisting();assert.equal(codeOnly.entry.hidden,false);codeOnly.identity.showSettings();assert.equal(codeOnly.entry.hidden,true);
+console.log('PASS: store-before-entry, zero-preserving five-digit format, response-loss retry, old long-code compatibility and saved-code settings gate.');
 })().catch(e=>{console.error(e);process.exitCode=1});
