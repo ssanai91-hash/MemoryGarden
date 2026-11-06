@@ -15,8 +15,8 @@
   const BOW_MS=8000,DAY_MS=86400000,HALO_WHITE_MS=3*DAY_MS,HALO_RED_MS=7*DAY_MS;
   const CODE_ALPHABET='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   const normalizeCode=value=>typeof value==='string'?value.toUpperCase().replace(/[\s-]/g,''):'';
-  const validCode=value=>/^[2-9A-HJ-NP-Z]{20}$/.test(normalizeCode(value));
-  const formatCode=value=>normalizeCode(value).match(/.{1,4}/g)?.join('-')||'';
+  const validCode=value=>/^(?:[0-9]{5}|[2-9A-HJ-NP-Z]{20})$/.test(normalizeCode(value));
+  const formatCode=value=>/^[0-9]{5}$/.test(normalizeCode(value))?normalizeCode(value):normalizeCode(value).match(/.{1,4}/g)?.join('-')||'';
   function cleanHalos(value,now){
     const valid=(v,max)=>Number.isFinite(v)&&v>now&&v<=now+max?v:0;
     return{whiteUntil:valid(value?.whiteUntil,HALO_WHITE_MS),redUntil:valid(value?.redUntil,HALO_RED_MS)};

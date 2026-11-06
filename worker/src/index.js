@@ -92,6 +92,8 @@ function cleanState(s) {
   return { space,x:space==='listening'?num(x,-5.6,5.6):x,z:space==='listening'?num(z,-3,5.3):z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true,haloUntil:cleanBowHalo(s.haloUntil),haloLevel:s.haloLevel===2?2:1,halos:Prayer.cleanHalos(s.halos||{whiteUntil:s.haloUntil},Date.now()) };
 }
 
+async function personalHash(text){return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(v=>v.toString(16).padStart(2,'0')).join('')}
+
 export class GardenRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -128,11 +130,16 @@ export class GardenRoom extends DurableObject {
   async personalIdentity(ws,a,m,legacyId){
     if(m.personalCode===undefined)return null; // old clients retain temporary visits
     if(!Prayer.validCode(m.personalCode)||!['create','restore'].includes(m.personalAction))throw Error('code');
-    const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(v=>v.toString(16).padStart(2,'0')).join('');
+    const hash=personalHash;
     const codeHash=await hash('garden-code-v1:'+Prayer.normalizeCode(m.personalCode)),id=(await hash('garden-person-v1:'+codeHash)).slice(0,20),now=Date.now(),session=crypto.randomUUID();
     const result=await this.ctx.storage.transaction(async txn=>{
       const key='person.'+id,jobs=(await txn.get('bowPractices'))||{};
       let person=await txn.get(key);
+      if(/^[0-9]{5}$/.test(Prayer.normalizeCode(m.personalCode))&&m.personalAction==='create'){
+        if(!/^[a-f0-9]{64}$/.test(m.personalRegistration||''))throw Error('code');
+        const reservation=await txn.get('personal.code.reserve.'+codeHash),requestHash=await hash('garden-issue-v1:'+m.personalRegistration);
+        if(!reservation||reservation.requestHash!==requestHash)throw Error('code');
+      }
       if(!person){
         if(m.personalAction!=='create')throw Error('missing');
         person={id,codeHash,createdAt:now,updatedAt:now,name:clean(m.name,12)||'친구',look:cleanLook(m.look,m.name),dog:cleanDog(m.dog),progress:{108:0,3000:0},completed:{108:0,3000:0},totalBows:0,highestHalo:0,halos:{whiteUntil:0,redUntil:0},bow:null};
@@ -160,11 +167,36 @@ export class GardenRoom extends DurableObject {
     return{halos:{whiteUntil:state.whiteUntil,redUntil:state.redUntil},haloUntil:state.until,haloLevel:state.level};
   }
 
-  async fetch() {
+  async allocatePersonalCode(req){
+    const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
+    if(req.method!=='POST')return reply({error:'method'},405);
+    let request;try{const body=await req.text();if(body.length>256)throw Error();request=JSON.parse(body).request;if(!/^[a-f0-9]{64}$/.test(request||''))throw Error()}catch{return reply({error:'request'},400)}
+    const requestHash=await personalHash('garden-issue-v1:'+request);
+    try{
+      // A retry, even after a lost response/restart, returns the same reservation.
+      const existing=await this.ctx.storage.get('personal.issue.'+requestHash);if(existing)return reply({code:existing});
+      const ip=req.headers.get('CF-Connecting-IP')||'unknown';if(!this.allow({id:'code-issue:'+ip},'issue',2))return reply({error:'slow'},429);
+      const code=await this.ctx.storage.transaction(async txn=>{
+        const prior=await txn.get('personal.issue.'+requestHash);if(prior)return prior;
+        const saved=await txn.get('personal.code.pool'),pool=saved?new Uint8Array(saved):new Uint8Array(12500);
+        // Unbiased random starting slot; a bitmap scan resolves all collisions
+        // inside this transaction, with a fixed 12.5 KB pool for 100,000 codes.
+        const values=new Uint32Array(1);do{crypto.getRandomValues(values)}while(values[0]>=4294900000);
+        const start=values[0]%100000;let slot=-1;
+        for(let i=0;i<100000;i++){const candidate=(start+i)%100000;if(!(pool[candidate>>3]&(1<<(candidate&7)))){slot=candidate;break}}
+        if(slot<0)throw Error('full');pool[slot>>3]|=1<<(slot&7);
+        const next=String(slot).padStart(5,'0'),codeHash=await personalHash('garden-code-v1:'+next);
+        await txn.put('personal.code.pool',pool);await txn.put('personal.code.reserve.'+codeHash,{requestHash});await txn.put('personal.issue.'+requestHash,next);return next;
+      });return reply({code});
+    }catch(error){return reply({error:error.message==='full'?'full':'storage'},503)}
+  }
+
+  async fetch(req) {
+    if(req&&new URL(req.url).pathname==='/personal/allocate')return this.allocatePersonalCode(req);
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ id: crypto.randomUUID().replace(/-/g, '').slice(0, 10), ready: false });
+    server.serializeAttachment({ id: crypto.randomUUID().replace(/-/g, '').slice(0, 10), ready: false,loginRateKey:req?.headers.get('CF-Connecting-IP')||null });
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -590,6 +622,7 @@ export class GardenRoom extends DurableObject {
         const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.resumeToken));
         a.id = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('').slice(0, 20);
       }
+      if(a.loginRateKey&&m.personalCode!==undefined&&!this.allow({id:'personal-login:'+a.loginRateKey},'login',3)){ws.send(JSON.stringify({t:'personal_error',code:'slow'}));ws.close(4004,'try later');return}
       const legacyId=a.id;let personal=null;
       try{personal=await this.personalIdentity(ws,a,m,legacyId)}catch(error){a.handshaking=false;ws.serializeAttachment(a);ws.send(JSON.stringify({t:'personal_error',code:['code','missing'].includes(error.message)?error.message:'storage'}));ws.close(4004,'personal profile unavailable');return}
       await this.advanceBows();await this.advanceVisits();
@@ -821,7 +854,8 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === '/health') return new Response('ok',{headers:{'X-Garden-Protocol':'board-v2'}});
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{6,40})$/);
-    if (!m) {
+    const allocating=url.pathname==='/personal/allocate';
+    if (!m&&!allocating) {
       if (env.ASSETS) {
         const response=await env.ASSETS.fetch(req);
         if(url.pathname==='/'||url.pathname==='/index.html'){
@@ -832,12 +866,13 @@ export default {
       }
       return new Response('기억의 정원 방 서버입니다.', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
     }
-    if (req.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket only', { status: 426 });
+    if (allocating&&req.method!=='POST')return new Response('Method not allowed',{status:405,headers:{Allow:'POST'}});
+    if (!allocating&&req.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket only', { status: 426 });
     const origins = env.ALLOWED_ORIGINS || (env.ASSETS ? url.origin : '');
     const allowed = origins.split(',').map((s) => s.trim()).filter(Boolean);
     if (allowed.length && !allowed.includes(req.headers.get('Origin') || '')) return new Response('origin not allowed', { status: 403 });
     // 통합 정원에서는 이전 링크를 열어도 모두 같은 공간으로 연결한다.
-    const space = env.ASSETS ? 'memorygarden' : m[1];
+    const space = env.ASSETS||allocating ? 'memorygarden' : m[1];
     return env.ROOMS.get(env.ROOMS.idFromName(space)).fetch(req);
   },
 };

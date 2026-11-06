@@ -820,7 +820,7 @@ import {createGardenIdentity} from './assets/garden-identity.js';
 THREE.ColorManagement.enabled=false;
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}};
 const $=id=>document.getElementById(id);
-const gardenIdentity=createGardenIdentity({document,storage:store,crypto,now:()=>serverNow(),onMode:()=>updateEntryForm(),onSwitch(){leaveGarden(false);beginManualEntry()}});
+const gardenIdentity=createGardenIdentity({document,storage:store,crypto,now:()=>serverNow(),onMode:()=>updateEntryForm(),onSwitch(){leaveGarden(false);beginManualEntry(true)}});
 $('nameForm').noValidate=true;
 const LEFT_KEY='garden.visit.left.v1';
 function readExitFlag(){try{return sessionStorage.getItem(LEFT_KEY)==='1'}catch(e){return false}}
@@ -4455,7 +4455,7 @@ function serverNow(){return Date.now()+(room&&room.clockOffset||0)}
 /* ---------- a confirmed name is required before joining ---------- */
 function entrySelection(group){return $('nameForm').querySelector('input[name="'+group+'"]:checked')?.value||''}
 
-let entryPetKind='',entryPetDrafts={};
+let entryPetKind='',entryPetDrafts={},entryBusy=false;
 function restorePetChoices(){
   for(const kind of ['dog','cat']){
     const saved=petKind(myDog)===kind?myDog:loadJSON('garden.pet.'+kind);
@@ -4502,7 +4502,7 @@ function updateEntryForm(){
   const petComplete=['dog','cat'].includes(kind)&&validDog(entryPetSpec());
   gardenIdentity.updateEntry(hasEntered);
   const complete=!hasEntered&&gardenIdentity.importing()?gardenIdentity.valid():['male','female'].includes(entrySelection('entryGender'))&&!!stripInvisible($('nameInput').value).slice(0,12)&&petComplete;
-  $('nameSubmit').disabled=!complete;return complete;
+  $('nameSubmit').disabled=!complete||entryBusy;return complete;
 }
 function selectEntryValue(group,value){for(const input of $('nameForm').querySelectorAll('input[name="'+group+'"]'))input.checked=!input.disabled&&input.value===value}
 function openNameDialog(focus){
@@ -4519,14 +4519,16 @@ function openNameDialog(focus){
 function closeNameDialog(){if(!hasEntered)return;$('nameInput').blur();$('welcome').hidden=true}
 $('nameForm').addEventListener('input',updateEntryForm);
 $('nameForm').addEventListener('change',updateEntryForm);
-$('nameForm').onsubmit=e=>{
-  e.preventDefault();if(visitEnded||!updateEntryForm())return;
-  const initial=!hasEntered;if(initial&&!gardenIdentity.prepare())return;
+$('nameForm').onsubmit=async e=>{
+  e.preventDefault();if(entryBusy||visitEnded||!updateEntryForm())return;
+  const initial=!hasEntered;
   const importing=initial&&gardenIdentity.importing();
   const name=stripInvisible($('nameInput').value).slice(0,12)||(importing?'친구':''),gender=entrySelection('entryGender')||(importing?myLook.gender||'male':'');
   const look={...myLook,gender,hs:gender==='female'?1:0,hat:false};
   if(myLook.gender!==gender||!Number.isInteger(myLook.st))Object.assign(look,randLook(gender));
-  const pet=importing?myDog:entryPetSpec();if(!validDog(pet))return;applyMyLook(look,pet,false,name);
+  const pet=importing?myDog:entryPetSpec();if(!validDog(pet))return;
+  if(initial){entryBusy=true;$('nameSubmit').disabled=true;$('nameSubmit').textContent='입장 준비 중…';let ready=false;try{ready=await gardenIdentity.prepare({name,look,dog:pet})}finally{entryBusy=false;$('nameSubmit').textContent='입장하기';updateEntryForm()}if(!ready||visitEnded)return}
+  applyMyLook(look,pet,false,name);
   if(initial){loadPersonalPractice()}
   myNick=name;store.set('garden.name',name);store.set('garden.gender',gender);store.set('garden.pet',petKind(pet));hasEntered=true;
   if(!visitToken)visitToken=newVisitToken();
@@ -4835,9 +4837,9 @@ function saveVisit(){
   let stored=false;try{sessionStorage.setItem(VISIT_KEY,JSON.stringify(snapshot));stored=true}catch(e){}
   lastVisitSave=performance.now();return stored;
 }
-function restoreVisit(){
+async function restoreVisit(){
   const saved=readVisit();if(!saved)return false;
-  gardenIdentity.restore(saved.personal);if(!gardenIdentity.credentials().personalCode)gardenIdentity.prepare();
+  gardenIdentity.restore(saved.personal);if(!gardenIdentity.credentials().personalCode&&!await gardenIdentity.prepare({name:saved.name,look:saved.look,dog:saved.dog}))return false;
   visitToken=saved.token;myNick=stripInvisible(saved.name).slice(0,12);hasEntered=true;
   store.set('garden.name',myNick);
   if(typeof saved.umbrella==='boolean'){myUmbrella=saved.umbrella;store.set('garden.umbrella',myUmbrella?'1':'0')}syncUmbrellaButtons();
@@ -4920,17 +4922,17 @@ function leaveGarden(closeWindow=true,notifyServer=true){
   showExitScreen();updateWho();
   if(closeWindow)exitWindowControls.requestClose();
 }
-function beginManualEntry(){
+function beginManualEntry(forceChoose=false){
   exitWindowControls.reset();
   visitEnded=false;try{sessionStorage.removeItem(LEFT_KEY)}catch(e){}
   clearVisit();visitToken='';fireWelcomeShown=false;hasEntered=false;
   $('exitScreen').hidden=true;document.body.classList.remove('visit-ended');me.g.visible=true;myDogObj.g.visible=true;
   if(!musicScheduleTimer)musicScheduleTimer=setInterval(schedule,250);
-  clock.getDelta();installGardenHistory();requestGardenFrame();openNameDialog(true);updateWho();
+  clock.getDelta();installGardenHistory();requestGardenFrame();if(!forceChoose&&restorePersonalEntry()){updateWho();return}openNameDialog(true);updateWho();
 }
 $('leaveBtn').onclick=showLeaveConfirm;
 
-$('reenterBtn').onclick=beginManualEntry;
+$('reenterBtn').onclick=()=>beginManualEntry();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveVisit()});
 addEventListener('pagehide',saveVisit);
 document.addEventListener('freeze',saveVisit);
@@ -5069,7 +5071,7 @@ function connectRoomServer(base,code){
           api.selfId=you;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
           applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});if(api.bowVersion){practice.serverRev=0;if(practice.pendingStart)api.send(practice.pendingStart);else if(m.bow)receivePractice(m.bow,true);else if(['auto','single'].includes(practice.mode)){const paused=practice.paused;requestPracticeStart();if(paused)requestPracticeControl('pause')}if(practice.pendingControl)api.send(practice.pendingControl)}break;
         case 'personal_state':receivePersonal(m.personal);break;
-        case 'personal_error':{const message=m.code==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':m.code==='storage'?'개인 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.':'개인 코드 형식을 확인해 주세요.';api.close();room=null;hasEntered=false;clearVisit();practice.remote=null;practice.mode='idle';openNameDialog();gardenIdentity.fail(message);break}
+        case 'personal_error':{const message=m.code==='slow'?'잠시 후 다시 입장해 주세요.':m.code==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':m.code==='storage'?'개인 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.':'개인 코드 형식을 확인해 주세요.';api.close();room=null;hasEntered=false;clearVisit();practice.remote=null;practice.mode='idle';openNameDialog();gardenIdentity.fail(message);break}
         case 'bow_state':if(m.id===you){receivePractice(m.job)}else if(m.peer){peersById.set(m.id,{...m.peer,quiet:true});emit()}else{const p=peersById.get(m.id);if(p){p.bow=m.job;emit()}}break;
         case 'bow_error':toast(m.code==='storage'?'수행 저장을 확인하지 못했어요. 다시 연결해 확인해 주세요.':'수행 상태를 다시 확인하고 있어요');if(m.code==='invalid')api.send({t:'bow_sync'});break;
         case 'candles_state':case 'candle_lit':case 'candle_error':candleUI?.receive(m);break;
@@ -5168,11 +5170,11 @@ gardenBoard.bind({
 });
 
 function restorePersonalEntry(){
-  const person=gardenIdentity.saved();if(!person||!validLook(person.look)||!validDog(person.dog)||!stripInvisible(person.name))return false;
-  myNick=stripInvisible(person.name).slice(0,12);applyMyLook(person.look,person.dog,false,myNick);hasEntered=true;visitToken=newVisitToken();loadPersonalPractice();pose='stand';closeNameDialog();startGardenConnection();saveVisit();return true;
+  if(!gardenIdentity.credentials().personalCode)return false;
+  const person=gardenIdentity.saved()||{};
+  myNick=stripInvisible(person.name||myNick||'친구').slice(0,12);applyMyLook(validLook(person.look)?person.look:myLook,validDog(person.dog)?person.dog:myDog,false,myNick);hasEntered=true;visitToken=newVisitToken();loadPersonalPractice();pose='stand';closeNameDialog();startGardenConnection();saveVisit();return true;
 }
-if(visitEnded){showExitScreen();updateWho()}else if(!restoreVisit()&&!restorePersonalEntry()){openNameDialog();updateWho()}
-installGardenHistory();
+(async()=>{if(visitEnded){showExitScreen();updateWho()}else if(!await restoreVisit()&&!restorePersonalEntry()){openNameDialog();updateWho()}installGardenHistory()})();
 
 
 /* ---------- keep complete speech bubbles inside the viewport and separate nearby cards ---------- */
