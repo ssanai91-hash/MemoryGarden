@@ -576,7 +576,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 2.1</small>
+    <small class="entry-version">ver 2.2</small>
   </form>
  </main>
 </div>
@@ -2279,14 +2279,14 @@ function randLook(gender){
   if(l.hair===0x8c8c8c&&Math.random()<.5)l.hair=0x4a3426;
   return l;
 }
-function makeTag(text){
-  const c=document.createElement('canvas');c.width=512;c.height=96;
+function makeTag(text,labelScale=1){
+  const c=document.createElement('canvas');c.width=512*labelScale;c.height=96*labelScale;
   const t=new THREE.CanvasTexture(c);const s=gardenPost.registerLabel(new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true,toneMapped:false})));
-  s.scale.set(2.4,.45,1);s.renderOrder=10;s.userData.c=c;setTag(s,text);return s;
+  s.scale.set(2.4*labelScale,.45*labelScale,1);s.renderOrder=10;s.userData.c=c;s.userData.labelScale=labelScale;setTag(s,text);return s;
 }
 function setTag(s,text){
   if(s.userData.text===text)return;s.userData.text=text;
-  const c=s.userData.c,x=c.getContext('2d');x.clearRect(0,0,512,96);if(!text){s.material.map.needsUpdate=true;return}
+  const c=s.userData.c,x=c.getContext('2d'),scale=s.userData.labelScale||1;x.setTransform(scale,0,0,scale,0,0);x.clearRect(0,0,512,96);if(!text){s.material.map.needsUpdate=true;return}
   x.font='34px "Gowun Dodum", sans-serif';const w=Math.min(500,x.measureText(text).width+36);
   x.fillStyle='rgba(30,28,36,.6)';const r=26,l=256-w/2,tp=22,h=52;
   x.beginPath();x.moveTo(l+r,tp);x.arcTo(l+w,tp,l+w,tp+h,r);x.arcTo(l+w,tp+h,l,tp+h,r);x.arcTo(l,tp+h,l,tp,r);x.arcTo(l,tp,l+w,tp,r);x.fill();
@@ -2363,7 +2363,7 @@ function updateUmbrellas(){
   const apply=(P,state,key,wanted)=>{
     const show=P.g.userData.space!=='listening'&&wanted===true&&!UMBRELLA_BLOCKED_POSES.includes(state);
     if(!show){if(P.umbrella)P.umbrella.visible=false;return}
-    const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=Math.min(0,P.tag.position.y-2.25);
+    const umbrella=ensureUmbrella(P,key);umbrella.visible=true;umbrella.position.y=Math.min(0,P.tag.position.y-(P.tag.userData.headGap||0)-2.25);
   };
   apply(me,pose,room&&room.selfId||myLook.shirt+':'+myLook.hair,myUmbrella);
   for(const [id,peer] of peers)apply(peer.P,peer.pose,id,peer.umbrella);
@@ -2470,7 +2470,7 @@ function makePerson(L,parent=scene,preview=false){
     k.traverse(n=>{n.userData.handProp=true;if(n.isMesh)n.castShadow=true});return k;
   });
   const wood=makeCarriedFirewood();wood.position.set(0,.27,.46);wood.visible=false;torso.add(wood);wood.traverse(n=>n.userData.handProp=true);
-  const tag=makeTag('');tag.position.y=2.25;g.add(tag);
+  const tag=makeTag('',2);tag.userData.headGap=.3;tag.position.y=2.25+tag.userData.headGap;g.add(tag);
   parent.add(g);
   const contactMeshes=[];
   rig.traverse(node=>{if(node.isMesh&&!node.userData.handProp)contactMeshes.push(node)});
@@ -2525,6 +2525,7 @@ function posePerson(P,pose,dt,t){
   P.head.rotation.x=L(P.head.rotation.x,pose==='standing_pray'&&still?.26:0);
   P.torso.rotation.x=L(P.torso.rotation.x,torsoLean);
   P.rig.rotation.x=L(P.rig.rotation.x,rx);P.rig.position.y=L(P.rig.position.y,ry);P.rig.position.z=L(P.rig.position.z,rz);
+  tagY+=P.tag.userData.headGap||0;
   if(pose==='pray2'&&w<.1){P.rig.position.y=ry;P.legs.forEach((l,i)=>l.rotation.x=leg[i]);P.arms.forEach((a,i)=>{a.rotation.x+=(arm[i]-a.rotation.x)*Math.min(1,dt*18);a.rotation.z+=(armZ[i]-a.rotation.z)*Math.min(1,dt*18)});P.tag.position.y=tagY}
   if(P.knives)P.knives.forEach(k=>k.visible=false);
   for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
