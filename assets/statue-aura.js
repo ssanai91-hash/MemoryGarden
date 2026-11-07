@@ -49,21 +49,26 @@ void main(){
   gl_FragColor=vec4(color*1.45,clamp(energy*uStrength,0.,.82));
 `+OUTPUT+`}`;
 const HALO=COMMON+`
+uniform float uHaloStrength;
+uniform vec3 uHaloColor;
 void main(){
   float r=length(vAuraPosition.xy),angle=atan(vAuraPosition.y,vAuraPosition.x);
-  float ripple=sin(angle*7.-uTime*.36)*.00065+sin(angle*13.+uTime*.24)*.00035;
-  float glow=0.,line=0.;
-  for(int i=0;i<4;i++){
-    float radius=.89+float(i)*.03;
-    float d=abs(r-radius-ripple),aa=max(fwidth(r)*.75,.0008);
-    line+=1.-smoothstep(.0014,.0014+aa,d);
-    glow+=exp(-d*160.)*.16;
-  }
-  float pulse=.92+.08*sin(uTime*.85+angle*2.);
-  float energy=clamp(line*.66+glow,0.,1.)*pulse*uStrength;
-  if(energy<.004)discard;
-  vec3 color=mix(uEdge,uCore,clamp(line*.65+.2,0.,1.));
-  gl_FragColor=vec4(color*1.5,energy);
+  // 실선 발광관을 주광으로 삼는다. 기존 가는 선은 낮/먼 거리에서 거의 사라졌다.
+  float aa=max(fwidth(r),.001),d=abs(r-.94);
+  float tube=1.-smoothstep(.022,.022+aa,d);
+  float inner=1.-smoothstep(.006,.006+aa,abs(r-.845));
+  float outer=1.-smoothstep(.006,.006+aa,abs(r-1.035));
+  float glow=exp(-pow(d/.085,2.))*.37;
+  glow+=exp(-pow((r-1.035)/.045,2.))*.11;
+  // 발광관은 항상 켜 두고 주위 빛만 천천히 숨 쉬듯 흐르게 한다.
+  float breath=.95+.05*sin(uTime*.65);
+  float sweep=.5+.5*sin(angle*2.-uTime*.32);
+  float alpha=clamp(tube+inner*.72+outer*.72+glow*breath,0.,1.);
+  if(alpha<.003)discard;
+  float hot=exp(-pow(d/.009,2.));
+  vec3 color=mix(uHaloColor,uCore,hot*.22);
+  float radiance=(3.2+tube*.9+hot*.5+glow*sweep*.25)*uHaloStrength;
+  gl_FragColor=vec4(color*radiance,alpha);
 `+OUTPUT+`}`;
 const POOL=COMMON+`
 void main(){
@@ -134,11 +139,15 @@ function emberGeometry(){
 export function createStatueAura(holder,side,markBloom=m=>m){
   const red=side==='right',root=new THREE.Group();root.name='sayu-aura-'+side;root.visible=false;holder.add(root);
   const uniforms={uTime:{value:red?13:0},uStrength:{value:.5},uHeight:{value:9},uRadius:{value:3.2},uDepth:{value:1.7},
+    uHaloStrength:{value:1},uHaloColor:{value:new THREE.Color(red?0xff2345:0xf0f6ff)},
     uCore:{value:new THREE.Color(red?0xffbac0:0xf7f7ff)},
     uEdge:{value:new THREE.Color(red?0xf92249:0x98bdff)},
     uAccent:{value:new THREE.Color(red?0xa40c35:0xc5b7ff)}};
   const flames=new THREE.Mesh(flameGeometry(),material(FLAME,uniforms,markBloom));
-  const halo=new THREE.Mesh(new THREE.RingGeometry(.81,1.075,192,4),material(HALO,uniforms,markBloom));
+  const haloMaterial=material(HALO,uniforms,markBloom);
+  // 실선은 투명한 가는 빛 대신 또렷한 LED 발광면으로, 번짐은 기존 블룸과 함께 표현한다.
+  haloMaterial.blending=THREE.NormalBlending;markBloom(haloMaterial,1.65);
+  const halo=new THREE.Mesh(new THREE.RingGeometry(.62,1.28,192,6),haloMaterial);
   const pool=new THREE.Mesh(new THREE.RingGeometry(.55,1.1,80,1),material(POOL,uniforms,markBloom));pool.rotation.x=-Math.PI/2;
   const embers=new THREE.Points(emberGeometry(),material(EMBER_FRAGMENT,uniforms,markBloom,EMBER_VERTEX));
   // 셰이더에서 이동하는 입자를 원본의 영점 좌표로 잘못 숨기지 않는다.
@@ -174,6 +183,7 @@ export function createStatueAura(holder,side,markBloom=m=>m){
       }
       root.visible=visible;if(!visible)return;
       uniforms.uStrength.value=.45+Math.min(1,Math.max(0,night||0))*.34;
+      uniforms.uHaloStrength.value=1+Math.min(1,Math.max(0,night||0))*.18;
       uniforms.uTime.value=reduced?.matches?(red?13:0):performance.now()*.001+(red?13:0);
       embers.visible=!reduced?.matches&&distance<65;
     }
