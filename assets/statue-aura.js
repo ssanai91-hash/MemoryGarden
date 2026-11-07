@@ -58,8 +58,8 @@ void main(){
   float tube=1.-smoothstep(.022,.022+aa,d);
   float inner=1.-smoothstep(.006,.006+aa,abs(r-.845));
   float outer=1.-smoothstep(.006,.006+aa,abs(r-1.035));
-  float glow=exp(-pow(d/.085,2.))*.37;
-  glow+=exp(-pow((r-1.035)/.045,2.))*.11;
+  float glow=exp(-pow(d/.042,2.))*.18;
+  glow+=exp(-pow((r-1.035)/.025,2.))*.07;
   // 발광관은 항상 켜 두고 주위 빛만 천천히 숨 쉬듯 흐르게 한다.
   float breath=.95+.05*sin(uTime*.65);
   float sweep=.5+.5*sin(angle*2.-uTime*.32);
@@ -67,7 +67,7 @@ void main(){
   if(alpha<.003)discard;
   float hot=exp(-pow(d/.009,2.));
   vec3 color=mix(uHaloColor,uCore,hot*.22);
-  float radiance=(3.2+tube*.9+hot*.5+glow*sweep*.25)*uHaloStrength;
+  float radiance=(2.3+tube*.7+hot*.3+glow*sweep*.18)*uHaloStrength;
   gl_FragColor=vec4(color*radiance,alpha);
 `+OUTPUT+`}`;
 const POOL=COMMON+`
@@ -144,9 +144,10 @@ export function createStatueAura(holder,side,markBloom=m=>m){
     uEdge:{value:new THREE.Color(red?0xf92249:0x98bdff)},
     uAccent:{value:new THREE.Color(red?0xa40c35:0xc5b7ff)}};
   const flames=new THREE.Mesh(flameGeometry(),material(FLAME,uniforms,markBloom));
+  markBloom(flames.material,.42);
   const haloMaterial=material(HALO,uniforms,markBloom);
   // 실선은 투명한 가는 빛 대신 또렷한 LED 발광면으로, 번짐은 기존 블룸과 함께 표현한다.
-  haloMaterial.blending=THREE.NormalBlending;markBloom(haloMaterial,1.65);
+  haloMaterial.blending=THREE.NormalBlending;markBloom(haloMaterial,.35);
   const halo=new THREE.Mesh(new THREE.RingGeometry(.62,1.28,192,6),haloMaterial);
   const pool=new THREE.Mesh(new THREE.RingGeometry(.55,1.1,80,1),material(POOL,uniforms,markBloom));pool.rotation.x=-Math.PI/2;
   const embers=new THREE.Points(emberGeometry(),material(EMBER_FRAGMENT,uniforms,markBloom,EMBER_VERTEX));
@@ -183,7 +184,8 @@ export function createStatueAura(holder,side,markBloom=m=>m){
       }
       root.visible=visible;if(!visible)return;
       uniforms.uStrength.value=.45+Math.min(1,Math.max(0,night||0))*.34;
-      uniforms.uHaloStrength.value=1+Math.min(1,Math.max(0,night||0))*.18;
+      // 밤에는 정원 블룸이 강해지므로 발광관 자체를 조금 낮춰 얼굴 앞 눈부심을 막는다.
+      uniforms.uHaloStrength.value=1-Math.min(1,Math.max(0,night||0))*.12;
       uniforms.uTime.value=reduced?.matches?(red?13:0):performance.now()*.001+(red?13:0);
       embers.visible=!reduced?.matches&&distance<65;
     }

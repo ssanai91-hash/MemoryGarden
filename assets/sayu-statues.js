@@ -35,29 +35,33 @@ function plaqueTexture(){
 // 불상 자체 조명: 박물관처럼 앞 위에서 비추는 따뜻한 주광과 뒤에서 윤곽을 잡는 푸른 테두리광.
 // 장면에 실제 조명을 늘리면 정원의 모든 재질 셰이더가 무거워지므로, 불상 재질 안에서만 계산한다.
 // 밤에 강해지고 낮에는 은은하게 남는다. 받침대 앞 두 등기구가 이 빛의 출처처럼 보이게 한다.
-const KEY_DIR=new THREE.Vector3(-.32,.78,.54).normalize(),RIM_DIR=new THREE.Vector3(.25,.55,-.8).normalize();
+const KEY_DIR=new THREE.Vector3(-.32,.78,.54).normalize(),RIM_DIR=new THREE.Vector3(.25,.55,-.8).normalize(),FILL_DIR=new THREE.Vector3(0,.18,1).normalize();
 const SAYU_LIGHT_GLSL=`
 float sayuH=clamp((vSayuY-uSayuMinY)/max(uSayuMaxY-uSayuMinY,1e-4),0.,1.);
 float sayuPool=mix(.5,1.15,smoothstep(.15,.92,sayuH));
 float sayuKey=max(dot(normal,uSayuKeyDir),0.)*sayuPool;
 float sayuFacing=max(dot(normal,normalize(vViewPosition)),0.);
 float sayuRim=pow(1.-sayuFacing,2.6)*max(dot(normal,uSayuRimDir)+.35,0.);
-totalEmissiveRadiance+=diffuseColor.rgb*uSayuKeyColor*(sayuKey*uSayuKey+(.22+.08*sayuH)*uSayuKey)+uSayuRimColor*sayuRim*uSayuRim;
+// 정면 아래쪽의 부드러운 보조광으로 눈·코·입의 깊이를 살린다. 얼굴 높이에서 강해진다.
+float sayuFace=smoothstep(.60,.82,sayuH);
+float sayuFill=(.12+max(dot(normal,uSayuFillDir),0.)*.88)*(.22+.58*sayuFace)*uSayuFill;
+totalEmissiveRadiance+=diffuseColor.rgb*(uSayuKeyColor*(sayuKey*uSayuKey+(.22+.08*sayuH)*uSayuKey)+uSayuFillColor*sayuFill)+uSayuRimColor*sayuRim*uSayuRim;
 `;
 function addStatueLight(material,uniforms,minY,maxY){
   const own={uSayuMinY:{value:minY},uSayuMaxY:{value:maxY}};
   material.onBeforeCompile=sh=>{
     Object.assign(sh.uniforms,uniforms,own);
     sh.vertexShader='varying float vSayuY;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvSayuY=position.y;');
-    sh.fragmentShader='varying float vSayuY;uniform float uSayuMinY,uSayuMaxY,uSayuKey,uSayuRim;uniform vec3 uSayuKeyDir,uSayuRimDir,uSayuKeyColor,uSayuRimColor;\n'+
+    sh.fragmentShader='varying float vSayuY;uniform float uSayuMinY,uSayuMaxY,uSayuKey,uSayuRim,uSayuFill;uniform vec3 uSayuKeyDir,uSayuRimDir,uSayuFillDir,uSayuKeyColor,uSayuRimColor,uSayuFillColor;\n'+
       sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n'+SAYU_LIGHT_GLSL);
   };
-  material.customProgramCacheKey=()=>'sayu-statue-light';
+  material.customProgramCacheKey=()=>'sayu-statue-light-face-fill';
   material.needsUpdate=true;
 }
 
 export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,markBloom=m=>m,onState=()=>{}}){
   const light={uSayuKey:{value:.2},uSayuRim:{value:.05},uSayuKeyDir:{value:KEY_DIR.clone()},uSayuRimDir:{value:RIM_DIR.clone()},
+    uSayuFill:{value:.35},uSayuFillDir:{value:FILL_DIR.clone()},uSayuFillColor:{value:new THREE.Color(0xfff1dc)},
     uSayuKeyColor:{value:new THREE.Color(0xffe3be)},uSayuRimColor:{value:new THREE.Color(0xbacfff)}};
   const lens=markBloom(new THREE.MeshStandardMaterial({color:0xfff0d0,emissive:0xffc77a,emissiveIntensity:.3,roughness:.4}),1.5);
   const housing=new THREE.MeshStandardMaterial({color:0x2c2a26,roughness:.55,metalness:.6});
@@ -113,13 +117,15 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
     pruneCache(SAYU_STATUES.flatMap(s=>[s.preview,s.hq]));
     return state;
   });
-  const keyView=new THREE.Vector3(),rimView=new THREE.Vector3();
+  const keyView=new THREE.Vector3(),rimView=new THREE.Vector3(),fillView=new THREE.Vector3();
   // night 0(낮)~1(밤). 빛 방향은 카메라 기준으로 바꿔 셰이더에 넘긴다.
   function update(night,camera){
     const n=Math.min(1,Math.max(0,night||0));
     light.uSayuKey.value=.45+n*1.15;light.uSayuRim.value=.10+n*.33;lens.emissiveIntensity=.3+n*2.4;
+    light.uSayuFill.value=.35+n*.8;
     if(camera){camera.updateMatrixWorld();light.uSayuKeyDir.value.copy(keyView.copy(KEY_DIR).transformDirection(camera.matrixWorldInverse));
-      light.uSayuRimDir.value.copy(rimView.copy(RIM_DIR).transformDirection(camera.matrixWorldInverse))}
+      light.uSayuRimDir.value.copy(rimView.copy(RIM_DIR).transformDirection(camera.matrixWorldInverse));
+      light.uSayuFillDir.value.copy(fillView.copy(FILL_DIR).transformDirection(camera.matrixWorldInverse))}
     for(const aura of auras)aura.update(n,camera);
   }
   return{root,holders,state,update,light,auras};
