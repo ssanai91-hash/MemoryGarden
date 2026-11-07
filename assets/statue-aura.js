@@ -156,7 +156,8 @@ export function createStatueAura(holder,side,markBloom=m=>m){
       if(!Number.isFinite(height)||height<=0)return;
       const total=box.max.y;
       flames.scale.setScalar(total);flames.position.y=.06;
-      halo.scale.setScalar(height*.245);halo.position.set(0,box.min.y+height*.80,box.min.z-.22);
+      // 뒤쪽 광배가 가슴 높이로 내려가 보이지 않도록 중심을 머리 뒤로 올린다.
+      halo.scale.setScalar(height*.245);halo.position.set(0,box.min.y+height*.94,box.min.z-.22);
       pool.scale.setScalar(Math.max(3.4,(box.max.x-box.min.x)*.65));pool.position.y=.075;
       uniforms.uHeight.value=total;uniforms.uRadius.value=total*.365;uniforms.uDepth.value=total*.19;
       ready=true;
