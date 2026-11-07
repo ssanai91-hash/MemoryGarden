@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createStatueAura} from './statue-aura.js';
 
 // 사유의 방 반가사유상 2점을 기도 광장의 옛 불상·성모상 자리에 세운다.
 // 원본: 국립중앙박물관 공개 3D 스캔(공공누리 제1유형). sayuRoom 저장소 GLB를 정원용으로 경량화했다
@@ -41,7 +42,7 @@ float sayuPool=mix(.5,1.15,smoothstep(.15,.92,sayuH));
 float sayuKey=max(dot(normal,uSayuKeyDir),0.)*sayuPool;
 float sayuFacing=max(dot(normal,normalize(vViewPosition)),0.);
 float sayuRim=pow(1.-sayuFacing,2.6)*max(dot(normal,uSayuRimDir)+.35,0.);
-totalEmissiveRadiance+=diffuseColor.rgb*uSayuKeyColor*(sayuKey*uSayuKey+.12*uSayuKey)+uSayuRimColor*sayuRim*uSayuRim;
+totalEmissiveRadiance+=diffuseColor.rgb*uSayuKeyColor*(sayuKey*uSayuKey+(.22+.08*sayuH)*uSayuKey)+uSayuRimColor*sayuRim*uSayuRim;
 `;
 function addStatueLight(material,uniforms,minY,maxY){
   const own={uSayuMinY:{value:minY},uSayuMaxY:{value:maxY}};
@@ -57,7 +58,7 @@ function addStatueLight(material,uniforms,minY,maxY){
 
 export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,markBloom=m=>m,onState=()=>{}}){
   const light={uSayuKey:{value:.2},uSayuRim:{value:.05},uSayuKeyDir:{value:KEY_DIR.clone()},uSayuRimDir:{value:RIM_DIR.clone()},
-    uSayuKeyColor:{value:new THREE.Color(0xffd7a0).convertSRGBToLinear()},uSayuRimColor:{value:new THREE.Color(0xa9c3ff).convertSRGBToLinear()}};
+    uSayuKeyColor:{value:new THREE.Color(0xffe3be)},uSayuRimColor:{value:new THREE.Color(0xbacfff)}};
   const lens=markBloom(new THREE.MeshStandardMaterial({color:0xfff0d0,emissive:0xffc77a,emissiveIntensity:.3,roughness:.4}),1.5);
   const housing=new THREE.MeshStandardMaterial({color:0x2c2a26,roughness:.55,metalness:.6});
   const HOUSING=new THREE.CylinderGeometry(.16,.2,.34,16),LENS=new THREE.CircleGeometry(.14,20);
@@ -80,6 +81,7 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
     obstacles.push({x:spot.x,z:spot.z,r:3.2});
     return g;
   });
+  const auras=holders.map((holder,i)=>createStatueAura(holder,SAYU_STATUES[i].side,markBloom));
 
   function place(gltf){
     const model=gltf.scene;model.scale.setScalar(SAYU_SCALE);
@@ -98,16 +100,16 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
   }
 
   const parse=bytes=>new Promise((resolve,reject)=>new GLTFLoader().parse(bytes,'',resolve,reject));
-  async function loadOne(job,holder){
+  async function loadOne(job,holder,aura){
     let shown=null,hq=false;
-    const show=(model,quality)=>{if(hq)return disposeModel(model);if(shown){holder.remove(shown);disposeModel(shown)}shown=model;holder.add(model);holder.userData.sayuQuality=quality};
+    const show=(model,quality)=>{if(hq)return disposeModel(model);if(shown){holder.remove(shown);disposeModel(shown)}aura.fit(model);shown=model;holder.add(model);holder.userData.sayuQuality=quality};
     const previewDone=job.preview.then(async bytes=>{if(!bytes)return;const gltf=await parse(bytes);show(place(gltf),'preview')}).catch(()=>{});
     const bytes=await job.hq,gltf=await parse(bytes),model=place(gltf);
     await previewDone;show(model,'hq');hq=true;
     state.loaded++;if(await job.fromCache)state.cached++;onState(state);
   }
   // 두 조각상을 동시에. 실패한 쪽은 미리보기본이라도 남긴다.
-  state.ready=Promise.all(Prefetch.jobs.map((job,i)=>loadOne(job,holders[i]).catch(e=>{state.error=String(e&&e.message||e);onState(state)}))).then(()=>{
+  state.ready=Promise.all(Prefetch.jobs.map((job,i)=>loadOne(job,holders[i],auras[i]).catch(e=>{state.error=String(e&&e.message||e);onState(state)}))).then(()=>{
     pruneCache(SAYU_STATUES.flatMap(s=>[s.preview,s.hq]));
     return state;
   });
@@ -115,9 +117,11 @@ export function createSayuStatues({scene,GLTFLoader,spots,floor,stone,obstacles,
   // night 0(낮)~1(밤). 빛 방향은 카메라 기준으로 바꿔 셰이더에 넘긴다.
   function update(night,camera){
     const n=Math.min(1,Math.max(0,night||0));
-    light.uSayuKey.value=.2+n*1.05;light.uSayuRim.value=.05+n*.38;lens.emissiveIntensity=.3+n*2.4;
+    light.uSayuKey.value=.45+n*1.15;light.uSayuRim.value=.10+n*.33;lens.emissiveIntensity=.3+n*2.4;
     if(camera){camera.updateMatrixWorld();light.uSayuKeyDir.value.copy(keyView.copy(KEY_DIR).transformDirection(camera.matrixWorldInverse));
       light.uSayuRimDir.value.copy(rimView.copy(RIM_DIR).transformDirection(camera.matrixWorldInverse))}
+    for(const aura of auras)aura.update(n,camera);
   }
-  return{root,holders,state,update,light};
+  return{root,holders,state,update,light,auras};
 }
+

@@ -41,6 +41,7 @@
 !assets/black-poodle.js
 
 !assets/sayu-statues.js
+!assets/statue-aura.js
 !assets/sayu-left-hq.glb
 !assets/sayu-right-hq.glb
 !assets/sayu-left-preview.glb
@@ -70,3 +71,4 @@
 !assets/action-sky-v1.webp
 !assets/profile-editor.js
 !assets/profile-editor.css
+
