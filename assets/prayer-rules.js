@@ -14,7 +14,9 @@
   const nonce=s=>typeof s==='string'&&/^[a-f0-9]{32}$/.test(s);
   const BOW_MS=8000,DAY_MS=86400000,HALO_WHITE_MS=3*DAY_MS,HALO_RED_MS=7*DAY_MS;
   const NIMBUS_BOWS=100000;
-  const NIMBUS_LAYOUT=Object.freeze({x:29,z:-55,y:38,rx:17,rz:14,boundaryZ:-108,height:128,width:86,gateZ:-21});
+  const PALM_TILT=Math.PI/10,PALM_SCALE=.85;
+  const NIMBUS_LAYOUT=Object.freeze({x:29,z:-60,y:30,rx:17*PALM_SCALE,rz:14*PALM_SCALE*Math.cos(PALM_TILT),boundaryZ:-108,height:102.4,width:68.8,gateZ:-21,palmTilt:PALM_TILT,palmScale:PALM_SCALE});
+  const palmHeight=z=>NIMBUS_LAYOUT.y-Math.tan(PALM_TILT)*(z-NIMBUS_LAYOUT.z);
   const hasNimbus=profile=>Number.isFinite(profile?.nimbusUnlockedAt)&&profile.nimbusUnlockedAt>0||Number.isSafeInteger(profile?.totalBows)&&profile.totalBows>=NIMBUS_BOWS;
   // 손바닥은 별도 세계가 아니라 기존 두 반가사유상 뒤, 같은 정원의 높은 곳이다.
   function palmPosition(x,z){const L=NIMBUS_LAYOUT,dx=x-L.x,dz=z-L.z,d=Math.hypot(dx/L.rx,dz/L.rz);return d>1?{x:L.x+dx/d,z:L.z+dz/d}:{x,z}}
@@ -65,5 +67,5 @@
       halos,haloUntil:halo.until,haloLevel:halo.level,completedAt:earned?finishedAt:job.completedAt||0,finishedAt,done};
   }
   function settleBow(job,now){const f=bowProgress(job,now);if(!f)return null;const {done,finishedAt,...value}=f;return{...value,at:now,rev:job.rev+1}}
-  root.GardenPrayer=Object.freeze({LAYOUT,LIFE_MS,MAX,BOW_MS,DAY_MS,HALO_WHITE_MS,HALO_RED_MS,NIMBUS_BOWS,NIMBUS_LAYOUT,hasNimbus,palmPosition,gardenPosition,behindAltars,normalizeCode,validCode,formatCode,ADMIN_CODE,isAdminCode,cleanHalos,haloState,profileView,accountProfile,bowProgress,settleBow,clean,inside,nearBox,active,display,publicState,nonce});
+  root.GardenPrayer=Object.freeze({LAYOUT,LIFE_MS,MAX,BOW_MS,DAY_MS,HALO_WHITE_MS,HALO_RED_MS,NIMBUS_BOWS,NIMBUS_LAYOUT,hasNimbus,palmHeight,palmPosition,gardenPosition,behindAltars,normalizeCode,validCode,formatCode,ADMIN_CODE,isAdminCode,cleanHalos,haloState,profileView,accountProfile,bowProgress,settleBow,clean,inside,nearBox,active,display,publicState,nonce});
 })(globalThis);

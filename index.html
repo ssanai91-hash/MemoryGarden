@@ -582,7 +582,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 2.5</small>
+    <small class="entry-version">ver 2.6</small>
   </form>
  </main>
 </div>
@@ -1175,7 +1175,7 @@ const nearWaterworks=(x,z,pad)=>lakeIn(x,z,pad)||Math.hypot(x-HUT.x,z-HUT.z)<8+p
   (Math.abs(lakeQ(x,z))<1.4+pad&&lakeS(x,z)>LAKE.deckA-1&&lakeS(x,z)<FALLS.s);
 // 걸어 다니는 높이: 호수 데크, 농막 마루, 평상
 function groundY(x,z,space=worldSpace){
-  if(space==='buddha')return Prayer.NIMBUS_LAYOUT.y;
+  if(space==='buddha')return Prayer.palmHeight(z);
   if(space==='listening')return 0;
   let y=Prayer.inside(x,z)?Prayer.LAYOUT.floor:0;const s=lakeS(x,z),q=lakeQ(x,z);
   if(Math.abs(q)<1.2&&s>LAKE.deckA&&s<LAKE.deckB)y=.32*Math.min(1,(s-LAKE.deckA)/1.3,(LAKE.deckB-s)/1.3);
@@ -3117,8 +3117,10 @@ function lookEnd(e){const p=looks.get(e.pointerId);looks.delete(e.pointerId);if(
     ray.setFromCamera({x:e.clientX/innerWidth*2-1,y:-(e.clientY/innerHeight)*2+1},camera);
     if(worldSpace==='listening'){if(listening.exitDoor&&ray.intersectObject(listening.exitDoor).length){exitListening();return}if(listening.audioTargets&&ray.intersectObjects(listening.audioTargets,true).length){openListeningAudio();return}for(let i=0;i<listening.chairs.length;i++){if(ray.intersectObject(listening.chairs[i],true).length){sitListening(i);return}}}else if(worldSpace==='garden'&&hasEntered&&listeningDoor&&ray.intersectObject(listeningDoor).length&&nearListeningDoor(me.g.position.x,me.g.position.z)){enterListening();return}
     if(worldSpace==='garden'&&hasEntered&&ray.intersectObject(bulletinGroup,true).length){gardenBoard.open();return}
-    groundPlane.constant=worldSpace==='buddha'?-Prayer.NIMBUS_LAYOUT.y:0;
-    if(!nimbus.flight&&ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){cancelFireCare();const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.position.set(x,worldSpace==='buddha'?Prayer.NIMBUS_LAYOUT.y+.08:.04,z);marker.visible=true}}}
+    const palmTilt=worldSpace==='buddha'?Prayer.NIMBUS_LAYOUT.palmTilt:0;
+    groundPlane.normal.set(0,Math.cos(palmTilt),Math.sin(palmTilt));
+    groundPlane.constant=worldSpace==='buddha'?-(groundPlane.normal.y*Prayer.NIMBUS_LAYOUT.y+groundPlane.normal.z*Prayer.NIMBUS_LAYOUT.z):0;
+    if(!nimbus.flight&&ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){cancelFireCare();const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.rotation.x=-Math.PI/2+palmTilt;marker.position.set(x,worldSpace==='buddha'?groundY(x,z)+.08:.04,z);marker.visible=true}}}
 canvas.addEventListener('pointerup',lookEnd);canvas.addEventListener('pointercancel',lookEnd);
 canvas.addEventListener('wheel',e=>{e.preventDefault();if(cam.sky){cam.skyFov=Math.max(45,Math.min(95,cam.skyFov+e.deltaY*.025));resize()}else cam.dist=Math.max(2.5,Math.min(12,cam.dist+e.deltaY*.005))},{passive:false});
 
@@ -5524,7 +5526,7 @@ function tick(){
       camera.lookAt(ax+focus*cy,2.25,az-focus*sy);
     }else camera.lookAt(ax,1.5,az);
   }else if(worldSpace==='buddha'){
-    const base=flightPoint?view.y-1.05:Prayer.NIMBUS_LAYOUT.y;
+    const base=flightPoint?view.y-1.05:groundY(ax,az);
     camera.position.set(ax+sy*cam.dist*cp,base+3.1+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
     camera.lookAt(ax-sy*4,base+6.5,az-cy*4);
   }else if(cam.sky){
