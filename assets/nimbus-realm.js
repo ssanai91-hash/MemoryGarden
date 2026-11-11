@@ -33,17 +33,36 @@ export function createBuddhaRealm({scene,markBloom=m=>m,onError=()=>{}}){
     emissive:0xe8edf7,emissiveIntensity:.42,fog:false});
   const body=new THREE.Group();body.position.set(L.x,4,L.boundaryZ);root.add(body);
   // 성인 비례의 손·손목·팔을 몸통과 같은 흰 석조 원화에 통합한다.
-  // 납작한 도형 손을 덧붙이지 않고 원화의 손가락 관절·엄지 볼륨·법의 연결을 그대로 사용한다.
+  // 손목을 고정한 국소 변형으로 양손을 1.2배 키운다. 주변 법의까지 부드럽게 이어 준다.
   new THREE.TextureLoader().load('./assets/great-buddha-mudra-v2.png',texture=>{
     texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
     const nx=128,ny=192,c=document.createElement('canvas');c.width=nx+1;c.height=ny+1;
     const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(texture.image,0,0,c.width,c.height);
     const data=ctx.getImageData(0,0,c.width,c.height).data,vertices=[],uv=[],indices=[];
+    const smooth=(a,b,x)=>{const t=THREE.MathUtils.clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
+    const region=(u,v,x0,x1,x2,x3,y0,y1,y2,y3)=>
+      smooth(x0,x1,u)*(1-smooth(x2,x3,u))*smooth(y0,y1,v)*(1-smooth(y2,y3,v));
+    const volume=(u,v,x,y,rx,ry)=>Math.exp(-(((u-x)/rx)**2+((v-y)/ry)**2)*2);
     for(let j=0;j<=ny;j++)for(let i=0;i<=nx;i++){
       const u=i/nx,v=1-j/ny,k=(j*(nx+1)+i)*4,lum=(data[k]*.2126+data[k+1]*.7152+data[k+2]*.0722)/255;
       const center=Math.sqrt(Math.max(0,1-((u-.5)/.52)**2));
       const profile=2.4+3.6*center+Math.exp(-(((v-.68)/.15)**2))*center;
-      vertices.push((u-.5)*L.width,v*L.height,(profile+lum*.8)*.8);uv.push(u,v);
+      // UV는 원화에 고정하고 메시만 확대해 손가락·손금·손목을 한 표면으로 유지한다.
+      const raised=region(u,v,.08,.16,.34,.43,.22,.30,.53,.65);
+      const resting=region(u,v,.24,.34,.67,.78,0,.025,.15,.23);
+      const handScale=1.2;
+      const du=(handScale-1)*(raised*(u-.246)+resting*(u-.704));
+      const dv=(handScale-1)*(raised*(v-.303)+resting*(v-.125));
+      // 완만한 해부학적 볼륨 위에 원화 명암의 작은 높낮이를 얹는다.
+      // 코·볼·턱, 가슴과 손을 따로 앞으로 내어 원통처럼 평평하던 정면을 다듬는다.
+      const sculpt=2.4*volume(u,v,.50,.715,.22,.19)
+        +1.6*volume(u,v,.505,.69,.045,.075)
+        +.7*(volume(u,v,.42,.67,.07,.07)+volume(u,v,.59,.67,.07,.07))
+        +.8*volume(u,v,.50,.605,.12,.055)
+        +1.5*volume(u,v,.51,.36,.32,.23)
+        +1.6*volume(u,v,.25,.37,.10,.12)
+        +1.1*volume(u,v,.54,.085,.21,.07);
+      vertices.push((u+du-.5)*L.width,(v+dv)*L.height,(profile+sculpt+lum*1.2)*.8);uv.push(u,v);
     }
     const solid=k=>data[k*4+3]>180;
     for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
@@ -53,9 +72,23 @@ export function createBuddhaRealm({scene,markBloom=m=>m,onError=()=>{}}){
     }
     const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
     geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();
+    // 양각의 실제 법선에 부드러운 좌상단 명암을 더해 밤에도 흰 조각의 굴곡을 남긴다.
+    // 추가 조명·그림자 패스 없이 이 부처님 표면에만 적용한다.
+    const normals=geometry.getAttribute('normal'),colors=[],key=new THREE.Vector3(-.55,.75,1).normalize();
+    for(let i=0;i<normals.count;i++){
+      const diffuse=Math.max(0,normals.getX(i)*key.x+normals.getY(i)*key.y+normals.getZ(i)*key.z);
+      const shade=.76+.24*diffuse;colors.push(shade,shade,shade);
+    }
+    geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
     // 이미 흰 원화의 명암을 보존해 과도한 밝기 보정으로 손의 입체감이 사라지지 않게 한다.
     const material=new THREE.MeshStandardMaterial({map:texture,emissiveMap:texture,emissive:0xffffff,
-      emissiveIntensity:.42,roughness:.93,metalness:0,alphaTest:.7,side:THREE.DoubleSide,fog:false});
+      emissiveIntensity:.32,roughness:.93,metalness:0,vertexColors:true,alphaTest:.7,side:THREE.DoubleSide,fog:false});
+    // 보조 발광에도 같은 명암을 적용해 야간에 굴곡이 다시 평평해지지 않게 한다.
+    material.onBeforeCompile=shader=>{
+      shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>',
+        '#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance *= vColor.rgb;\n#endif');
+    };
+    material.customProgramCacheKey=()=> 'great-buddha-sculpt-shading-v1';
     const relief=new THREE.Mesh(geometry,material);relief.name='great-buddha-raised-relief';relief.frustumCulled=false;body.add(relief);
     root.userData.reliefReady=true;
   },undefined,()=>{root.userData.reliefError=true;onError()});
