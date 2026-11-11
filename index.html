@@ -422,7 +422,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
     <div class="garden-actions garden-preferences" id="gardenPreferences"><button id="kickDuplicatesBtn" type="button" hidden>중복 내보내기</button><button id="homeInstallBtn" type="button">홈 화면 추가</button><button id="qualityBtn" type="button">화면 품질</button><button id="lookBtn" type="button">내 모습 바꾸기</button><button id="rerollBtn" type="button">반려동물 변경</button></div>
   </section>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status">모닥불을 불러오는 중…</div><div id="campfireLastCare"></div>
-  <section class="garden-menu-group" aria-label="근두운"><p id="nimbusStatus" role="status">근두운 · 누적 10만 배 보상</p><div class="room-actions"><button id="nimbusMountBtn" type="button" disabled>근두운 타기</button><button id="nimbusEnterBtn" type="button" hidden>부처님 손바닥으로</button></div></section>
+  <section class="garden-menu-group" aria-label="근두운"><p id="nimbusStatus" role="status">근두운 · 누적 10만 배 보상</p><div class="room-actions"><button id="nimbusMountBtn" type="button" disabled>근두운 타기</button><button id="nimbusEnterBtn" type="button" hidden>부처님 앞으로</button></div></section>
   <div class="now" id="nowPlaying" hidden></div>
   </div>
 </header>
@@ -582,7 +582,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 2.6</small>
+    <small class="entry-version">ver 2.7</small>
   </form>
  </main>
 </div>
@@ -1088,7 +1088,7 @@ function updateScenery(){
   }
 }
 function performancePlace(){
-  if(worldSpace==='buddha')return '부처님 손바닥';
+  if(worldSpace==='buddha')return '구름 위 수행';
   if(worldSpace==='listening')return '음악방';
   const x=me.g.position.x,z=me.g.position.z;
   if(cam.sky)return '밤하늘';
@@ -1561,7 +1561,7 @@ function updateNimbusUI(){
   $('nimbusEnterBtn').hidden=!unlocked;$('nimbusEnterBtn').disabled=!!nimbus.pending||!!nimbus.flight||!connected||!nimbus.mounted||worldSpace!=='garden';
   $('nimbusExitBtn').hidden=worldSpace!=='buddha';$('nimbusExitBtn').disabled=!!nimbus.pending||!!nimbus.flight||!connected;
   const hint=$('nimbusVista');if(hint){hint.hidden=!hasEntered||worldSpace!=='garden'||!Prayer.inside(me.g.position.x,me.g.position.z)||cam.sky;
-    hint.textContent=unlocked?'두 불상 뒤 · 근두운을 타고 손바닥으로':'두 불상 뒤 큰 부처님 · 누적 10만 배에 근두운 획득';}
+    hint.textContent=unlocked?'두 불상 뒤 · 근두운을 타고 큰 부처님 앞으로':'두 불상 뒤 큰 부처님 · 누적 10만 배에 근두운 획득';}
   const label=$('nimbusPracticeTotal');if(label){label.hidden=worldSpace!=='buddha';label.textContent='누적 '+total.toLocaleString()+'배 · 근두운 영구 획득';}
 }
 function nimbusRequest(action){
@@ -1598,7 +1598,7 @@ function receiveNimbus(s,person,request,action){
     if(departure)nimbus.flight={from:departure,to:me.g.position.clone(),at:performance.now(),duration:3600};
   }
   updateNimbusUI();
-  if(action==='enter')toast('부처님 손바닥 · 근두운 위에서 수행해 보세요');
+  if(action==='enter')toast('큰 부처님 앞 · 근두운 위에서 수행해 보세요');
   else if(action==='mount')toast('근두운에 올랐어요. 조이스틱으로 움직여 보세요');
 }
 function stopListeningMovement(){cancelFireCare();pendingStoke=false;clearTimeout(fuelTimer);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);me.speed=0;sendDirty=true;userMoved=true;autoJoined=true}

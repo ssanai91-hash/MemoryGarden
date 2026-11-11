@@ -14,11 +14,11 @@
   const nonce=s=>typeof s==='string'&&/^[a-f0-9]{32}$/.test(s);
   const BOW_MS=8000,DAY_MS=86400000,HALO_WHITE_MS=3*DAY_MS,HALO_RED_MS=7*DAY_MS;
   const NIMBUS_BOWS=100000;
-  const PALM_TILT=Math.PI/10,PALM_SCALE=.85;
-  const NIMBUS_LAYOUT=Object.freeze({x:29,z:-60,y:30,rx:17*PALM_SCALE,rz:14*PALM_SCALE*Math.cos(PALM_TILT),boundaryZ:-108,height:102.4,width:68.8,gateZ:-21,palmTilt:PALM_TILT,palmScale:PALM_SCALE});
-  const palmHeight=z=>NIMBUS_LAYOUT.y-Math.tan(PALM_TILT)*(z-NIMBUS_LAYOUT.z);
+  const NIMBUS_LAYOUT=Object.freeze({x:29,z:-60,y:30,rx:14.45,rz:11.9,boundaryZ:-108,height:102.4,width:68.8,gateZ:-21,palmTilt:0});
+  // 기존 저장/통신 API 이름은 보존한다. 손바닥 대신 수평 공중 영역에서 근두운으로 수행한다.
+  const palmHeight=()=>NIMBUS_LAYOUT.y;
   const hasNimbus=profile=>Number.isFinite(profile?.nimbusUnlockedAt)&&profile.nimbusUnlockedAt>0||Number.isSafeInteger(profile?.totalBows)&&profile.totalBows>=NIMBUS_BOWS;
-  // 손바닥은 별도 세계가 아니라 기존 두 반가사유상 뒤, 같은 정원의 높은 곳이다.
+  // 공중 수행 영역은 기존 두 반가사유상 뒤, 같은 정원의 높은 곳이다.
   function palmPosition(x,z){const L=NIMBUS_LAYOUT,dx=x-L.x,dz=z-L.z,d=Math.hypot(dx/L.rx,dz/L.rz);return d>1?{x:L.x+dx/d,z:L.z+dz/d}:{x,z}}
   const behindAltars=(x,z,pad=0)=>z<-14+pad&&Math.abs(x-NIMBUS_LAYOUT.x)<NIMBUS_LAYOUT.width/2+pad;
   function gardenPosition(x,z){
