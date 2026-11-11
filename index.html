@@ -132,6 +132,9 @@ button:disabled{opacity:.5;cursor:default}
 .plaque{max-height:calc(100dvh - 36px);overflow-y:auto}
 @media(max-width:380px){.practice .row{gap:4px}.practice .row button{font-size:10.5px!important;padding:5px 7px!important}}
 /* Keep the garden visible while controls are in use. */
+#nimbusVista,#nimbusPracticeTotal{position:fixed;left:14px;top:calc(83px + env(safe-area-inset-top,0px));z-index:3;max-width:calc(100vw - 110px);margin:0;color:#5c4932;background:rgba(250,246,238,.9);border-radius:8px;padding:6px 9px;font-size:11px;line-height:1.5;pointer-events:none}
+#nimbusPracticeTotal{font-weight:700}.buddha-realm #campfireLastCare{display:none}
+.buddha-realm #nimbusExitBtn{background:#fff6e5;border-color:#d2b47b;color:#68472a}
 .plaque{box-sizing:border-box;z-index:3}
 .plaque-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .plaque-heading h1{font-size:19px;white-space:nowrap}
@@ -404,6 +407,8 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
+<p id="nimbusVista" hidden></p>
+<p id="nimbusPracticeTotal" aria-live="polite" hidden></p>
 <header class="plaque collapsed" id="gardenPanel">
   <div class="plaque-heading"><h1>기억의 정원</h1><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button><button id="musicToggle" class="sound-toggle" type="button" aria-pressed="false" aria-label="새벽 예불 켜기" title="새벽 예불 켜기">♪</button></div>
   <div id="gardenDetails" hidden>
@@ -417,6 +422,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
     <div class="garden-actions garden-preferences" id="gardenPreferences"><button id="kickDuplicatesBtn" type="button" hidden>중복 내보내기</button><button id="homeInstallBtn" type="button">홈 화면 추가</button><button id="qualityBtn" type="button">화면 품질</button><button id="lookBtn" type="button">내 모습 바꾸기</button><button id="rerollBtn" type="button">반려동물 변경</button></div>
   </section>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status">모닥불을 불러오는 중…</div><div id="campfireLastCare"></div>
+  <section class="garden-menu-group" aria-label="근두운"><p id="nimbusStatus" role="status">근두운 · 누적 10만 배 보상</p><div class="room-actions"><button id="nimbusMountBtn" type="button" disabled>근두운 타기</button><button id="nimbusEnterBtn" type="button" hidden>부처님 손바닥으로</button></div></section>
   <div class="now" id="nowPlaying" hidden></div>
   </div>
 </header>
@@ -528,7 +534,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 </script>
 
 <aside class="visitors" aria-label="들어온 친구"><div class="visitors-title"><span>들어온 친구</span><button id="visitorToggle" class="visitor-toggle" type="button" aria-expanded="true" aria-controls="visitorNames">접기 ▴</button></div><div id="visitorNames" class="visitor-names" aria-live="polite"></div></aside>
-<div class="poses" id="rightMenu" role="group" aria-label="정원 상황별 메뉴"><div id="contextActions" class="context-actions"><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><div class="plaza-bar" id="plazaBar" role="group" aria-label="절하기" hidden><button id="autoBowBtn" type="button">108배
+<div class="poses" id="rightMenu" role="group" aria-label="정원 상황별 메뉴"><div id="contextActions" class="context-actions"><button id="nimbusExitBtn" type="button" hidden>정원으로 돌아가기</button><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><div class="plaza-bar" id="plazaBar" role="group" aria-label="절하기" hidden><button id="autoBowBtn" type="button">108배
 하기</button><button id="auto3000Btn" type="button">3000배
 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
 <div class="dock-actions" id="dockActions" role="group" aria-label="절 횟수와 대화 목록" hidden><section class="bow-counter" id="bowCounter" aria-label="절 횟수" hidden><div class="count-line" role="status" aria-atomic="true"><b id="bowCount">0</b><span>/</span><span><span id="bowTarget">108</span>배</span></div></section><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button></div>
@@ -576,7 +582,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 2.3</small>
+    <small class="entry-version">ver 2.4</small>
   </form>
  </main>
 </div>
@@ -830,6 +836,7 @@ import {pavedDisk,makePrayerGarden} from './assets/prayer-garden.js';
 import {createCandleUI} from './assets/prayer-candles-ui.js';
 import {createBowHalo} from './assets/bow-halo.js';
 import {createSayuStatues} from './assets/sayu-statues.js';
+import {createNimbus,createBuddhaRealm} from './assets/nimbus-realm.js';
 import {addAlpineRange} from './assets/garden-mountains.js';
 import {createFramePacer,qualityDecision,createShadowBudget,disableActorShadows,createPowerSaving} from './assets/garden-performance.js';
 import {createGardenLightSlots} from './assets/garden-light-slots.js';
@@ -932,6 +939,7 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFi
 const gardenPost=createGardenRenderer(renderer);
 const scene=new THREE.Scene();gardenLights=createGardenLightSlots(scene);
 let worldSpace='garden',listeningDoor=null;
+const nimbus={realm:null,profile:null,mounted:false,resume:null,pending:null,timer:null,returnPoint:null,lastSync:0,flight:null};
 const listening={scene:null,returnPoint:null,state:{track:'bluehour',power:false,startedAt:0,offsetMs:0,rev:0},audio:null,
   muted:store.get('garden.listening.muted')==='1',volume:Math.max(0,Math.min(1,Number(store.get('garden.listening.volume')??'.65')))||0};
 scene.fog=new THREE.Fog(0xe9dccb,30,95);
@@ -968,7 +976,7 @@ const ALTAR_SPOTS=[Prayer.LAYOUT.buddha,Prayer.LAYOUT.mary];
 const ALTAR_MOON_SKY_POSITION=new THREE.Vector3((ALTAR_SPOTS[0].x+ALTAR_SPOTS[1].x)/2,135,(ALTAR_SPOTS[0].z+ALTAR_SPOTS[1].z)/2-270);
 // 기도 광장의 조각상: 'sayu'(사유의 방 반가사유상 2점) 또는 'classic'(옛 좌불상·성모 마리아상).
 const PLAZA_STATUES='sayu';
-const nearAltar=(x,z,r)=>ALTAR_SPOTS.some(p=>Math.hypot(x-p.x,z-p.z)<r);
+const nearAltar=(x,z,r)=>Prayer.behindAltars(x,z,r)||ALTAR_SPOTS.some(p=>Math.hypot(x-p.x,z-p.z)<r);
 const POCHA={x:-6.3,z:-23.4};POCHA.h=Math.atan2(-POCHA.x,-POCHA.z);
 const pochaLocal=(lx,lz)=>({x:POCHA.x+Math.cos(POCHA.h)*lx+Math.sin(POCHA.h)*lz,z:POCHA.z-Math.sin(POCHA.h)*lx+Math.cos(POCHA.h)*lz});
 const BULLETIN_POSITION=pochaLocal(4.7,.9);
@@ -1080,6 +1088,7 @@ function updateScenery(){
   }
 }
 function performancePlace(){
+  if(worldSpace==='buddha')return '부처님 손바닥';
   if(worldSpace==='listening')return '음악방';
   const x=me.g.position.x,z=me.g.position.z;
   if(cam.sky)return '밤하늘';
@@ -1166,6 +1175,7 @@ const nearWaterworks=(x,z,pad)=>lakeIn(x,z,pad)||Math.hypot(x-HUT.x,z-HUT.z)<8+p
   (Math.abs(lakeQ(x,z))<1.4+pad&&lakeS(x,z)>LAKE.deckA-1&&lakeS(x,z)<FALLS.s);
 // 걸어 다니는 높이: 호수 데크, 농막 마루, 평상
 function groundY(x,z,space=worldSpace){
+  if(space==='buddha')return Prayer.NIMBUS_LAYOUT.y;
   if(space==='listening')return 0;
   let y=Prayer.inside(x,z)?Prayer.LAYOUT.floor:0;const s=lakeS(x,z),q=lakeQ(x,z);
   if(Math.abs(q)<1.2&&s>LAKE.deckA&&s<LAKE.deckB)y=.32*Math.min(1,(s-LAKE.deckA)/1.3,(LAKE.deckB-s)/1.3);
@@ -1528,12 +1538,73 @@ function paintListeningScreen(){
 function syncListeningActors(){
   $('listeningControls').hidden=worldSpace!=='listening';
   if(worldSpace==='listening')makeListeningScene();
-  const put=(P,D,space)=>{const parent=space==='listening'?listening.scene:scene;P.g.userData.space=D.g.userData.space=space;const visible=space===worldSpace;P.g.visible=D.g.visible=visible&&!cam.sky;if(parent&&P.g.parent!==parent){parent.add(P.g);parent.add(D.g)}};
+  const put=(P,D,space)=>{const parent=space==='listening'?listening.scene:scene;P.g.userData.space=D.g.userData.space=space;const visible=space===worldSpace||space!=='listening'&&worldSpace!=='listening';P.g.visible=visible&&!cam.sky;D.g.visible=visible&&!cam.sky&&!P.ridingNimbus;if(parent&&P.g.parent!==parent){parent.add(P.g);parent.add(D.g)}};
+  setNimbusRide(me,nimbus.mounted);
   put(me,myDogObj,worldSpace);for(const e of peers.values())put(e.P,e.D,e.space||'garden');
+}
+function ensureBuddhaRealm(){if(!nimbus.realm)nimbus.realm=createBuddhaRealm({scene,markBloom,onError:()=>toast('큰 부처님 형상을 불러오지 못했어요. 새로고침하면 다시 받아요')});return nimbus.realm}
+function setNimbusRide(P,on){
+  P.ridingNimbus=!!on;if(on&&!P.nimbusCloud){P.nimbusCloud=createNimbus();P.g.add(P.nimbusCloud)}
+  if(P.nimbusCloud)P.nimbusCloud.visible=!!on;
+}
+function nimbusTotal(){
+  let total=nimbus.profile?.totalBows||0;const job=practice.remote;
+  if(job){const f=Prayer.bowProgress(job,serverNow());total+=Math.max(0,f.count-(job.accountedCount??job.count))}
+  return total;
+}
+function updateNimbusUI(){
+  const status=$('nimbusStatus');if(!status)return;
+  const unlocked=nimbus.profile?.nimbus===true,total=nimbusTotal(),connected=room?.connected()&&room.nimbusVersion===1;
+  status.textContent=unlocked?'근두운 영구 획득 · 누적 '+total.toLocaleString()+'배':'근두운까지 '+total.toLocaleString()+' / '+Prayer.NIMBUS_BOWS.toLocaleString()+'배';
+  $('nimbusMountBtn').textContent=nimbus.mounted?'근두운에서 내리기':'근두운 타기';
+  $('nimbusMountBtn').disabled=!!nimbus.pending||!!nimbus.flight||!connected||worldSpace==='buddha'||worldSpace==='listening'||!unlocked&&total<Prayer.NIMBUS_BOWS;
+  $('nimbusEnterBtn').hidden=!unlocked;$('nimbusEnterBtn').disabled=!!nimbus.pending||!!nimbus.flight||!connected||!nimbus.mounted||worldSpace!=='garden';
+  $('nimbusExitBtn').hidden=worldSpace!=='buddha';$('nimbusExitBtn').disabled=!!nimbus.pending||!!nimbus.flight||!connected;
+  const hint=$('nimbusVista');if(hint){hint.hidden=!hasEntered||worldSpace!=='garden'||!Prayer.inside(me.g.position.x,me.g.position.z)||cam.sky;
+    hint.textContent=unlocked?'두 불상 뒤 · 근두운을 타고 손바닥으로':'두 불상 뒤 큰 부처님 · 누적 10만 배에 근두운 획득';}
+  const label=$('nimbusPracticeTotal');if(label){label.hidden=worldSpace!=='buddha';label.textContent='누적 '+total.toLocaleString()+'배 · 근두운 영구 획득';}
+}
+function nimbusRequest(action){
+  if(!hasEntered||visitEnded||nimbus.pending||nimbus.flight)return;
+  if(!room?.connected()||room.nimbusVersion!==1){toast('최신 정원 서버에 연결한 뒤 다시 눌러 주세요');return}
+  if(action!=='sync'){closeOtherMenus('nimbus');endCalm(true);endPractice(false);if(cam.sky)setSkyView(false,true);stopListeningMovement()}
+  const request=crypto.randomUUID().replace(/-/g,'');nimbus.pending={request,action};
+  if(!room.send({t:'nimbus_control',action,request})){nimbus.pending=null;return}
+  clearTimeout(nimbus.timer);nimbus.timer=setTimeout(()=>{nimbus.pending=null;updateNimbusUI();toast('근두운 상태를 확인하지 못했어요. 다시 연결해 확인해 주세요.');room?.reconnect()},10000);updateNimbusUI();
+}
+function receiveNimbus(s,person,request,action){
+  if(person){nimbus.profile=person;gardenIdentity.confirm(person)}
+  if(request===nimbus.pending?.request||!request){clearTimeout(nimbus.timer);nimbus.pending=null}
+  if(!s){updateNimbusUI();return}
+  const next=s.space==='buddha'?'buddha':s.space==='listening'?'listening':'garden',changed=next!==worldSpace;
+  const departure=changed&&['enter','exit'].includes(action)&&!reduceHaloMotion.matches?me.g.position.clone():null;
+  if(changed){
+    if(next==='buddha'){
+      nimbus.returnPoint=nimbus.resume?.nimbusReturn||{x:me.g.position.x,z:me.g.position.z,h:me.g.rotation.y,cam:{...cam}};
+      closeOtherMenus('nimbus');endCalm(true);if(cam.sky)setSkyView(false,true);worldSpace='buddha';ensureBuddhaRealm();
+      document.body.classList.add('buddha-realm');const savedView=nimbus.resume?.cam;cam.yaw=Number.isFinite(savedView?.yaw)?savedView.yaw:0;cam.pitch=Number.isFinite(savedView?.pitch)?savedView.pitch:.18;cam.dist=Number.isFinite(savedView?.dist)?savedView.dist:11.5;
+      if(historyReady&&history.state?.gardenView!=='buddha')history.pushState({gardenView:'buddha'},'',location.href);
+    }else if(worldSpace==='buddha'){
+      worldSpace='garden';document.body.classList.remove('buddha-realm');const old=nimbus.returnPoint?.cam;
+      if(old){cam.yaw=old.yaw;cam.pitch=old.pitch;cam.dist=old.dist}environmentTick=99;
+      if(historyReady)history.replaceState({gardenView:'garden'},'',location.href);
+    }
+    stopListeningMovement();resetQualitySampling();resize();
+  }
+  nimbus.mounted=s.cloud===true&&nimbus.profile?.nimbus===true;nimbus.resume=null;setNimbusRide(me,nimbus.mounted);
+  if(changed||['enter','exit','mount','dismount'].includes(action)){
+    me.g.position.set(s.x,groundY(s.x,s.z)+(nimbus.mounted?1.05:0),s.z);me.g.rotation.y=s.h||0;pose=s.p||'stand';
+    syncListeningActors();scene.add(marker);syncPoseButtons();sendDirty=true;saveVisit();
+    if(departure)nimbus.flight={from:departure,to:me.g.position.clone(),at:performance.now(),duration:3600};
+  }
+  updateNimbusUI();
+  if(action==='enter')toast('부처님 손바닥 · 근두운 위에서 수행해 보세요');
+  else if(action==='mount')toast('근두운에 올랐어요. 조이스틱으로 움직여 보세요');
 }
 function stopListeningMovement(){cancelFireCare();pendingStoke=false;clearTimeout(fuelTimer);target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';Object.keys(keys).forEach(k=>delete keys[k]);me.speed=0;sendDirty=true;userMoved=true;autoJoined=true}
 function enterListening(fromHistory=false,restored=null){
   if(!hasEntered||visitEnded||worldSpace==='listening')return;
+  if(worldSpace==='buddha'||nimbus.mounted){toast('근두운에서 내린 뒤 음악방에 들어가 주세요');return}
   if(room&&room.connected()&&!room.listeningVersion){toast('음악방 서버가 아직 준비되지 않았어요. 최신 버전으로 반영해 주세요.');return}
   restoreSeatCamera();
   const back=restored&&restored.roomReturn;listening.returnPoint=back&&[back.x,back.z,back.h].every(Number.isFinite)?back:{x:me.g.position.x,z:me.g.position.z,h:me.g.rotation.y,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist}};
@@ -2187,6 +2258,7 @@ const FIRE_SEATS=Array.from({length:16},(_,i)=>{const a=(i+.5)/16*Math.PI*2;retu
 const CHAIR_SEATS=[];TABLE_SPOTS.forEach(t=>{for(let k=0;k<4;k++){const a=k*Math.PI/2+Math.PI/4;CHAIR_SEATS.push({x:t.x+Math.sin(a)*2,z:t.z+Math.cos(a)*2,table:t.i,h:a+Math.PI,k})}});
 const STOOLS=Array.from({length:8},(_,i)=>{const lx=-2.45+i*.7,p=pochaLocal(lx,.35);return{x:p.x,z:p.z,h:POCHA.h+Math.PI,i,lx}});
 function seatAt(x,z,space=worldSpace){
+  if(space==='buddha')return -1;
   if(space==='listening'){const i=listeningSeatAt(x,z);return i<0?-1:20+i}
   const f=CENTERPIECE==='campfire'?FIRE_SEATS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.3):-1;if(f>=0)return f;
   const c=CHAIR_SEATS.findIndex(sp=>Math.hypot(sp.x-x,sp.z-z)<.3);if(c>=0)return 100+c;
@@ -2482,11 +2554,12 @@ const prayerContactBounds=new THREE.Box3();
 const reduceHaloMotion=matchMedia('(prefers-reduced-motion: reduce)');
 function posePerson(P,pose,dt,t){
   const personSpace=P.g.userData.space||'garden';
-  P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)-P.g.position.y)*Math.min(1,dt*12);
+  P.g.position.y+=(groundY(P.g.position.x,P.g.position.z,personSpace)+(P.ridingNimbus?1.05:0)-P.g.position.y)*Math.min(1,dt*12);
+  if(P.nimbusCloud)P.nimbusCloud.position.y=reduceHaloMotion.matches?0:Math.sin(t*1.3)*.025;
   const seatY=seatSurfaceY(P.g.position.x,P.g.position.z,personSpace);
   if(P.eyes){P.blinkT-=dt;const close=P.blinkT<0&&P.blinkT>-.13;P.eyes.forEach(e=>e.scale.y=close?.012:.075);if(P.blinkT<-.13)P.blinkT=2+Math.random()*4}
-  if(personSpace==='garden'&&worldSpace==='garden'&&P.speed>2.2&&P.g.parent){P.dustT=(P.dustT||0)-dt;if(P.dustT<0){P.dustT=.22;puffDust(P.g.position.x,P.g.position.z)}}
-  const w=Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
+  if(personSpace==='garden'&&worldSpace==='garden'&&!P.ridingNimbus&&P.speed>2.2&&P.g.parent){P.dustT=(P.dustT||0)-dt;if(P.dustT<0){P.dustT=.22;puffDust(P.g.position.x,P.g.position.z)}}
+  const w=P.ridingNimbus?0:Math.min(1,P.speed/3);P.walkT+=dt*P.speed*2.6;
   const sw=Math.sin(P.walkT)*.7*w,k=Math.min(1,dt*10);
   const L=(o,v)=>o+(v-o)*k;
   let torsoLean=0;
@@ -2530,7 +2603,7 @@ function posePerson(P,pose,dt,t){
   if(P.knives)P.knives.forEach(k=>k.visible=false);
   for(let i=0;i<2;i++){P.legs[i].rotation.x=L(P.legs[i].rotation.x,leg[i]);P.arms[i].rotation.x=L(P.arms[i].rotation.x,arm[i]);P.arms[i].rotation.z=L(P.arms[i].rotation.z,armZ[i])}
   // 절하기·누워있기·엎드리기에서 몸이 바닥이나 방석에 묻히지 않게 한다.
-  const surface=personSpace==='listening'?0:prayerSurfaceAt(P.g.position.x,P.g.position.z);
+  const surface=P.ridingNimbus?groundY(P.g.position.x,P.g.position.z,personSpace)+1.05:personSpace==='listening'?0:prayerSurfaceAt(P.g.position.x,P.g.position.z);
   if(pose==='pray'||pose==='bow'||pose==='lie'||pose==='prone'||surface>.035){
     P.g.updateMatrixWorld(true);let lowest=Infinity;
     for(const mesh of P.contactMeshes){
@@ -2724,8 +2797,9 @@ function makeCat(spec){
 
 const angLerp=(a,b,k)=>{let d=b-a;d=Math.atan2(Math.sin(d),Math.cos(d));return a+d*k};
 function collide(x,z,r,space=worldSpace){
+  if(space==='buddha'){const p=Prayer.palmPosition(x,z);return[p.x,p.z]}
   if(space==='listening')return listeningCollide(x,z,r);
-  const d=Math.hypot(x,z);if(d>WORLD_R){x*=WORLD_R/d;z*=WORLD_R/d}
+  const bounded=Prayer.gardenPosition(x,z);x=bounded.x;z=bounded.z;
   for(const o of obstacles){const dx=x-o.x,dz=z-o.z,dd=Math.hypot(dx,dz),min=o.r+r;if(dd<min&&dd>1e-4){x=o.x+dx/dd*min;z=o.z+dz/dd*min}}
   if(lakeIn(x,z,.4)){const s=lakeS(x,z),q=lakeQ(x,z);
     if(Math.abs(q)<1.7&&s>LAKE.deckA&&s<LAKE.deckB){const qq=Math.max(-.85,Math.min(.85,q));x+=(qq-q)*LAKE.px;z+=(qq-q)*LAKE.pz}
@@ -2819,6 +2893,7 @@ function setMyUmbrella(open){
 $('umbrellaBtn').onclick=e=>{e.stopPropagation();setMyUmbrella(!myUmbrella)};syncUmbrellaButtons();
 
 function sitNearest(){
+  if(worldSpace!=='garden'||nimbus.mounted)return;
   const seats=[];if(CENTERPIECE==='campfire')FIRE_SEATS.forEach(sp=>seats.push({x:sp.x,z:sp.z,h:Math.atan2(-sp.x,-sp.z),fire:true}));
   CHAIR_SEATS.forEach(sp=>seats.push({x:sp.x,z:sp.z,h:sp.h}));
   const px=me.g.position.x,pz=me.g.position.z,taken=sp=>[...peers.values()].some(e=>(e.space||'garden')==='garden'&&Math.hypot(e.x-sp.x,e.z-sp.z)<.4);
@@ -2831,6 +2906,7 @@ function sitNearest(){
   cam.yaw=best.h+Math.PI;cam.pitch=best.fire?.22:.08;cam.dist=best.fire?7.5:4.6;
 }
 function sitAtFire(){
+  if(worldSpace==='buddha'||nimbus.mounted)return;
   if(worldSpace==='listening'){sitListening();return}
   const taken=i=>[...peers.values()].some(e=>(e.space||'garden')==='garden'&&Math.hypot(e.x-FIRE_SEATS[i].x,e.z-FIRE_SEATS[i].z)<.4);
   let best=-1,bd=Infinity;FIRE_SEATS.forEach((sp,i)=>{const d=Math.hypot(sp.x-me.g.position.x,sp.z-me.g.position.z);if(!taken(i)&&d<bd){bd=d;best=i}});
@@ -2998,7 +3074,7 @@ function syncStandingPrayerBubble(key,P,state,name){
 /* ---------- input ---------- */
 const cam={yaw:0,pitch:.25,dist:11.5,sky:false,skyPitch:.74,skyFov:75};
 function setSkyView(open,fromHistory=false){
-  if(open&&worldSpace==='listening'){toast('음악방에서 나가면 밤하늘을 볼 수 있어요');return}
+  if(open&&worldSpace!=='garden'){toast('정원으로 돌아가면 밤하늘을 볼 수 있어요');return}
   if(open===cam.sky)return;
   if(open){cam.gardenYaw=cam.yaw;cam.yaw=Math.atan2(120,200);cam.skyPitch=.74}
   else if(Number.isFinite(cam.gardenYaw))cam.yaw=cam.gardenYaw;
@@ -3039,9 +3115,10 @@ marker.rotation.x=-Math.PI/2;marker.visible=false;scene.add(marker);
 function lookEnd(e){const p=looks.get(e.pointerId);looks.delete(e.pointerId);if(!p||e.type==='pointercancel'||cam.sky)return;
   if(!p.moved&&performance.now()-p.t<400){
     ray.setFromCamera({x:e.clientX/innerWidth*2-1,y:-(e.clientY/innerHeight)*2+1},camera);
-    if(worldSpace==='listening'){if(listening.exitDoor&&ray.intersectObject(listening.exitDoor).length){exitListening();return}if(listening.audioTargets&&ray.intersectObjects(listening.audioTargets,true).length){openListeningAudio();return}for(let i=0;i<listening.chairs.length;i++){if(ray.intersectObject(listening.chairs[i],true).length){sitListening(i);return}}}else if(hasEntered&&listeningDoor&&ray.intersectObject(listeningDoor).length&&nearListeningDoor(me.g.position.x,me.g.position.z)){enterListening();return}
+    if(worldSpace==='listening'){if(listening.exitDoor&&ray.intersectObject(listening.exitDoor).length){exitListening();return}if(listening.audioTargets&&ray.intersectObjects(listening.audioTargets,true).length){openListeningAudio();return}for(let i=0;i<listening.chairs.length;i++){if(ray.intersectObject(listening.chairs[i],true).length){sitListening(i);return}}}else if(worldSpace==='garden'&&hasEntered&&listeningDoor&&ray.intersectObject(listeningDoor).length&&nearListeningDoor(me.g.position.x,me.g.position.z)){enterListening();return}
     if(worldSpace==='garden'&&hasEntered&&ray.intersectObject(bulletinGroup,true).length){gardenBoard.open();return}
-    if(ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){cancelFireCare();const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.position.set(x,.04,z);marker.visible=true}}}
+    groundPlane.constant=worldSpace==='buddha'?-Prayer.NIMBUS_LAYOUT.y:0;
+    if(!nimbus.flight&&ray.ray.intersectPlane(groundPlane,hit)&&hit.distanceTo(me.g.position)<40){cancelFireCare();const[x,z]=collide(hit.x,hit.z,.4);target={x,z};marker.position.set(x,worldSpace==='buddha'?Prayer.NIMBUS_LAYOUT.y+.08:.04,z);marker.visible=true}}}
 canvas.addEventListener('pointerup',lookEnd);canvas.addEventListener('pointercancel',lookEnd);
 canvas.addEventListener('wheel',e=>{e.preventDefault();if(cam.sky){cam.skyFov=Math.max(45,Math.min(95,cam.skyFov+e.deltaY*.025));resize()}else cam.dist=Math.max(2.5,Math.min(12,cam.dist+e.deltaY*.005))},{passive:false});
 
@@ -3062,7 +3139,7 @@ function goToFriend(auto){
 const lastSent={};
 function sendPresence(){
   if(!room)return;const p=me.g.position;
-  const patch={space:worldSpace,x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,u:myUmbrella,wc:fireAction?.count||0,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow()),haloLevel:practice.haloLevel||0,halos:practice.halos,look:myLook,dog:myDog,uid:myId,nick:myNick||null};
+  const patch={space:worldSpace,cloud:nimbus.mounted,x:Math.round(p.x*100)/100,z:Math.round(p.z*100)/100,h:Math.round(me.g.rotation.y*100)/100,p:pose,bp:pose==='bow'?Math.round((practice.elapsed/8)*100)/100:0,u:myUmbrella,wc:fireAction?.count||0,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow()),haloLevel:practice.haloLevel||0,halos:practice.halos,look:myLook,dog:myDog,uid:myId,nick:myNick||null};
   const out={};for(const k in patch){const v=JSON.stringify(patch[k]);if(lastSent[k]!==v){out[k]=patch[k];lastSent[k]=v}}
   if(Object.keys(out).length)room.presence(out).catch(()=>{});
 }
@@ -3083,7 +3160,8 @@ function onPeerList(change){
       e={P,D,key,x:s.x,z:s.z,h:0,pose:'stand',by:pr.by||(typeof s.uid==='string'?s.uid:null),dog:dog};
       peers.set(pr.peer,e);if(!known&&!pr.quiet)pendingHello.push(pr.peer);
     }
-    const nextSpace=s.space==='listening'?'listening':'garden';if(e.space!==undefined&&e.space!==nextSpace){e.P.g.position.set(s.x,0,s.z);e.D.g.position.set(s.x+.8,0,s.z)}e.space=nextSpace;
+    const nextSpace=s.space==='buddha'?'buddha':s.space==='listening'?'listening':'garden';if(e.space!==nextSpace){const y=groundY(s.x,s.z,nextSpace);e.P.g.position.set(s.x,y+(s.cloud===true?1.05:0),s.z);e.D.g.position.set(s.x+.8,y,s.z)}e.space=nextSpace;
+    setNimbusRide(e.P,s.cloud===true);
     e.x=Math.max(-WORLD_R,Math.min(WORLD_R,s.x));e.z=Math.max(-WORLD_R,Math.min(WORLD_R,s.z));e.h=Number.isFinite(s.h)?s.h:e.h;
     e.P.woodCount=Number.isInteger(s.wc)?Math.max(1,Math.min(5,s.wc)):1;e.halos=s.halos||{whiteUntil:s.haloUntil};e.P.haloUntil=validBowHaloUntil(s.haloUntil,serverNow());e.P.haloLevel=s.haloLevel||1;
     e.bow=s.bow||null;
@@ -3213,7 +3291,7 @@ function updateNatureListener(){
   e.listener(naturePosition,natureForward,natureUp);
   const step=(P,p,self,away=false,teleport=false)=>{
     const pos=P.g.position,space=P.g.userData.space||'garden',point=space==='listening'?hutLocal(pos.x*.3,pos.z*.3):pos;
-    return e.step(P,{x:point.x,y:pos.y,z:point.z,walkT:P.walkT,speed:P.speed,pose:p,self,space,away,surface:surfaceAt(pos.x,pos.z,space),teleport});
+    return e.step(P,{x:point.x,y:pos.y,z:point.z,walkT:P.walkT,speed:P.ridingNimbus?0:P.speed,pose:p,self,space,away,surface:surfaceAt(pos.x,pos.z,space),teleport});
   };
   step(me,pose,true);for(const peer of peers.values())step(peer.P,peer.pose,false,peer.away,peer.P.g.userData.audioTeleported);
   for(const peer of peers.values())peer.P.g.userData.audioTeleported=false;
@@ -3444,11 +3522,14 @@ function loadPersonalPractice(){practice.target=bowGet('garden.bowTarget')==='30
 function receivePersonal(person,restore=false){
   if(!person||!gardenIdentity.credentials().personalCode)return;
   const changed=gardenIdentity.confirm(person);
+  const hadNimbus=nimbus.profile?.nimbus;nimbus.profile=person;
+  if(hadNimbus===false&&person.nimbus===true)toast('누적 10만 배 달성! 근두운을 영구 획득했어요');
   if(changed){const queued=practice.pendingStart,control=practice.pendingControl;loadPersonalPractice();if(queued){practice.pendingStart={...queued,count:readPracticeCount(queued.target)};practice.target=queued.target;practice.count=readPracticeCount(queued.target);practice.mode=queued.mode;practice.pendingControl=control;pose='bow'}}
   if(restore&&validLook(person.look)&&validDog(person.dog)){myNick=stripInvisible(person.name).slice(0,12);applyMyLook(person.look,person.dog,false,myNick);store.set('garden.name',myNick);refreshMine()}
   for(const target of[108,3000])bowSet(practiceCountKey(target),String(person.progress?.[target]||0));
   setMyHalos(person.halos);saveMyHalos();if(!practice.remote)practice.count=readPracticeCount(practice.target);practiceUI();saveVisit();
   if(changed)toast('개인 기록을 연결했어요. 메뉴에서 내 입장 코드를 보관해 주세요.');
+  updateNimbusUI();
 }
 function serverPracticeReady(){return typeof room!=='undefined'&&room?.bowVersion===1&&room.connected()}
 function requestPracticeStart(restart=false){
@@ -3493,7 +3574,7 @@ function receivePractice(job,restore=false){
   if(job.id===practice.stoppedId&&['auto','single'].includes(f.mode))return;
   practice.serverRev=job.rev;practice.remote=job;practice.pendingStart=null;
   if(restore&&['auto','single'].includes(f.mode)&&job.position?.space===worldSpace){
-    me.g.position.set(job.position.x,0,job.position.z);me.g.rotation.y=job.position.h;target=null;marker.visible=false;me.speed=0;
+    me.g.position.set(job.position.x,groundY(job.position.x,job.position.z)+(nimbus.mounted?1.05:0),job.position.z);me.g.rotation.y=job.position.h;target=null;marker.visible=false;me.speed=0;
   }
   syncRemotePractice();practiceUI();sendDirty=true;
 }
@@ -3521,6 +3602,7 @@ function practiceUI(){
 function endPractice(notify=true){if(practice.remote)syncRemotePractice();requestPracticeControl('stop');practice.remote=null;practice.mode='idle';practice.paused=false;practice.elapsed=0;pose='stand';me.bowPhase=0;sendDirty=true;practiceUI();if(notify)toast('수행을 마쳤어요. 횟수는 내 개인 기록에 보관돼요')}
 function preparePracticeInPlace(){
   cancelFireCare();
+  if(worldSpace==='buddha')me.g.rotation.y=Math.atan2(Prayer.NIMBUS_LAYOUT.x-me.g.position.x,Prayer.NIMBUS_LAYOUT.boundaryZ-me.g.position.z);
   if(worldSpace==='garden'&&Prayer.inside(me.g.position.x,me.g.position.z)){const p=ALTAR_SPOTS.reduce((a,b)=>Math.hypot(a.x-me.g.position.x,a.z-me.g.position.z)<Math.hypot(b.x-me.g.position.x,b.z-me.g.position.z)?a:b);me.g.rotation.y=Math.atan2(p.x-me.g.position.x,p.z-me.g.position.z)}
   // Stop walking and pending fire actions without moving the person, dog or camera.
   target=null;marker.visible=false;move={x:0,y:0};knob.style.transform='';
@@ -3528,6 +3610,7 @@ function preparePracticeInPlace(){
   pendingStoke=false;clearTimeout(fuelTimer);me.speed=0;userMoved=true;sendDirty=true;
 }
 function startPractice(mode,target=practice.target){
+  if(nimbus.flight||nimbus.pending){toast('근두운이 도착하면 수행할 수 있어요');return}
   if(mode==='auto'&&target===3000&&typeof room!=='undefined'&&room?.bowVersion===1&&!room.bowTargets?.includes(3000)){toast('3000배를 지원하는 최신 정원에 연결한 뒤 다시 눌러 주세요');return}
   if(mode==='pray'&&practice.mode==='pray'){endPractice();return}
   if(practice.remote)syncRemotePractice();
@@ -3560,10 +3643,13 @@ practiceUI();
 /* ---------- plaza practice bar ---------- */
 // 불상이 있는 돌바닥(기도 광장)에 올라서면 108배·3000배 버튼이 나타난다. 절하는 중에는 숨긴다.
 function syncPlazaBar(){
-  const on=hasEntered&&!visitEnded&&worldSpace==='garden'&&practice.mode==='idle'&&Prayer.inside(me.g.position.x,me.g.position.z);
+  const on=hasEntered&&!visitEnded&&practice.mode==='idle'&&(worldSpace==='buddha'||worldSpace==='garden'&&Prayer.inside(me.g.position.x,me.g.position.z));
   if($('plazaBar').hidden===!on)return;$('plazaBar').hidden=!on;syncMenuSections();
 }
 setInterval(syncPlazaBar,250);
+let nimbusUISecond=-1;
+$('nimbusMountBtn').onclick=()=>nimbusRequest(nimbus.mounted?'dismount':'mount');
+$('nimbusEnterBtn').onclick=()=>nimbusRequest('enter');$('nimbusExitBtn').onclick=()=>nimbusRequest('exit');
 let appHidden=document.hidden;document.addEventListener('visibilitychange',()=>{appHidden=document.hidden;if(practice.remote)syncRemotePractice();clock.getDelta();if(!appHidden){framePacer.reset();requestGardenFrame()}if(appHidden){cancelFireCare();Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''}});
 addEventListener('blur',()=>{Object.keys(keys).forEach(k=>delete keys[k]);move={x:0,y:0};knob.style.transform=''});
 
@@ -4416,7 +4502,7 @@ function updateContext(dt){
   $('candleActions').hidden=!(hasEntered&&worldSpace==='garden'&&Prayer.nearBox(x,z)&&!fireAction);
   const nearWood=worldSpace==='garden'&&Math.hypot(x-Fire.PILE.x,z-Fire.PILE.z)<=Fire.PILE.r;
   if(fireAction){b.textContent='장작 옮기기 멈추기';b.dataset.act='fireCancel';b.hidden=false;return}
-  if(worldSpace==='listening'){b.hidden=true;return}
+  if(worldSpace!=='garden'){b.hidden=true;return}
   if(hasEntered&&Prayer.nearBox(x,z)){b.hidden=true;return}
   if(hasEntered&&nearListeningDoor(x,z)){b.textContent='음악방 들어가기';b.dataset.act='listening';b.hidden=false;return}
   if(inPocha()){b.textContent='포차 나오기';b.dataset.act='leave';b.hidden=false;return}
@@ -4842,8 +4928,8 @@ function readVisit(){
 function clearVisit(keepDevice=false){try{sessionStorage.removeItem(VISIT_KEY)}catch(e){}if(!keepDevice)store.set(DEVICE_VISIT_KEY,'')}
 function saveVisit(){
   if(visitEnded||readExitFlag()||!hasEntered||!visitToken)return false;
-  const p=me.g.position,message=lastMessages.get('me');
-  const snapshot={v:1,personal:gardenIdentity.credentials(),space:worldSpace,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
+  const p=nimbus.resume||me.g.position,message=lastMessages.get('me');
+  const snapshot={v:1,personal:gardenIdentity.credentials(),space:nimbus.resume?.space||worldSpace,cloud:nimbus.resume?.cloud===true||nimbus.mounted,nimbusReturn:nimbus.resume?.nimbusReturn||nimbus.returnPoint,roomReturn:listening.returnPoint,token:visitToken,name:myNick,look:myLook,dog:myDog,umbrella:myUmbrella,
     x:p.x,z:p.z,h:me.g.rotation.y,cameraStateVersion:CAMERA_STATE_VERSION,seatCamera,cam:{yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,sky:cam.sky,skyPitch:cam.skyPitch,skyFov:cam.skyFov,gardenYaw:cam.gardenYaw},pose:pose==='cheers'?(me.lastDrink||'sit'):pose,lastDrink:me.lastDrink||null,chatDraft:$('chatInput').value,
     practice:{mode:practice.mode,paused:practice.paused,elapsed:practice.elapsed,count:practice.count,target:practice.target,haloUntil:practice.haloUntil,halos:practice.halos,remote:practice.remote,pendingStart:practice.pendingStart,pendingControl:practice.pendingControl,stoppedId:practice.stoppedId},
     lastChat:message?{name:shownName(),text:message.text,at:message.at}:null};
@@ -4859,6 +4945,7 @@ async function restoreVisit({connect=true,identity=true}={}){
   if(typeof saved.umbrella==='boolean'){myUmbrella=saved.umbrella;store.set('garden.umbrella',myUmbrella?'1':'0')}syncUmbrellaButtons();
   if(validLook(saved.look)&&validDog(saved.dog))applyMyLook(saved.look,saved.dog,false);
   if(saved.space==='listening')enterListening(true,saved);
+  nimbus.resume=saved.space==='buddha'||saved.cloud===true?saved:null;
   if(Number.isFinite(saved.x)&&Number.isFinite(saved.z)){
     const pos=collide(saved.x,saved.z,.4);me.g.position.set(pos[0],0,pos[1]);
   }
@@ -4928,6 +5015,8 @@ function showExitScreen(){
   if(animationFrameId!==null){cancelAnimationFrame(animationFrameId);animationFrameId=null}
 }
 function leaveGarden(closeWindow=true,notifyServer=true,keepDevice=false){
+  if(worldSpace==='buddha'){worldSpace='garden';document.body.classList.remove('buddha-realm')}
+  clearTimeout(nimbus.timer);nimbus.pending=null;nimbus.flight=null;nimbus.mounted=false;nimbus.profile=null;nimbus.resume=null;setNimbusRide(me,false);
   if(worldSpace==='listening')exitListening(true);
   profileEditor?.close(true);candleUI?.endVisit();gardenBoard.close(true);if($('fireLoadDialog').open)$('fireLoadDialog').close();if($('qualityDialog').open)$('qualityDialog').close();visitEnded=true;hasEntered=false;
   try{sessionStorage.setItem(LEFT_KEY,'1')}catch(e){}
@@ -4999,6 +5088,7 @@ $('leaveConfirm').addEventListener('keydown',event=>{if(event.key==='Escape')can
 addEventListener('popstate',event=>{
   if(visitEnded||readExitFlag())return;
   const view=event.state&&event.state.gardenView;
+  if(worldSpace==='buddha'){history.pushState({gardenView:'buddha'},'',location.href);nimbusRequest('exit');return}
   if(candleUI?.isOpen()){candleUI.close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
   if($('fireLoadDialog').open){$('fireLoadDialog').close();history.pushState({gardenView:worldSpace==='listening'?'listening':'garden'},'',location.href);return}
   if(profileEditor?.isOpen()){profileEditor.close();if(view==='base')history.pushState({gardenView:'garden'},'',location.href);return}
@@ -5047,7 +5137,7 @@ function connectRoomServer(base,code){
     send(o){if(!stop&&ws&&ws.readyState===1){try{ws.send(JSON.stringify(o));return true}catch(e){}}return false},
     onPeers(fn){peerL.push(fn)},onConnection(fn){connL.push(fn);fn(connected)},
     presence(patch){Object.assign(local,patch);
-      const st={space:local.space==='listening'?'listening':'garden',x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp,u:local.u===true,wc:local.wc,haloUntil:validBowHaloUntil(local.haloUntil,serverNow()),haloLevel:local.haloLevel,halos:local.halos},k=JSON.stringify(st);
+      const st={space:local.space==='buddha'?'buddha':local.space==='listening'?'listening':'garden',cloud:local.cloud===true,x:local.x,z:local.z,h:local.h,p:local.p,bp:local.bp,u:local.u===true,wc:local.wc,haloUntil:validBowHaloUntil(local.haloUntil,serverNow()),haloLevel:local.haloLevel,halos:local.halos},k=JSON.stringify(st);
       if(k!==sentState&&Number.isFinite(st.x)&&connected&&api.send({t:'state',s:st}))sentState=k;
       if(connected&&('look' in patch||'dog' in patch||'nick' in patch))api.profile();
       return Promise.resolve()},
@@ -5074,7 +5164,7 @@ function connectRoomServer(base,code){
     const list=[...peersById.values()].map(p=>({peer:p.id,quiet:!!p.quiet,sameTab:false,kind:'viewer',by:null,guest:false,presence:Object.assign({},p.s||{},{look:p.look,dog:p.dog,nick:p.name,say:p.lastChat||null,away:!!p.away,bow:p.bow||null})}));
     peerL.forEach(fn=>fn({peers:list}))})}
   function failProfileSave(code){if(!profileSave)return;const pending=profileSave;profileSave=null;clearTimeout(pending.timer);pending.reject(Error(code))}
-  function setConn(c,message){connected=c;if(!c)failProfileSave('connection');if(!c)cancelFireCare();gardenBoard.connection(c);candleUI?.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c))}
+  function setConn(c,message){connected=c;if(!c){failProfileSave('connection');clearTimeout(nimbus.timer);nimbus.pending=null}if(!c)cancelFireCare();gardenBoard.connection(c);candleUI?.connection(c);if(message)connectionStatus=message;connL.forEach(fn=>fn(c));updateNimbusUI()}
   function applyShared(sh){
     if(!sh)return;
     if(sh.campfire){
@@ -5108,8 +5198,8 @@ function connectRoomServer(base,code){
     connectionStartedAt=Date.now();
     let socket;try{socket=new WebSocket(base+'/room/'+code);ws=socket}catch(e){disconnected('친구 연결을 다시 시도하는 중…');return}
     handshakeTimer=setTimeout(()=>{if(ws===socket&&!connected)disconnected('친구 연결이 지연되고 있어요 · 다시 시도하는 중…')},12000);
-    socket.onopen=()=>{if(stop||visitEnded||!hasEntered||ws!==socket)return;const p=me.g.position;lastReceived=Date.now();
-      api.send({t:'hello',...gardenIdentity.credentials(),personalUpdate:personalUpdatePending,resumeToken:visitToken,away:document.hidden,name:myNick,look:myLook,dog:myDog,s:{space:worldSpace,x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0,u:myUmbrella,wc:fireAction?.count||0,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow()),haloLevel:practice.haloLevel,halos:practice.halos}});
+    socket.onopen=()=>{if(stop||visitEnded||!hasEntered||ws!==socket)return;const p=nimbus.resume||me.g.position;lastReceived=Date.now();
+      api.send({t:'hello',...gardenIdentity.credentials(),personalUpdate:personalUpdatePending,resumeToken:visitToken,away:document.hidden,name:myNick,look:myLook,dog:myDog,s:{space:nimbus.resume?.space==='buddha'?'buddha':worldSpace,cloud:nimbus.resume?.cloud===true||nimbus.mounted,x:p.x,z:p.z,h:me.g.rotation.y,p:pose,bp:pose==='bow'?practice.elapsed/8:0,u:myUmbrella,wc:fireAction?.count||0,haloUntil:validBowHaloUntil(practice.haloUntil,serverNow()),haloLevel:practice.haloLevel,halos:practice.halos}});
       clearInterval(pingTimer);pingTimer=setInterval(()=>{
         if(Date.now()-lastReceived>60000){disconnected('연결이 끊어졌어요 · 다시 연결하는 중…');return}
         api.send({t:'ping',c:Date.now()});
@@ -5119,9 +5209,14 @@ function connectRoomServer(base,code){
         case 'welcome':clearTimeout(handshakeTimer);retry=0;you=m.you;isGardenAdmin=m.admin===1;$('kickAllBtn').hidden=!isGardenAdmin;$('kickDuplicatesBtn').hidden=!isGardenAdmin;
           if(gardenIdentity.credentials().personalCode&&m.features?.personal!==1){api.close();room=null;hasEntered=false;clearVisit();openNameDialog();gardenIdentity.fail('개인 기록을 지원하는 최신 정원에 연결해 주세요.');break}
           api.clockOffset=(m.now||Date.now())-Date.now();if(m.personal){receivePersonal(m.personal,true);personalUpdatePending=false;}
-          api.selfId=you;api.profileEditorVersion=m.features?.profileEdit===1?1:0;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
-          applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});if(api.bowVersion){practice.serverRev=0;if(practice.pendingStart)api.send(practice.pendingStart);else if(m.bow)receivePractice(m.bow,true);else if(['auto','single'].includes(practice.mode)){const paused=practice.paused;requestPracticeStart();if(paused)requestPracticeControl('pause')}if(practice.pendingControl)api.send(practice.pendingControl)}break;
+          api.selfId=you;api.nimbusVersion=m.features?.nimbus===1?1:0;api.profileEditorVersion=m.features?.profileEdit===1?1:0;api.bowVersion=m.features?.bows===1?1:0;api.bowTargets=Array.isArray(m.features?.bowTargets)?m.features.bowTargets:[108];api.candleVersion=m.features?.candles===1?1:0;api.fireVersion=m.features?.campfire===1?1:0;api.boardVersion=Number.isInteger(m.features?.board)?m.features.board:0;api.listeningVersion=m.features?.listening===1?1:0;if(worldSpace==='listening'&&!api.listeningVersion)exitListening(true);applyListeningState(m.listeningAudio);api.clockOffset=(m.now||Date.now())-Date.now();peersById.clear();(m.peers||[]).forEach(p=>peersById.set(p.id,{...p,quiet:true}));
+          receiveNimbus(m.s,m.personal);updateNimbusUI();applyShared(m.shared);applyRps(m.rps||null);sentState='';for(const k in lastSent)delete lastSent[k];sendDirty=true;setConn(true,'정원에 연결됐어요');emit();api.send({t:'ping',c:Date.now()});if(api.bowVersion){practice.serverRev=0;if(practice.pendingStart)api.send(practice.pendingStart);else if(m.bow)receivePractice(m.bow,true);else if(['auto','single'].includes(practice.mode)){const paused=practice.paused;requestPracticeStart();if(paused)requestPracticeControl('pause')}if(practice.pendingControl)api.send(practice.pendingControl)}break;
         case 'personal_state':receivePersonal(m.personal);break;
+        case 'nimbus_state':receiveNimbus(m.s,m.personal,m.request,m.action);break;
+        case 'nimbus_error':{
+          if(!m.request||m.request===nimbus.pending?.request){clearTimeout(nimbus.timer);nimbus.pending=null;updateNimbusUI();}
+          toast(({locked:'누적 10만 배를 달성하면 근두운을 얻어요',mount:'정원에서 근두운에 탄 뒤 입장해 주세요',palm:'정원으로 돌아간 뒤 근두운에서 내릴 수 있어요',space:'음악방 밖에서 근두운을 타 주세요',slow:'잠시 후 다시 눌러 주세요',storage:'서버 기록을 확인하지 못했어요. 다시 연결해 주세요'})[m.code]||'근두운 상태를 다시 확인해 주세요');break;
+        }
         case 'personal_error':{const message=m.code==='name_taken'?'이미 정원에 같은 이름이 있어요. 다른 이름으로 입장해 주세요.':m.code==='slow'?'잠시 후 다시 입장해 주세요.':m.code==='missing'?'등록된 코드가 없어요. 보관한 코드를 확인해 주세요.':m.code==='storage'?'개인 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.':'개인 코드 형식을 확인해 주세요.';api.close();room=null;hasEntered=false;if(m.code!=='name_taken')clearVisit();practice.remote=null;practice.mode='idle';openNameDialog();gardenIdentity.fail(message);break}
         case 'profile_saved':{
           if(!profileSave||m.request!==profileSave.request)break;
@@ -5260,7 +5355,7 @@ function layoutBubbles(dt){
     b.visible=false;
     if(!b.parent||!b.parent.parent||!b.userData.tag)continue;
     let visible=true;for(let node=b.parent;node;node=node.parent)if(!node.visible){visible=false;break}if(!visible)continue;
-    if((b.parent.userData.space||'garden')!==worldSpace){b.visible=false;continue}
+    if(((b.parent.userData.space||'garden')==='listening')!==(worldSpace==='listening')){b.visible=false;continue}
     const g=b.parent,headY=b.userData.tag.position.y+.15;
     _bv.set(g.position.x,g.position.y+headY,g.position.z).applyMatrix4(camera.matrixWorldInverse);
     const depth=-_bv.z,dist=_bv.length();
@@ -5329,7 +5424,7 @@ $('candleLightBtn').onclick=()=>candleUI.open();
 $('candleViewBtn').onclick=()=>candleUI.openVault();
 let candleRefreshSecond=-1;
 /* ---------- loop ---------- */
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);gardenPost.setSize(w,h,quality.level);camera.aspect=w/h;camera.fov=cam.sky?cam.skyFov:w/h<.8?72:55;camera.updateProjectionMatrix()}
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);gardenPost.setSize(w,h,quality.level);camera.aspect=w/h;camera.fov=cam.sky?cam.skyFov:worldSpace==='buddha'?72:w/h<.8?72:55;camera.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PN=160,pg=new THREE.BufferGeometry(),pp=new Float32Array(PN*3);
@@ -5377,18 +5472,22 @@ function tick(){
   else if(target){const dx=target.x-me.g.position.x,dz=target.z-me.g.position.z,d=Math.hypot(dx,dz);
     if(d<.2){target=null;marker.visible=false;mag=0}else{vx=dx/d;vz=dz/d;mag=Math.min(1,d)}}
   else mag=0;
-  if(cam.sky||candleUI?.isOpen()||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('profileEditor')?.open||$('fireLoadDialog').open||$('listeningAudio').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
+  if(nimbus.flight||nimbus.pending||cam.sky||candleUI?.isOpen()||gardenBoard.isOpen()||$('homeInstallHelp').open||$('qualityDialog').open||$('profileEditor')?.open||$('fireLoadDialog').open||$('listeningAudio').open||rpsGame&&rpsGame.status==='playing'){mag=0;target=null;marker.visible=false}
   if(mag>0&&pose!=='stand'&&pose!=='woodcarry'){if(practice.mode!=='idle')endPractice(false);pose='stand';syncPoseButtons();sendDirty=true}
   const ox=me.g.position.x,oz=me.g.position.z;
-  if(mag>0){userMoved=true;const sp=3.2*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
+  if(mag>0){userMoved=true;const sp=(nimbus.mounted?5.4:3.2)*mag*dt;const[x,z]=collide(ox+vx*sp,oz+vz*sp,.4);me.g.position.x=x;me.g.position.z=z;
     me.g.rotation.y=angLerp(me.g.rotation.y,Math.atan2(vx,vz),Math.min(1,dt*10))}
   const moved=Math.hypot(me.g.position.x-ox,me.g.position.z-oz)/Math.max(dt,1e-4);
   me.speed+=(moved-me.speed)*Math.min(1,dt*10);
   updatePractice(visualDt);updateFireCare(visualDt);
   if(bowRosterAt!==Math.floor(serverNow()/1000)){bowRosterAt=Math.floor(serverNow()/1000);renderVisitors()}
-  posePerson(me,pose,dt,t);
-  if(worldSpace==='garden'){updateEnvironment(visualDt,t);updateWaterworks(visualDt,t)}else updateUmbrellas();
-  if(worldSpace==='garden'){updateCampfire(visualDt);updateBonfire(visualDt,t);updateOwner(visualDt,t)}updateContext(visualDt);updateRps(visualDt);syncListeningActors();
+  setNimbusRide(me,nimbus.mounted);posePerson(me,pose,dt,t);
+  if(nimbusUISecond!==Math.floor(serverNow()/1000)){
+    nimbusUISecond=Math.floor(serverNow()/1000);updateNimbusUI();
+    if(hasEntered&&!nimbus.profile?.nimbus&&nimbusTotal()>=Prayer.NIMBUS_BOWS&&!nimbus.pending&&room?.connected()&&room.nimbusVersion===1&&serverNow()-nimbus.lastSync>30000){nimbus.lastSync=serverNow();nimbusRequest('sync')}
+  }
+  if(worldSpace!=='listening'){updateEnvironment(visualDt,t);updateWaterworks(visualDt,t)}else updateUmbrellas();
+  if(worldSpace!=='listening'){updateCampfire(visualDt);updateBonfire(visualDt,t);updateOwner(visualDt,t)}updateContext(visualDt);updateRps(visualDt);syncListeningActors();
   if(worldSpace==='garden'&&pendingStoke&&!target&&Math.hypot(me.g.position.x,me.g.position.z)<4)doStoke();
   if(inPocha()){const st=STOOLS[mySeatIndex()],o=pochaLocal(st&&st.lx>0?3.7:-3.7,2.3);updateDog(myDogObj,o.x,o.z,POCHA.h,'sit',false,dt,t)}
   else updateDog(myDogObj,me.g.position.x,me.g.position.z,me.g.rotation.y,pose,me.speed>.3,dt,t);
@@ -5409,7 +5508,14 @@ function tick(){
   syncStandingPrayerBubble('me',me,pose,shownName());
   for(const [id,peer] of peers)syncStandingPrayerBubble(id,peer.P,peer.pose,peer.nick||peer.nm||'친구');
   sy=Math.sin(cam.yaw);cy=Math.cos(cam.yaw);
-  const ax=me.g.position.x,az=me.g.position.z,cp=Math.cos(cam.pitch);
+  let flightPoint=null;
+  if(nimbus.flight){
+    const f=nimbus.flight,u=Math.min(1,(frameStart-f.at)/f.duration),k=u*u*(3-2*u);
+    flightPoint=f.from.clone().lerp(f.to,k);flightPoint.y+=Math.sin(u*Math.PI)*4;
+    if(u>=1){nimbus.flight=null;flightPoint=null;updateNimbusUI()}
+  }
+  const view=flightPoint||me.g.position,ax=view.x,az=view.z,cp=Math.cos(cam.pitch);
+  const altarView=worldSpace==='garden'&&!flightPoint&&Prayer.inside(ax,az)&&['bow','pray','standing_pray'].includes(pose)&&Math.cos(cam.yaw)>.65;
   if(worldSpace==='listening'){
     camera.position.set(THREE.MathUtils.clamp(ax+sy*cam.dist*cp,-5.8,5.8),Math.min(4.25,1.65+Math.sin(cam.pitch)*cam.dist),THREE.MathUtils.clamp(az+cy*cam.dist*cp,-5.2,6.5));
     if(pose==='sit'){
@@ -5417,30 +5523,40 @@ function tick(){
       const orbit=Math.hypot(camera.position.x-ax,camera.position.z-az),focus=(LISTENING_TV.x-ax)*orbit/(orbit+az-LISTENING_TV.z);
       camera.lookAt(ax+focus*cy,2.25,az-focus*sy);
     }else camera.lookAt(ax,1.5,az);
+  }else if(worldSpace==='buddha'){
+    const base=flightPoint?view.y-1.05:Prayer.NIMBUS_LAYOUT.y;
+    camera.position.set(ax+sy*cam.dist*cp,base+3.1+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
+    camera.lookAt(ax-sy*4,base+6.5,az-cy*4);
   }else if(cam.sky){
     const elevation=cam.skyPitch;
     camera.position.set(ax,2.1,az);
     camera.lookAt(ax-sy*Math.cos(elevation)*100,2.1+Math.sin(elevation)*100,az-cy*Math.cos(elevation)*100);
   }else{
-    camera.position.set(ax+sy*cam.dist*cp,1.3+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
-    camera.lookAt(ax,(pose==='lie'||pose==='prone')?.6:practice.mode!=='idle'?3.4:inPocha()?1.5:2.5,az);
+    const base=flightPoint?view.y-1.05:0;
+    camera.position.set(ax+sy*cam.dist*cp,base+1.3+Math.sin(cam.pitch)*cam.dist,az+cy*cam.dist*cp);
+    camera.lookAt(ax,base+(altarView?9:(pose==='lie'||pose==='prone')?.6:practice.mode!=='idle'?3.4:inPocha()?1.5:2.5),az-(altarView?18:0));
   }
+  const viewFov=cam.sky?cam.skyFov:worldSpace==='buddha'||innerWidth/innerHeight<.8?72:altarView?62:55;
+  if(camera.fov!==viewFov){camera.fov=viewFov;camera.updateProjectionMatrix()}
 
   updateNatureListener();
   const candleNow=serverNow();prayerView.update(candleNow,t);if(Math.floor(candleNow/1000)!==candleRefreshSecond){candleRefreshSecond=Math.floor(candleNow/1000);if(candleUI.isOpen())candleUI.refresh()}
   sendAcc+=elapsed;if(room&&(sendAcc>.1||sendDirty)){sendAcc=0;sendDirty=false;sendPresence()}
+  // 저장·통신은 서버의 도착 좌표. 렌더링 동안만 구름이 실제로 오르는 모습을 보인다.
+  const logicalPosition=flightPoint?me.g.position.clone():null;if(flightPoint)me.g.position.copy(flightPoint);
   if(marker.visible)marker.material.opacity=.5+Math.sin(t*5)*.3;
   if(!reduce){const a=pg.attributes.position.array;
     for(let i=0;i<PN;i++){a[i*3+1]-=dt*.25;a[i*3]+=Math.sin(t+i)*dt*.2;if(a[i*3+1]<0)a[i*3+1]=8}
     pg.attributes.position.needsUpdate=true}
   layoutBubbles(dt);windU.value=t;const windTarget=natureAudio.on&&natureAudio.engine?natureAudio.engine.windStrength:1+Math.min(1,Math.abs(weatherFrame(serverNow()).wind))*.8;windStrengthU.value+=(windTarget-windStrengthU.value)*Math.min(1,dt*2);updateMoonSanctuary();updateDust(dt);const shadowPlan=shadowBudget.plan(frameStart,me.g.position,sunOffset,worldSpace);shadowAnchor.set(shadowPlan.x,0,shadowPlan.z);sun.position.copy(sunOffset).add(shadowAnchor);sun.target.position.copy(shadowAnchor);if(shadowPlan.update&&renderer.shadowMap.enabled)renderer.shadowMap.needsUpdate=true;
   if(!gardenBoard.isOpen()){
-    if(worldSpace==='garden')gardenLights.update(frameStart/1000,camera.position,me.g.position);
-    renderer.info.reset();if(worldSpace==='listening')updateListening(dt,t);else updateScenery();
+    if(worldSpace!=='listening')gardenLights.update(frameStart/1000,camera.position,me.g.position);
+    renderer.info.reset();if(worldSpace!=='listening'){ensureBuddhaRealm().update(t,reduce);updateScenery()}else updateListening(dt,t);
     const phase=gardenEnvironment.frame(serverNow());
-    gardenPost.draw(worldSpace==='listening'?listening.scene:scene,camera,dt,{...phase,rain:weatherFrame(serverNow()).rain,space:worldSpace,level:hasEntered?postQualityLevel():0});
+    gardenPost.draw(worldSpace==='listening'?listening.scene:scene,camera,dt,{...phase,rain:weatherFrame(serverNow()).rain,space:worldSpace==='listening'?'listening':'garden',level:hasEntered?postQualityLevel():0});
     sampleGardenFrame(frameStart,performance.now()-frameStart);
   }else resetQualitySampling();
+  if(logicalPosition)me.g.position.copy(logicalPosition);
   requestGardenFrame();
 }
 requestGardenFrame();
@@ -5448,8 +5564,3 @@ requestGardenFrame();
 </script>
 
 </body></html>
-
-
-
-
-

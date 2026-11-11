@@ -13,7 +13,7 @@ const MAX_PEERS = 16;
 const VISIT_AWAY_MS=5*60*1000,VISIT_MEMORY_MS=24*60*60*1000;
 const TRACKS=['dawn','wind','bowl','melody'];
 const LISTENING_TRACKS=['bluehour','rainwood','starlight'];
-const spaceOf=s=>s&&s.space==='listening'?'listening':'garden';
+const spaceOf=s=>s?.space==='buddha'?'buddha':s?.space==='listening'?'listening':'garden';
 const sameSpace=(a,b)=>spaceOf(a)===spaceOf(b);
 const WEATHER = ['auto', 'clear', 'rain', 'snow'];
 const BOARD_PAGE_SIZE=6,BOARD_MAX_NOTES=500,BOARD_MAX_TEXT=600;
@@ -88,7 +88,8 @@ function cleanState(s) {
   const x = num(s.x, -WORLD_R, WORLD_R), z = num(s.z, -WORLD_R, WORLD_R);
   if (x === null || z === null) return null;
   const space=spaceOf(s);
-  return { space,x:space==='listening'?num(x,-5.6,5.6):x,z:space==='listening'?num(z,-3,5.3):z, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true,haloUntil:cleanBowHalo(s.haloUntil),haloLevel:s.haloLevel===2?2:1,halos:Prayer.cleanHalos(s.halos||{whiteUntil:s.haloUntil},Date.now()) };
+  const palm=space==='buddha'?Prayer.palmPosition(x,z):space==='garden'?Prayer.gardenPosition(x,z):{x,z};
+  return { space,x:space==='listening'?num(x,-5.6,5.6):palm.x,z:space==='listening'?num(z,-3,5.3):palm.z,cloud:s.cloud===true, h: num(s.h, -1000, 1000) ?? 0, p: POSES.includes(s.p) ? s.p : 'stand', bp: num(s.bp, 0, 1) ?? 0, u:s.u===true,haloUntil:cleanBowHalo(s.haloUntil),haloLevel:s.haloLevel===2?2:1,halos:Prayer.cleanHalos(s.halos||{whiteUntil:s.haloUntil},Date.now()) };
 }
 
 async function personalHash(text){return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(v=>v.toString(16).padStart(2,'0')).join('')}
@@ -108,6 +109,11 @@ export class GardenRoom extends DurableObject {
       this.rps = (await ctx.storage.get('rpsGames')) || [];
       this.visits=(await ctx.storage.get('visits'))||{};
       this.bows=(await ctx.storage.get('bowPractices'))||{};this.bowQueue=new Map();
+      // Hibernation/restart must restore permanent totals before scheduling a milestone.
+      for(const id of new Set([...Object.keys(this.bows),...this.readyPeers().map(p=>p.a.id)])){
+        const person=await ctx.storage.get('person.'+id);
+        if(person)this.personalViews.set(id,Prayer.profileView(person,Date.now()));
+      }
       this.campfire=await ctx.storage.get('campfire');
       if(!this.campfire){this.campfire=Fire.initial(Date.now());await ctx.storage.put('campfire',this.campfire)}
       if(this.campfire.fuelUntil>Date.now()+Fire.MAX_MS){this.campfire={...this.campfire,fuelUntil:Date.now()+Fire.MAX_MS};await ctx.storage.put('campfire',this.campfire)}
@@ -253,6 +259,59 @@ export class GardenRoom extends DurableObject {
   readyPeers() {
     return this.ctx.getWebSockets().map((ws) => ({ ws, a: ws.deserializeAttachment() })).filter((p) => p.ws.readyState === 1 && p.a && p.a.ready);
   }
+  nimbusAllowed(a){return !!a.personal&&Prayer.hasNimbus(this.personalViews.get(a.id))}
+  nimbusMilestoneAt(id,job){
+    const p=this.personalViews.get(id);if(!p||Prayer.hasNimbus(p)||!job||job.paused||!['auto','single'].includes(job.mode))return null;
+    const cursor=job.accountedCount??job.count,need=Prayer.NIMBUS_BOWS-(p.totalBows||0),limit=job.mode==='single'?job.count+1:job.target;
+    if(need<=0||cursor+need>limit)return null;
+    return job.at+Math.max(0,(cursor+need-job.count)*Prayer.BOW_MS-(job.elapsed||0));
+  }
+  validateNimbus(a,s){
+    const allowed=this.nimbusAllowed(a);
+    s.cloud=allowed&&s.cloud===true&&spaceOf(s)!=='listening';
+    if(spaceOf(s)==='buddha'&&(!allowed||!s.cloud))return false;
+    return true;
+  }
+  async handleNimbus(ws,m){
+    let a=ws.deserializeAttachment();if(!a?.ready)return;
+    const fail=code=>ws.send(JSON.stringify({t:'nimbus_error',request:m.request,code}));
+    if(!Prayer.nonce(m.request)||!['sync','mount','dismount','enter','exit'].includes(m.action)){fail('invalid');return}
+    if(!this.allow(a,'nimbus',3)){fail('slow');return}
+    try{
+      if(a.personal){
+        const person=await this.ctx.storage.get('person.'+a.id);
+        if(!person||person.session!==a.personalSession){fail('session');return}
+      }
+      // 진행 중인 절도 서버 시계로 정산한 뒤 누적 달성을 판정한다.
+      if(a.personal)await this.editBow(a.id,j=>j,a.personalSession);
+      a=ws.deserializeAttachment();if(!a?.ready)return;
+      if(a.nimbusLast?.request===m.request){
+        ws.send(JSON.stringify({t:'nimbus_state',request:m.request,action:m.action,s:a.s,personal:this.personalViews.get(a.id)||null}));return;
+      }
+      if(m.action!=='sync'&&!this.nimbusAllowed(a)){fail('locked');return}
+      if(m.action==='enter'&&(!a.s.cloud||spaceOf(a.s)!=='garden')){fail('mount');return}
+      if(m.action==='dismount'&&spaceOf(a.s)==='buddha'){fail('palm');return}
+      if(m.action==='mount'&&spaceOf(a.s)==='listening'){fail('space');return}
+      if(m.action!=='sync'){
+        const f=Prayer.bowProgress(this.bows[a.id],Date.now());
+        if(f&&['auto','single'].includes(f.mode))await this.editBow(a.id,old=>{
+          const settled=Prayer.settleBow(old,Date.now());return settled?{...settled,mode:'idle',paused:false,elapsed:0}:null;
+        },a.personalSession);
+        a=ws.deserializeAttachment();if(!a?.ready)return;
+        if(m.action==='enter'){
+          const L=Prayer.NIMBUS_LAYOUT;
+          a.nimbusReturn={x:a.s.x,z:a.s.z,h:a.s.h};a.s={...a.s,space:'buddha',x:L.x,z:L.z+9,h:Math.PI,cloud:true,p:'stand'};
+        }else if(m.action==='exit'&&spaceOf(a.s)==='buddha'){
+          const p=a.nimbusReturn||{x:29,z:4,h:Math.PI};a.s={...a.s,...p,space:'garden',cloud:true,p:'stand'};
+        }else if(m.action==='mount'||m.action==='dismount')a.s={...a.s,cloud:m.action==='mount',p:'stand'};
+        a.nimbusLast={request:m.request,action:m.action};
+        ws.serializeAttachment(a);await this.rememberVisit(a);
+        this.broadcast({t:'state',id:a.id,s:a.s},ws);
+      }
+      this.publishBow(a.id);
+      ws.send(JSON.stringify({t:'nimbus_state',request:m.request,action:m.action,s:a.s,personal:this.personalViews.get(a.id)||null}));
+    }catch{fail('storage')}
+  }
   peerInfo(a) {
     const job=this.bows?.[a.id]||null,f=Prayer.bowProgress(job,Date.now()),s={...a.s};
     if(a.personal)Object.assign(s,this.personalHalos(a));
@@ -274,7 +333,7 @@ export class GardenRoom extends DurableObject {
     await this.ctx.storage.put('visits',this.visits);await this.armRpsAlarm();
   }
   async rememberVisit(a,awayUntil=null){
-    this.visits[a.id]={peer:this.peerInfo(a),enteredAt:a.enteredAt||this.visits[a.id]?.enteredAt||Date.now(),lastSeen:Date.now(),awayUntil,expiresAt:Date.now()+VISIT_MEMORY_MS};
+    this.visits[a.id]={peer:this.peerInfo(a),nimbusReturn:a.nimbusReturn||null,enteredAt:a.enteredAt||this.visits[a.id]?.enteredAt||Date.now(),lastSeen:Date.now(),awayUntil,expiresAt:Date.now()+VISIT_MEMORY_MS};
     await this.saveVisits();await this.rememberPersonal(a);
   }
   async advanceVisits(now=Date.now()){
@@ -311,7 +370,7 @@ export class GardenRoom extends DurableObject {
       const jobs=(await txn.get('bowPractices'))||{};
       let old=jobs[id]||null,person=await txn.get('person.'+id);
       if(personalSession&&person?.session!==personalSession)return{jobs,person:null};
-      if(person&&old){const settled=Prayer.accountProfile(person,old,Date.now());person=settled.profile;old=settled.job}
+      if(person){const settled=Prayer.accountProfile(person,old,Date.now());person=settled.profile;old=settled.job}
       let value=change(old);
       if(person){
         if(value){const settled=Prayer.accountProfile(person,value,Date.now());person=settled.profile;value=settled.job}
@@ -333,15 +392,18 @@ export class GardenRoom extends DurableObject {
     if(live?.a.personal)live.ws.send(JSON.stringify({t:'personal_state',personal:this.personalViews.get(id)}));
   }
   async advanceBows(now=Date.now()){
-    const ids=Object.keys(this.bows||{}).filter(id=>Prayer.bowProgress(this.bows[id],now).done||this.bows[id].expiresAt<=now);
+    const ids=Object.keys(this.bows||{}).filter(id=>Prayer.bowProgress(this.bows[id],now).done||this.bows[id].expiresAt<=now||(this.nimbusMilestoneAt(id,this.bows[id])??Infinity)<=now);
     for(const id of ids){await this.editBow(id,job=>!job||job.expiresAt<=now?null:Prayer.bowProgress(job,now).done?Prayer.settleBow(job,now):job);this.publishBow(id)}
     if(ids.length)await this.saveVisits();
   }
+  queueBow(id,change){
+    this.bowQueue=this.bowQueue||new Map();const previous=this.bowQueue.get(id)||Promise.resolve();
+    const task=previous.catch(()=>{}).then(change);this.bowQueue.set(id,task);
+    return task.finally(()=>{if(this.bowQueue.get(id)===task)this.bowQueue.delete(id)});
+  }
   handleBows(ws,a,m){
-    // Control commands from the same socket retain their order across storage awaits.
-    this.bowQueue=this.bowQueue||new Map();const previous=this.bowQueue.get(a.id)||Promise.resolve();
-    const task=previous.catch(()=>{}).then(()=>this.performBowControl(ws,a,m));this.bowQueue.set(a.id,task);
-    return task.finally(()=>{if(this.bowQueue.get(a.id)===task)this.bowQueue.delete(a.id)});
+    // 수행·탑승·입장 명령을 같은 개인별 큐에서 순서대로 처리한다.
+    return this.queueBow(a.id,()=>this.performBowControl(ws,a,m));
   }
   async performBowControl(ws,a,m){
     a=ws.deserializeAttachment()||a;if(!a.ready)return;
@@ -359,7 +421,7 @@ export class GardenRoom extends DurableObject {
           const f=Prayer.bowProgress(old,now),progress={...(old?.progress||{})};if(f)progress[f.target]=f.count;
           const count=m.restart?0:a.personal?(progress[target]||0):Math.max(m.count,progress[target]||0),startCount=m.mode==='auto'&&count>=target?0:count;
           return{id:m.request,rev:(old?.rev||0)+1,mode:m.mode,target,progress,count:startCount,elapsed:0,at:now,paused:false,
-            position:{space:spaceOf(a.s),x:a.s.x,z:a.s.z,h:a.s.h},accountedCount:startCount,halos:f?.halos||Prayer.cleanHalos(a.personal?null:a.s.halos,now),haloUntil:a.personal?(f?.haloUntil||0):Math.max(f?.haloUntil||0,a.s.haloUntil||0),expiresAt:now+VISIT_MEMORY_MS*2};
+            position:{space:spaceOf(a.s),cloud:a.s.cloud===true,x:a.s.x,z:a.s.z,h:a.s.h},accountedCount:startCount,halos:f?.halos||Prayer.cleanHalos(a.personal?null:a.s.halos,now),haloUntil:a.personal?(f?.haloUntil||0):Math.max(f?.haloUntil||0,a.s.haloUntil||0),expiresAt:now+VISIT_MEMORY_MS*2};
         }
         if(!old||old.id!==m.id)return old; // stale controls cannot cancel a newer practice
         const next=Prayer.settleBow(old,now);if(m.action==='stop'||m.action==='reset'){next.mode='idle';next.paused=false;next.elapsed=0;if(m.action==='reset'){next.count=0;next.accountedCount=0;next.progress={...next.progress,[next.target]:0}}}
@@ -553,7 +615,7 @@ export class GardenRoom extends DurableObject {
   }
   async armRpsAlarm() {
     const deadlines=this.rps.map(g=>g.expiresAt);
-    for(const job of Object.values(this.bows||{})){const f=Prayer.bowProgress(job,Date.now());if(f.finishedAt&&f.mode!=='idle')deadlines.push(f.finishedAt);else if(f.done)deadlines.push(Date.now()+1);deadlines.push(job.expiresAt)}
+    for(const [id,job] of Object.entries(this.bows||{})){const f=Prayer.bowProgress(job,Date.now());if(f.finishedAt&&f.mode!=='idle')deadlines.push(f.finishedAt);else if(f.done)deadlines.push(Date.now()+1);const milestone=this.nimbusMilestoneAt(id,job);if(milestone!==null)deadlines.push(milestone);deadlines.push(job.expiresAt)}
     for(const candle of this.candles?.items||[])deadlines.push(candle.expiresAt);
     for(const visit of Object.values(this.visits)){if(visit.awayUntil)deadlines.push(visit.awayUntil);deadlines.push(visit.expiresAt)}
     const next=deadlines.length?Math.min(...deadlines):null;
@@ -671,6 +733,7 @@ export class GardenRoom extends DurableObject {
     try{personal=await this.personalIdentity(ws,a,m,legacyId)}catch(error){a.handshaking=false;ws.serializeAttachment(a);ws.send(JSON.stringify({t:'personal_error',code:['code','missing','name_taken'].includes(error.message)?error.message:'storage'}));ws.close(4004,'personal profile unavailable');return}
     await this.advanceBows();await this.advanceVisits();
     const previous=this.visits[a.id];
+    a.nimbusReturn=previous?.nimbusReturn||null;
     a.enteredAt=previous&&!previous.revoked?(previous.enteredAt||previous.peer?.enteredAt||previous.lastSeen||a.acceptedAt||Date.now()):(a.acceptedAt||Date.now());
     if(previous&&previous.revoked&&!a.personal){ws.send(JSON.stringify({t:'visit_ended'}));ws.close(4003,'visit ended');return}
     if(!personal&&this.nameInUse(clean(m.name,12)||'친구',a.id)){ws.send(JSON.stringify({t:'personal_error',code:'name_taken'}));ws.close(4004,'name in use');return}
@@ -692,6 +755,7 @@ export class GardenRoom extends DurableObject {
     a.look = personal?.look||cleanLook(m.look);
     a.dog = personal?.dog||cleanDog(m.dog);
     a.s = cleanState(m.s) || { x: 0, z: 14, h: Math.PI, p: 'stand', bp: 0, u:false };
+    if(!this.validateNimbus(a,a.s))a.s={space:'garden',x:29,z:4,h:Math.PI,p:'stand',cloud:false};
     if(a.personal)Object.assign(a.s,this.personalHalos(a));
     if(a.s.p.startsWith('wood'))a.s.p='stand';
     a.ready = true;a.away=!!m.away;
@@ -701,7 +765,7 @@ export class GardenRoom extends DurableObject {
     await this.advanceRps();
     await this.rememberVisit(a);
     const peers = this.visiblePeers(a.id);
-    ws.send(JSON.stringify({ t: 'welcome', admin:a.admin?1:0, features:{personal:1,profileEdit:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
+    ws.send(JSON.stringify({ t: 'welcome', admin:a.admin?1:0, features:{nimbus:1,personal:1,profileEdit:1,board:1,listening:1,campfire:1,candles:1,bows:1,bowTargets:[108,3000]},s:a.s,bow:this.bows[a.id]||null,personal:a.personal?this.personalViews.get(a.id):null,listeningAudio:this.listeningAudio, you: a.id, now: Date.now(), max: MAX_PEERS, resumed, peers, shared: {...this.shared,campfire:Fire.publicState(this.campfire),candles:Prayer.publicState(this.candles,Date.now())}, rps: this.rpsView(this.rpsFor(a.id), a.id) }));
     this.broadcast({ t: resumed?'resume':'join', peer: this.peerInfo(a) }, ws);
     return;
   }
@@ -762,6 +826,7 @@ export class GardenRoom extends DurableObject {
 
     if (m.t === 'hello') return this.queueAdmission(()=>this.admit(ws,m));
     if (!a.ready) return;
+    if(m.t==='nimbus_control')return this.queueAdmission(()=>this.queueBow(a.id,()=>this.handleNimbus(ws,m)));
     if(['bow_start','bow_control','bow_sync'].includes(m.t))return this.handleBows(ws,a,m);
     if(['candle_light','candles_sync'].includes(m.t))return this.handleCandles(ws,a,m);
     if(['fire_begin','fire_add','fire_cancel'].includes(m.t))return this.handleFire(ws,a,m);
@@ -806,6 +871,10 @@ export class GardenRoom extends DurableObject {
         if (!this.allow(a, 's', 25)) return;
         const s = cleanState(m.s);
         if (!s) return;
+        // 손바닥 입장·퇴장은 권한을 확인하는 명령으로만 허용한다.
+        if((spaceOf(s)==='buddha')!==(spaceOf(a.s)==='buddha')||s.cloud!==!!a.s.cloud||!this.validateNimbus(a,s)){
+          ws.send(JSON.stringify({t:'nimbus_state',s:a.s,personal:this.personalViews.get(a.id)||null}));return;
+        }
         if(spaceOf(s)!=='garden'||a.fireCarry&&Date.now()-a.fireCarry.at>45000)delete a.fireCarry;
         if(s.p.startsWith('wood')&&!a.fireCarry)s.p='stand';
         s.wc=s.p.startsWith('wood')?a.fireCarry?.count||1:0;
@@ -1006,5 +1075,3 @@ export default {
     return env.ROOMS.get(env.ROOMS.idFromName(space)).fetch(req);
   },
 };
-
-

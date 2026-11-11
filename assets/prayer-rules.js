@@ -13,6 +13,17 @@
   const display=(state,now)=>active(state,now).slice(0,MAX).map((c,i)=>({...c,displaySlot:i}));
   const nonce=s=>typeof s==='string'&&/^[a-f0-9]{32}$/.test(s);
   const BOW_MS=8000,DAY_MS=86400000,HALO_WHITE_MS=3*DAY_MS,HALO_RED_MS=7*DAY_MS;
+  const NIMBUS_BOWS=100000;
+  const NIMBUS_LAYOUT=Object.freeze({x:29,z:-55,y:38,rx:17,rz:14,boundaryZ:-108,height:128,width:86,gateZ:-21});
+  const hasNimbus=profile=>Number.isFinite(profile?.nimbusUnlockedAt)&&profile.nimbusUnlockedAt>0||Number.isSafeInteger(profile?.totalBows)&&profile.totalBows>=NIMBUS_BOWS;
+  // 손바닥은 별도 세계가 아니라 기존 두 반가사유상 뒤, 같은 정원의 높은 곳이다.
+  function palmPosition(x,z){const L=NIMBUS_LAYOUT,dx=x-L.x,dz=z-L.z,d=Math.hypot(dx/L.rx,dz/L.rz);return d>1?{x:L.x+dx/d,z:L.z+dz/d}:{x,z}}
+  const behindAltars=(x,z,pad=0)=>z<-14+pad&&Math.abs(x-NIMBUS_LAYOUT.x)<NIMBUS_LAYOUT.width/2+pad;
+  function gardenPosition(x,z){
+    const d=Math.hypot(x,z);if(d>90){x*=90/d;z*=90/d}
+    if(behindAltars(x,z)&&z<NIMBUS_LAYOUT.gateZ)z=NIMBUS_LAYOUT.gateZ;
+    return{x,z};
+  }
   const CODE_ALPHABET='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   const normalizeCode=value=>typeof value==='string'?value.toUpperCase().replace(/[\s-]/g,''):'';
   const validCode=value=>/^(?:[0-9]{5}|[2-9A-HJ-NP-Z]{20})$/.test(normalizeCode(value));
@@ -24,11 +35,11 @@
     return{whiteUntil:valid(value?.whiteUntil,HALO_WHITE_MS),redUntil:valid(value?.redUntil,HALO_RED_MS)};
   }
   function haloState(value,now){const halos=cleanHalos(value,now),level=halos.redUntil?2:halos.whiteUntil?1:0;return{...halos,level,until:level===2?halos.redUntil:halos.whiteUntil}}
-  function profileView(profile,now){return{id:profile.id,name:profile.name,look:profile.look,dog:profile.dog,progress:profile.progress||{},totalBows:profile.totalBows||0,completed:profile.completed||{},highestHalo:profile.highestHalo||0,halos:cleanHalos(profile.halos,now),target:profile.bow?.target===3000?3000:108}}
+  function profileView(profile,now){return{id:profile.id,name:profile.name,look:profile.look,dog:profile.dog,progress:profile.progress||{},totalBows:profile.totalBows||0,nimbus:hasNimbus(profile),nimbusUnlockedAt:profile.nimbusUnlockedAt||0,nimbusGoal:NIMBUS_BOWS,completed:profile.completed||{},highestHalo:profile.highestHalo||0,halos:cleanHalos(profile.halos,now),target:profile.bow?.target===3000?3000:108}}
   // Count only server-timed new steps. Reset/restart changes the current bank,
   // never cumulative achievements. Each job carries its own accounting cursor.
   function accountProfile(profile,job,now){
-    if(!job)return{profile,job};
+    if(!job)return{profile:hasNimbus(profile)&&!profile.nimbusUnlockedAt?{...profile,nimbusUnlockedAt:now}:profile,job};
     const f=bowProgress(job,now),accounted=Number.isInteger(job.accountedCount)?job.accountedCount:job.count;
     const progress={...profile.progress,[f.target]:f.count},completed={...profile.completed};
     const totalBows=(profile.totalBows||0)+Math.max(0,f.count-accounted),halos={...cleanHalos(profile.halos,now)};
@@ -37,7 +48,8 @@
     if(!rewarded&&f.completedAt&&f.count===f.target){rewarded=true;completed[f.target]=(completed[f.target]||0)+1;highestHalo=Math.max(highestHalo,f.target===3000?2:1)}
     const {done,finishedAt,...settled}=f;
     const state=haloState(halos,now),value={...settled,at:now,halos,haloUntil:state.until,haloLevel:state.level,accountedCount:f.count,rewarded};
-    return{profile:{...profile,progress,completed,totalBows,highestHalo,halos,bow:value,updatedAt:now},job:value};
+    const nimbusUnlockedAt=profile.nimbusUnlockedAt||(totalBows>=NIMBUS_BOWS?now:0);
+    return{profile:{...profile,progress,completed,totalBows,nimbusUnlockedAt,highestHalo,halos,bow:value,updatedAt:now},job:value};
   }
   // A compact clock anchor, shared by server, returning participant and watching friends.
   function bowProgress(job,now){
@@ -53,5 +65,5 @@
       halos,haloUntil:halo.until,haloLevel:halo.level,completedAt:earned?finishedAt:job.completedAt||0,finishedAt,done};
   }
   function settleBow(job,now){const f=bowProgress(job,now);if(!f)return null;const {done,finishedAt,...value}=f;return{...value,at:now,rev:job.rev+1}}
-  root.GardenPrayer=Object.freeze({LAYOUT,LIFE_MS,MAX,BOW_MS,DAY_MS,HALO_WHITE_MS,HALO_RED_MS,normalizeCode,validCode,formatCode,ADMIN_CODE,isAdminCode,cleanHalos,haloState,profileView,accountProfile,bowProgress,settleBow,clean,inside,nearBox,active,display,publicState,nonce});
+  root.GardenPrayer=Object.freeze({LAYOUT,LIFE_MS,MAX,BOW_MS,DAY_MS,HALO_WHITE_MS,HALO_RED_MS,NIMBUS_BOWS,NIMBUS_LAYOUT,hasNimbus,palmPosition,gardenPosition,behindAltars,normalizeCode,validCode,formatCode,ADMIN_CODE,isAdminCode,cleanHalos,haloState,profileView,accountProfile,bowProgress,settleBow,clean,inside,nearBox,active,display,publicState,nonce});
 })(globalThis);
