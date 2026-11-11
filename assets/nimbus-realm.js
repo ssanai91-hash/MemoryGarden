@@ -28,12 +28,13 @@ export function createNimbus(){
 // 단일 정원 안에 붙이는 양각 반신상 + 입체 팔·손바닥. 뒤쪽은 플레이 공간이 없다.
 export function createBuddhaRealm({scene,markBloom=m=>m,onError=()=>{}}){
   const root=new THREE.Group();root.name='great-buddha-garden-boundary';scene.add(root);
-  const stone=new THREE.MeshStandardMaterial({color:0xe5cba2,roughness:.84,metalness:.015,
-    emissive:0xe1c8a0,emissiveIntensity:.24,fog:false});
-  const sleeve=stone.clone();sleeve.color.setHex(0xdac29d);
-  const crease=new THREE.MeshStandardMaterial({color:0xb39a76,roughness:1,emissive:0x8b7353,emissiveIntensity:.14,fog:false});
+  // 시안의 흰 석조: 낮·밤에도 황금색/갈색으로 묻히지 않도록 중성 보조 발광을 쓴다.
+  const stone=new THREE.MeshStandardMaterial({color:0xfafcff,roughness:.9,metalness:0,
+    emissive:0xe8edf7,emissiveIntensity:.42,fog:false});
+  const sleeve=stone.clone();sleeve.color.setHex(0xf3f6fc);
+  const crease=new THREE.MeshStandardMaterial({color:0xaeb8c8,roughness:1,emissive:0x929dad,emissiveIntensity:.25,fog:false});
   const body=new THREE.Group();body.position.set(L.x,4,L.boundaryZ);root.add(body);
-  // 얼굴과 법의의 원화는 유지하고, 표면을 약 7m 돌출시킨 높이 필드 양각.
+  // 얼굴·법의 명암과 투명 실루엣을 보존한 흰 양각. 원화의 누런 색은 표면과 발광 모두에서 뺀다.
   new THREE.TextureLoader().load('./assets/great-buddha-relief.png',texture=>{
     texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
     const nx=96,ny=144,c=document.createElement('canvas');c.width=nx+1;c.height=ny+1;
@@ -53,8 +54,17 @@ export function createBuddhaRealm({scene,markBloom=m=>m,onError=()=>{}}){
     }
     const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
     geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();
-    const material=new THREE.MeshStandardMaterial({map:texture,emissiveMap:texture,emissive:0xffffff,
-      emissiveIntensity:.42,roughness:.93,metalness:0,alphaTest:.7,side:THREE.DoubleSide,fog:false});
+    const whiteCanvas=document.createElement('canvas');whiteCanvas.width=texture.image.width;whiteCanvas.height=texture.image.height;
+    const whiteCtx=whiteCanvas.getContext('2d');whiteCtx.drawImage(texture.image,0,0);
+    const whitePixels=whiteCtx.getImageData(0,0,whiteCanvas.width,whiteCanvas.height),rgba=whitePixels.data;
+    for(let k=0;k<rgba.length;k+=4){
+      const light=Math.min(255,Math.round((rgba[k]*.2126+rgba[k+1]*.7152+rgba[k+2]*.0722)*1.18));
+      rgba[k]=rgba[k+1]=rgba[k+2]=light;
+    }
+    whiteCtx.putImageData(whitePixels,0,0);
+    const whiteTexture=new THREE.CanvasTexture(whiteCanvas);whiteTexture.colorSpace=THREE.SRGBColorSpace;whiteTexture.anisotropy=4;texture.dispose();
+    const material=new THREE.MeshStandardMaterial({map:whiteTexture,emissiveMap:whiteTexture,emissive:0xffffff,
+      emissiveIntensity:.6,roughness:.93,metalness:0,alphaTest:.7,side:THREE.DoubleSide,fog:false});
     const relief=new THREE.Mesh(geometry,material);relief.name='great-buddha-raised-relief';relief.frustumCulled=false;body.add(relief);
     root.userData.reliefReady=true;
   },undefined,()=>{root.userData.reliefError=true;onError()});
@@ -72,14 +82,15 @@ export function createBuddhaRealm({scene,markBloom=m=>m,onError=()=>{}}){
   const thumb=oval(palm,stone,-20,-1.7,-1,9,3.1,4.8);thumb.rotation.y=-.72;
   stroke(palm,[[-13,-.05,4],[-7,.06,-2],[3,.05,-5],[12,-.05,-1]],.065,crease);
   stroke(palm,[[-10,-.05,-6],[-2,.06,-9],[9,-.05,-7]],.055,crease);
-  // 구름 바다는 확장부의 바닥을 감싸며 54개 형상을 한 번에 그린다.
-  const cloudMat=new THREE.MeshStandardMaterial({color:0xece4ed,roughness:1,emissive:0xc0b6cf,emissiveIntensity:.23,fog:false});
+  // 앞쪽 광장까지 뻗던 구름을 손바닥 아래·뒤 반원에만 둔다.
+  // 가장 앞쪽 끝도 z=-65 이하, 윗면도 y=16 미만이라 손바닥(y=38)과 얼굴 앞을 막지 않는다.
+  const cloudMat=new THREE.MeshStandardMaterial({color:0xe9efff,roughness:1,emissive:0xcbd7ee,emissiveIntensity:.23,fog:false});
   const banks=new THREE.InstancedMesh(new THREE.SphereGeometry(1,16,10),cloudMat,54),dummy=new THREE.Object3D();
   banks.name='nimbus-cloud-sea';banks.frustumCulled=false;root.add(banks);
   for(let i=0;i<54;i++){
-    const a=i*2.39996,r=23+(i%7)*5.8;
-    dummy.position.set(L.x+Math.cos(a)*r,18+(i%4)*2,L.z+Math.sin(a)*r*.72);
-    dummy.scale.set(10+(i%5)*2.6,3+(i%3),8+(i%4)*2);dummy.updateMatrix();banks.setMatrixAt(i,dummy.matrix);
+    const a=i/53*Math.PI,r=23+(i%7)*5.8;
+    dummy.position.set(L.x+Math.cos(a)*r,8+(i%4)*1.2,L.z-24-Math.sin(a)*r*.6);
+    dummy.scale.set(10+(i%5)*2.6,2+(i%3)*.6,8+(i%4)*2);dummy.updateMatrix();banks.setMatrixAt(i,dummy.matrix);
   }
   const haloMat=markBloom(new THREE.MeshBasicMaterial({color:0xffe5b0,transparent:true,opacity:.52,fog:false,depthWrite:false}),.65);
   for(const radius of[23.5,24.1]){
