@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import './prayer-rules.js';
 const L=globalThis.GardenPrayer.NIMBUS_LAYOUT;
+// 정원에서는 무릎 높이로 낮게 떠서 이동하고, 공중 수행 영역의 기존 높이는 유지한다.
+export function nimbusRideHeight(space='garden'){return space==='buddha'?1.05:.5}
 const sphere=new THREE.SphereGeometry(1,24,16);
 const cream=new THREE.MeshStandardMaterial({color:0xfff6e5,roughness:.9,emissive:0xe4cfa5,emissiveIntensity:.18});
 const gold=new THREE.MeshBasicMaterial({color:0xf4d99e,transparent:true,opacity:.68,depthWrite:false,fog:false});
@@ -110,6 +112,6 @@ export function createBuddhaRealm({scene,markBloom=m=>m,onError=()=>{}}){
   boundary.position.set(L.x,-.8,L.boundaryZ+2);root.add(boundary);
   const edge=new THREE.Mesh(new THREE.BoxGeometry(L.width,.18,.3),stone);edge.position.set(L.x,.1,L.gateZ);root.add(edge);
   const rayFloor=new THREE.Mesh(new THREE.PlaneGeometry(L.rx*2,L.rz*2/Math.cos(L.palmTilt)),new THREE.MeshBasicMaterial({visible:false}));
-  rayFloor.rotation.x=-Math.PI/2+L.palmTilt;rayFloor.position.set(L.x,L.y+1.05,L.z);root.add(rayFloor);
+  rayFloor.rotation.x=-Math.PI/2+L.palmTilt;rayFloor.position.set(L.x,L.y+nimbusRideHeight('buddha'),L.z);root.add(rayFloor);
   return{scene,root,rayFloor,update(t,reduced=false){banks.position.y=reduced?0:Math.sin(t*.13)*.17}};
 }
