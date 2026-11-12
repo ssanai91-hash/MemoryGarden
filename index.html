@@ -132,8 +132,7 @@ button:disabled{opacity:.5;cursor:default}
 .plaque{max-height:calc(100dvh - 36px);overflow-y:auto}
 @media(max-width:380px){.practice .row{gap:4px}.practice .row button{font-size:10.5px!important;padding:5px 7px!important}}
 /* Keep the garden visible while controls are in use. */
-#nimbusVista,#nimbusPracticeTotal{position:fixed;left:14px;top:calc(83px + env(safe-area-inset-top,0px));z-index:3;max-width:calc(100vw - 110px);margin:0;color:#5c4932;background:rgba(250,246,238,.9);border-radius:8px;padding:6px 9px;font-size:11px;line-height:1.5;pointer-events:none}
-#nimbusPracticeTotal{font-weight:700}.buddha-realm #campfireLastCare{display:none}
+.buddha-realm #campfireLastCare{display:none}
 .buddha-realm #nimbusExitBtn{background:#fff6e5;border-color:#d2b47b;color:#68472a}
 .plaque{box-sizing:border-box;z-index:3}
 .plaque-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -407,8 +406,6 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 
 <canvas id="c" aria-label="좌불상 앞에서 기도하고 산책하는 정원"></canvas>
 
-<p id="nimbusVista" hidden></p>
-<p id="nimbusPracticeTotal" aria-live="polite" hidden></p>
 <header class="plaque collapsed" id="gardenPanel">
   <div class="plaque-heading"><h1>기억의 정원</h1><button id="gardenToggle" type="button" aria-expanded="false" aria-controls="gardenDetails">펼치기 ▾</button><button id="musicToggle" class="sound-toggle" type="button" aria-pressed="false" aria-label="새벽 예불 켜기" title="새벽 예불 켜기">♪</button></div>
   <div id="gardenDetails" hidden>
@@ -422,7 +419,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
     <div class="garden-actions garden-preferences" id="gardenPreferences"><button id="kickDuplicatesBtn" type="button" hidden>중복 내보내기</button><button id="homeInstallBtn" type="button">홈 화면 추가</button><button id="qualityBtn" type="button">화면 품질</button><button id="lookBtn" type="button">내 모습 바꾸기</button><button id="rerollBtn" type="button">반려동물 변경</button></div>
   </section>
   <div class="mine" id="mine"></div><div id="campfireStatus" role="status">모닥불을 불러오는 중…</div><div id="campfireLastCare"></div>
-  <section class="garden-menu-group" aria-label="근두운"><p id="nimbusStatus" role="status">근두운 · 누적 10만 배 보상</p><div class="room-actions"><button id="nimbusMountBtn" type="button" disabled>근두운 타기</button><button id="nimbusEnterBtn" type="button" hidden>부처님 앞으로</button></div></section>
+  <section class="garden-menu-group" aria-label="근두운"><div class="room-actions"><button id="nimbusMountBtn" type="button" disabled>근두운 타기</button><button id="nimbusEnterBtn" type="button" hidden>부처님 앞으로</button></div></section>
   <div class="now" id="nowPlaying" hidden></div>
   </div>
 </header>
@@ -537,7 +534,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
 <div class="poses" id="rightMenu" role="group" aria-label="정원 상황별 메뉴"><div id="contextActions" class="context-actions"><button id="nimbusExitBtn" type="button" hidden>정원으로 돌아가기</button><div id="listeningControls" hidden><button id="listeningAudioBtn" type="button">오디오 조작</button><button id="listeningSeatBtn" type="button">의자에 앉기</button><button id="listeningExitBtn" type="button">정원으로 나오기</button></div><div class="table-bar" id="tableBar" hidden><button id="dSoda" type="button" aria-pressed="false">음료수</button><button id="dBeer" type="button" aria-pressed="false">캔맥주</button><button id="dSoju" type="button" aria-pressed="false">소주</button><button id="dOrder" type="button" aria-expanded="false" aria-controls="orderPanel" hidden>주문하기</button><button class="primary" id="dCheers" type="button">짠!</button><button id="dClear" type="button" hidden>상 치우기</button></div><button id="rpsInviteBtn" type="button" aria-haspopup="dialog" aria-controls="rpsPanel" hidden>가위바위보 신청</button><div class="plaza-bar" id="plazaBar" role="group" aria-label="절하기" hidden><button id="autoBowBtn" type="button">108배
 하기</button><button id="auto3000Btn" type="button">3000배
 하기</button><button id="resetBtn" type="button" hidden>횟수 초기화</button></div><button class="ctx-btn" id="ctxBtn" type="button" hidden></button></div></div>
-<div class="dock-actions" id="dockActions" role="group" aria-label="절 횟수와 대화 목록" hidden><section class="bow-counter" id="bowCounter" aria-label="절 횟수" hidden><div class="count-line" role="status" aria-atomic="true"><b id="bowCount">0</b><span>/</span><span><span id="bowTarget">108</span>배</span></div></section><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button></div>
+<div class="dock-actions" id="dockActions" role="group" aria-label="절 횟수와 대화 목록" hidden><div id="bowSummary"><section class="bow-counter" id="bowCounter" aria-label="현재 수행 횟수" hidden><div class="count-line" role="status" aria-atomic="true"><b id="bowCount">0</b><span>/</span><span><span id="bowTarget">108</span>배</span></div></section><p id="bowLifetime">전체 절 <b id="bowLifetimeCount">0</b>회</p><p id="nimbusStatus" role="status">근두운 기록 확인 중</p></div><button class="fold" id="chatHistoryBtn" type="button" aria-expanded="false" aria-controls="chatHistory">대화 목록</button></div>
 <button class="sky-return" id="skyReturn" type="button" hidden>정원으로 돌아가기</button>
 <div id="joy" role="application" aria-label="이동 조이스틱"><div id="knob"></div></div><div id="quickActions" role="group" aria-label="그림 동작 카드 5개">
 <button id="umbrellaBtn" type="button" aria-pressed="false" aria-label="우산 쓰기" title="우산 쓰기"><img src="assets/action-umbrella-v1.webp" width="384" height="384" alt="" aria-hidden="true" decoding="async"></button>
@@ -582,7 +579,7 @@ body.board-open #rightMenu,body.board-open #joy,body.board-open #gardenPanel,bod
      <p class="entry-hint" id="entryHint" role="status" aria-live="polite">입장 코드 자동 저장 · 내 정보 확인 후 입장</p>
      <button id="nameCancel" type="button" hidden>취소</button>
     </div>
-    <small class="entry-version">ver 3.0</small>
+    <small class="entry-version">ver 3.1</small>
   </form>
  </main>
 </div>
@@ -1555,14 +1552,13 @@ function nimbusTotal(){
 function updateNimbusUI(){
   const status=$('nimbusStatus');if(!status)return;
   const unlocked=nimbus.profile?.nimbus===true,total=nimbusTotal(),connected=room?.connected()&&room.nimbusVersion===1;
-  status.textContent=unlocked?'근두운 영구 획득 · 누적 '+total.toLocaleString()+'배':'근두운까지 '+total.toLocaleString()+' / '+Prayer.NIMBUS_BOWS.toLocaleString()+'배';
+  $('bowLifetimeCount').textContent=total.toLocaleString();
+  const message=unlocked?(nimbus.mounted?'근두운 탑승 중':'근두운 획득'):total>=Prayer.NIMBUS_BOWS?'근두운 확인 중':'근두운까지 '+(Prayer.NIMBUS_BOWS-total).toLocaleString()+'회';
+  if(status.textContent!==message)status.textContent=message;
   $('nimbusMountBtn').textContent=nimbus.mounted?'근두운에서 내리기':'근두운 타기';
   $('nimbusMountBtn').disabled=!!nimbus.pending||!!nimbus.flight||!connected||worldSpace==='buddha'||worldSpace==='listening'||!unlocked&&total<Prayer.NIMBUS_BOWS;
   $('nimbusEnterBtn').hidden=!unlocked;$('nimbusEnterBtn').disabled=!!nimbus.pending||!!nimbus.flight||!connected||!nimbus.mounted||worldSpace!=='garden';
   $('nimbusExitBtn').hidden=worldSpace!=='buddha';$('nimbusExitBtn').disabled=!!nimbus.pending||!!nimbus.flight||!connected;
-  const hint=$('nimbusVista');if(hint){hint.hidden=!hasEntered||worldSpace!=='garden'||!Prayer.inside(me.g.position.x,me.g.position.z)||cam.sky;
-    hint.textContent=unlocked?'두 불상 뒤 · 근두운을 타고 큰 부처님 앞으로':'두 불상 뒤 큰 부처님 · 누적 10만 배에 근두운 획득';}
-  const label=$('nimbusPracticeTotal');if(label){label.hidden=worldSpace!=='buddha';label.textContent='누적 '+total.toLocaleString()+'배 · 근두운 영구 획득';}
 }
 function nimbusRequest(action){
   if(!hasEntered||visitEnded||nimbus.pending||nimbus.flight)return;
@@ -3535,7 +3531,7 @@ function receivePersonal(person,restore=false){
   if(!person||!gardenIdentity.credentials().personalCode)return;
   const changed=gardenIdentity.confirm(person);
   const hadNimbus=nimbus.profile?.nimbus;nimbus.profile=person;
-  if(hadNimbus===false&&person.nimbus===true)toast('누적 10만 배 달성! 근두운을 영구 획득했어요');
+  if(hadNimbus===false&&person.nimbus===true)toast('근두운을 획득했어요');
   if(changed){const queued=practice.pendingStart,control=practice.pendingControl;loadPersonalPractice();if(queued){practice.pendingStart={...queued,count:readPracticeCount(queued.target)};practice.target=queued.target;practice.count=readPracticeCount(queued.target);practice.mode=queued.mode;practice.pendingControl=control;pose='bow'}}
   if(restore&&validLook(person.look)&&validDog(person.dog)){myNick=stripInvisible(person.name).slice(0,12);applyMyLook(person.look,person.dog,false,myNick);store.set('garden.name',myNick);refreshMine()}
   for(const target of[108,3000])bowSet(practiceCountKey(target),String(person.progress?.[target]||0));

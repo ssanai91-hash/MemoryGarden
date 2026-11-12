@@ -18,6 +18,11 @@ body.chat-docked{--quick-bottom:calc(var(--keyboard-lift,0px) + var(--chat-heigh
 #rightMenu{right:calc(var(--quick-right) + var(--quick-card-size) + 8px)}
 #bowCounter{position:static;flex:none;display:flex;align-items:center;height:34px;pointer-events:none}
 #bowCounter[hidden]{display:none}
+/* 전체 횟수 바로 아래에 근두운 상태를 짧게 모아 보여 준다. */
+#bowSummary{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:3px;max-width:min(160px,calc(100vw - 154px));padding:6px 8px;border:1px solid var(--line);border-radius:12px;background:var(--paper);pointer-events:none}
+#bowSummary #bowCounter{height:auto;padding:0;border:0;border-radius:0;background:none;backdrop-filter:none}
+#bowLifetime{margin:0;color:var(--ink);font-size:11px;font-weight:700;line-height:1.3;white-space:nowrap;font-variant-numeric:tabular-nums}
+#nimbusStatus{margin:0;color:var(--soft);font-size:10px;line-height:1.3;text-align:center;overflow-wrap:anywhere}
 .entry-open #quickActions,.sky-view #quickActions,.visit-ended #quickActions,.rps-open #quickActions,body.board-open #quickActions{display:none}
 body.listening-room #quickActions #umbrellaBtn{visibility:hidden;pointer-events:none}
 @media(max-width:650px){:root{--joy-size:109.2px;--joy-knob-size:44.2px;--joy-left:max(12px,env(safe-area-inset-left,0px));--joy-bottom:calc(14px + env(safe-area-inset-bottom,0px));--quick-card-size:38.48px}body.chat-docked{--joy-size:101.4px}#bowCounter .count-line{font-size:12px}}
